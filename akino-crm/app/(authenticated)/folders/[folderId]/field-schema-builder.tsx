@@ -9,6 +9,8 @@ import {
   EyeOff,
   Sparkles,
   Download,
+  ClipboardPaste,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -172,6 +174,252 @@ function AddFieldDialog({
   );
 }
 
+// ─── Bulk Add Dialog ──────────────────────────────────────────────────
+interface BulkEntry {
+  label: string;
+  type: FieldType;
+}
+
+function BulkAddDialog({
+  folderId,
+  open,
+  onOpenChange,
+}: {
+  folderId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [pasteValue, setPasteValue] = useState("");
+  const [entries, setEntries] = useState<BulkEntry[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const [defaultType, setDefaultType] = useState<FieldType>("text");
+
+  // Parse pasted text: split by tabs (horizontal) or newlines (vertical)
+  function handleParse() {
+    const raw = pasteValue.trim();
+    if (!raw) return;
+
+    // Detect: if tabs exist treat as horizontal, otherwise newlines
+    let names: string[];
+    if (raw.includes("\t")) {
+      names = raw.split("\t");
+    } else {
+      names = raw.split(/\r?\n/);
+    }
+
+    const parsed = names
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((label) => ({ label, type: defaultType }));
+
+    if (parsed.length > 0) setEntries(parsed);
+  }
+
+  // Handle paste event directly on the textarea
+  function handlePaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text/plain").trim();
+    if (!text) return;
+
+    let names: string[];
+    if (text.includes("\t")) {
+      names = text.split("\t");
+    } else {
+      names = text.split(/\r?\n/);
+    }
+
+    const parsed = names
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((label) => ({ label, type: defaultType }));
+
+    if (parsed.length > 0) {
+      e.preventDefault();
+      setPasteValue(text);
+      setEntries(parsed);
+    }
+  }
+
+  function removeEntry(idx: number) {
+    setEntries((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateEntryType(idx: number, type: FieldType) {
+    setEntries((prev) =>
+      prev.map((e, i) => (i === idx ? { ...e, type } : e))
+    );
+  }
+
+  function setAllTypes(type: FieldType) {
+    setDefaultType(type);
+    setEntries((prev) => prev.map((e) => ({ ...e, type })));
+  }
+
+  function handleSubmit() {
+    if (entries.length === 0) return;
+
+    startTransition(async () => {
+      for (const entry of entries) {
+        const key = entry.label
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_|_$/g, "");
+        await createField(folderId, {
+          key,
+          label: entry.label.trim(),
+          type: entry.type,
+        });
+      }
+      setPasteValue("");
+      setEntries([]);
+      onOpenChange(false);
+    });
+  }
+
+  function handleClose() {
+    setPasteValue("");
+    setEntries([]);
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Bulk Add Columns</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {entries.length === 0 ? (
+            <>
+              <p className="text-sm text-(--color-fg-muted)">
+                Paste column names from Excel or Google Sheets. Works with rows (vertical) or columns (horizontal).
+              </p>
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-(--color-fg-muted) shrink-0">Default type:</label>
+                <select
+                  value={defaultType}
+                  onChange={(e) => setDefaultType(e.target.value as FieldType)}
+                  className="h-9 flex-1 rounded-xl border-0 bg-(--color-surface-2) px-3 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                >
+                  {FIELD_TYPES.map((ft) => (
+                    <option key={ft.value} value={ft.value}>
+                      {ft.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                value={pasteValue}
+                onChange={(e) => setPasteValue(e.target.value)}
+                onPaste={handlePaste}
+                placeholder={"Paste here — e.g.:\nCompany Name\nEmail\nPhone Number\nIndustry\nRevenue"}
+                rows={6}
+                className="w-full rounded-xl border-0 bg-(--color-surface-2) px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-none"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleParse}
+                disabled={!pasteValue.trim()}
+                className="w-full"
+              >
+                <ClipboardPaste className="h-4 w-4" /> Parse Column Names
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-(--color-fg-muted)">
+                  {entries.length} columns detected — set the type for each
+                </p>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-(--color-fg-subtle)">Set all:</label>
+                  <select
+                    value={defaultType}
+                    onChange={(e) => setAllTypes(e.target.value as FieldType)}
+                    className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                  >
+                    {FIELD_TYPES.map((ft) => (
+                      <option key={ft.value} value={ft.value}>
+                        {ft.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="max-h-72 overflow-auto space-y-1.5 pr-1">
+                {entries.map((entry, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded-xl bg-(--color-surface-1) px-4 py-2.5 border border-(--color-card-border)"
+                  >
+                    <span className="flex-1 text-sm font-medium truncate">
+                      {entry.label}
+                    </span>
+                    <select
+                      value={entry.type}
+                      onChange={(e) =>
+                        updateEntryType(i, e.target.value as FieldType)
+                      }
+                      className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    >
+                      {FIELD_TYPES.map((ft) => (
+                        <option key={ft.value} value={ft.value}>
+                          {ft.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(i)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-(--color-fg-subtle) hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          {entries.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setEntries([])}
+            >
+              Back
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+          >
+            Cancel
+          </Button>
+          {entries.length > 0 && (
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={isPending || entries.length === 0}
+            >
+              {isPending
+                ? "Adding…"
+                : `Add ${entries.length} Column${entries.length > 1 ? "s" : ""}`}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function FieldSchemaBuilder({
   folderId,
   fields,
@@ -180,6 +428,7 @@ export function FieldSchemaBuilder({
   fields: FieldDefinition[];
 }) {
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   function handleDownloadTemplate() {
@@ -225,6 +474,9 @@ export function FieldSchemaBuilder({
               <Download className="h-4 w-4" /> Download Template
             </Button>
           )}
+          <Button size="sm" variant="secondary" onClick={() => setBulkOpen(true)}>
+            <ClipboardPaste className="h-4 w-4" /> Bulk Add
+          </Button>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" /> Add Column
           </Button>
@@ -307,6 +559,11 @@ export function FieldSchemaBuilder({
         folderId={folderId}
         open={addOpen}
         onOpenChange={setAddOpen}
+      />
+      <BulkAddDialog
+        folderId={folderId}
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
       />
     </div>
   );
