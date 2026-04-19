@@ -11,12 +11,17 @@ export default async function FolderDetailPage({
 }) {
   const { folderId } = await params;
 
-  const folder = await getFolder(folderId);
+  let folder;
+  try {
+    folder = await getFolder(folderId);
+  } catch {
+    folder = null;
+  }
   if (!folder) notFound();
 
   const [fields, leads] = await Promise.all([
-    getFieldDefinitions(folderId).catch(() => []),
-    getLeads(folderId).catch(() => []),
+    getFieldDefinitions(folderId).catch(() => [] as never[]),
+    getLeads(folderId).catch(() => [] as never[]),
   ]);
 
   return <FolderDetail folder={folder} fields={fields} initialLeads={leads} />;
