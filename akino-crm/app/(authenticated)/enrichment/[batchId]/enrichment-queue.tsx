@@ -72,7 +72,57 @@ export function EnrichmentQueue({
     }
   }
 
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  function validateForm(): string[] {
+    const errors: string[] = [];
+
+    // Check required fields
+    for (const field of enrichmentFields) {
+      if (field.is_required) {
+        const val = formData[field.key] ?? (lead?.data as Record<string, unknown>)?.[field.key];
+        if (!val || String(val).trim() === "") {
+          errors.push(`"${field.label}" is required.`);
+        }
+      }
+    }
+
+    // Check that at least email or phone is present (in form data or existing lead data)
+    const emailFields = enrichmentFields.filter(
+      (f) => f.type === "email" || f.label.toLowerCase().includes("email")
+    );
+    const phoneFields = enrichmentFields.filter(
+      (f) => f.type === "phone" || f.label.toLowerCase().includes("phone")
+    );
+
+    if (emailFields.length > 0 || phoneFields.length > 0) {
+      const hasEmail = emailFields.some((f) => {
+        const val = formData[f.key] ?? (lead?.data as Record<string, unknown>)?.[f.key] ?? lead?.email;
+        return val && String(val).trim() !== "";
+      });
+      const hasPhone = phoneFields.some((f) => {
+        const val = formData[f.key] ?? (lead?.data as Record<string, unknown>)?.[f.key];
+        return val && String(val).trim() !== "";
+      });
+
+      // Also check top-level lead.email
+      const hasTopLevelEmail = lead?.email && lead.email.trim() !== "";
+
+      if (!hasEmail && !hasPhone && !hasTopLevelEmail) {
+        errors.push("At least an email or phone number must be provided.");
+      }
+    }
+
+    return errors;
+  }
+
   function handleComplete() {
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
     startTransition(async () => {
       await completeBatchLead(batch.id, current.lead_id, formData);
       setFormData({});
@@ -332,6 +382,15 @@ export function EnrichmentQueue({
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Validation errors */}
+            {validationErrors.length > 0 && (
+              <div className="mt-6 rounded-2xl bg-red-500/10 border border-red-500/20 p-4 space-y-1">
+                {validationErrors.map((err, i) => (
+                  <p key={i} className="text-sm text-red-400">{err}</p>
+                ))}
               </div>
             )}
 

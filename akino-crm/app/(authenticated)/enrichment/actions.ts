@@ -321,10 +321,20 @@ export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
   // Group by folder
   const groups: FolderBatchGroup[] = [];
   for (const folderId of folderIds) {
+    const folderBatches = batchesWithCounts
+      .filter((b) => b.folder_id === folderId)
+      .sort((a, b) => {
+        // Extract batch number from name like "Prefix - Batch #3"
+        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] ?? "0", 10);
+        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] ?? "0", 10);
+        if (numA !== numB) return numA - numB;
+        // Fallback: sort by created_at ascending
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
     groups.push({
       folder_id: folderId,
       folder_name: folderMap.get(folderId) ?? "Unknown Folder",
-      batches: batchesWithCounts.filter((b) => b.folder_id === folderId),
+      batches: folderBatches,
     });
   }
 
