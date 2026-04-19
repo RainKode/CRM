@@ -28,6 +28,10 @@ import {
   MoreHorizontal,
   Calendar,
   X,
+  Trash2,
+  Search,
+  UserPlus,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,8 +45,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn, relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, LossReason } from "@/lib/types";
-import { createDeal, moveDeal, logActivity, setFollowUp } from "./actions";
+import type { Deal, PipelineStage, LossReason, Pipeline } from "@/lib/types";
+import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, type LeadSearchResult } from "./actions";
 
 // ─────────────────────────────────────────────
 // Generic dropdown hook (click-outside to close)
@@ -240,6 +244,8 @@ function KanbanColumn({
 // ─────────────────────────────────────────────
 // Create deal dialog
 // ─────────────────────────────────────────────
+type DealMode = "new" | "from_leads";
+
 function CreateDealDialog({
   open,
   onOpenChange,
@@ -251,17 +257,73 @@ function CreateDealDialog({
   stages: PipelineStage[];
   defaultStageId?: string | null;
 }) {
+  const [mode, setMode] = useState<DealMode>("new");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const resolvedDefault = defaultStageId ?? stages[0]?.id ?? "";
   const [stageId, setStageId] = useState(resolvedDefault);
 
-  // Sync when defaultStageId changes (e.g. opening from a column menu)
+  // Lead search state
+  const [leadQuery, setLeadQuery] = useState("");
+  const [enrichedOnly, setEnrichedOnly] = useState(false);
+  const [leadResults, setLeadResults] = useState<LeadSearchResult[]>([]);
+  const [selectedLead, setSelectedLead] = useState<LeadSearchResult | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
   useEffect(() => {
     if (open && defaultStageId) setStageId(defaultStageId);
   }, [open, defaultStageId]);
+
+  // Reset when dialog closes or mode changes
+  useEffect(() => {
+    if (!open) {
+      setMode("new");
+      setName("");
+      setCompany("");
+      setEmail("");
+      setLeadQuery("");
+      setLeadResults([]);
+      setSelectedLead(null);
+      setEnrichedOnly(false);
+    }
+  }, [open]);
+
   const [isPending, startTransition] = useTransition();
+
+  function handleSearch(query: string) {
+    setLeadQuery(query);
+    setSelectedLead(null);
+    if (query.trim().length < 2) {
+      setLeadResults([]);
+      return;
+    }
+    setIsSearching(true);
+    startTransition(async () => {
+      const results = await searchLeads({ query: query.trim(), enrichedOnly });
+      setLeadResults(results);
+      setIsSearching(false);
+    });
+  }
+
+  function handleEnrichedToggle(checked: boolean) {
+    setEnrichedOnly(checked);
+    if (leadQuery.trim().length >= 2) {
+      setIsSearching(true);
+      startTransition(async () => {
+        const results = await searchLeads({ query: leadQuery.trim(), enrichedOnly: checked });
+        setLeadResults(results);
+        setIsSearching(false);
+      });
+    }
+  }
+
+  function selectLead(lead: LeadSearchResult) {
+    setSelectedLead(lead);
+    setName(lead.name || "");
+    setCompany(lead.company || "");
+    setEmail(lead.email || "");
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -272,27 +334,130 @@ function CreateDealDialog({
         company: company.trim() || undefined,
         email: email.trim() || undefined,
         stage_id: stageId,
+        lead_id: selectedLead?.id || undefined,
+        source_folder_id: selectedLead?.folder_id || undefined,
       });
-      setName("");
-      setCompany("");
-      setEmail("");
       onOpenChange(false);
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Deal</DialogTitle>
         </DialogHeader>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 px-6 pb-2">
+          {([
+            { val: "new" as DealMode, label: "New Client", Icon: UserPlus },
+            { val: "from_leads" as DealMode, label: "From Lead Database", Icon: Search },
+          ] as const).map(({ val, label, Icon }) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => { setMode(val); setSelectedLead(null); setName(""); setCompany(""); setEmail(""); }}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
+                mode === val
+                  ? "bg-(--color-accent) text-(--color-accent-fg)"
+                  : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+              )}
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-3">
+            {mode === "from_leads" && (
+              <>
+                {/* Lead search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-(--color-fg-subtle)" />
+                  <input
+                    type="text"
+                    placeholder="Search leads by name, email, or company…"
+                    value={leadQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    autoFocus
+                    className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                  />
+                </div>
+
+                {/* Enriched filter */}
+                <label className="flex items-center gap-2 text-sm text-(--color-fg-muted) cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enrichedOnly}
+                    onChange={(e) => handleEnrichedToggle(e.target.checked)}
+                    className="accent-(--color-accent) rounded"
+                  />
+                  Show enriched leads only
+                </label>
+
+                {/* Search results */}
+                {leadQuery.trim().length >= 2 && (
+                  <div className="max-h-48 overflow-y-auto rounded-xl border border-(--color-card-border) bg-(--color-surface-1)">
+                    {isSearching ? (
+                      <p className="text-sm text-(--color-fg-muted) text-center py-4">Searching…</p>
+                    ) : leadResults.length === 0 ? (
+                      <p className="text-sm text-(--color-fg-muted) text-center py-4">No leads found</p>
+                    ) : (
+                      leadResults.map((lead) => (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          onClick={() => selectLead(lead)}
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-(--color-card-border) last:border-b-0 transition-colors flex items-center justify-between gap-3",
+                            selectedLead?.id === lead.id
+                              ? "bg-(--color-accent)/10"
+                              : "hover:bg-(--color-surface-2)"
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-(--color-fg) truncate">
+                              {lead.name || "No name"}
+                            </p>
+                            <p className="text-xs text-(--color-fg-muted) truncate">
+                              {[lead.company, lead.email].filter(Boolean).join(" · ") || "—"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {lead.status === "enriched" && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-(--color-success) bg-(--color-success)/10 px-2 py-0.5 rounded-full">
+                                Enriched
+                              </span>
+                            )}
+                            {lead.quality_rating != null && (
+                              <span className="flex items-center gap-0.5 text-xs text-(--color-accent)">
+                                <Star className="h-3 w-3" /> {lead.quality_rating}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {selectedLead && (
+                  <p className="text-xs text-(--color-fg-muted)">
+                    Selected: <span className="font-medium text-(--color-fg)">{selectedLead.name || selectedLead.email}</span>
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Manual fields (always shown so user can edit after selecting a lead) */}
             <Input
               placeholder="Contact name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
+              autoFocus={mode === "new"}
             />
             <Input
               placeholder="Company (optional)"
@@ -360,6 +525,7 @@ function DealDetail({
   const [, startTransition] = useTransition();
   const [summary, setSummary] = useState("");
   const [actType, setActType] = useState<"call" | "email" | "note">("call");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function handleLogActivity(e: React.FormEvent) {
     e.preventDefault();
@@ -451,6 +617,42 @@ function DealDetail({
                 </p>
               </div>
             )}
+
+            {/* Delete deal */}
+            <div className="pt-4 border-t border-(--color-border)/15">
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-2 text-sm text-(--color-danger) hover:underline"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete deal
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-(--color-danger)">Delete this deal?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      startTransition(async () => {
+                        await deleteDeal(deal.id);
+                        onClose();
+                      });
+                    }}
+                    className="rounded-lg bg-(--color-danger) px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                  >
+                    Yes, delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-xs text-(--color-fg-muted) hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -501,10 +703,12 @@ function DealDetail({
 // Main pipeline view
 // ─────────────────────────────────────────────
 export function PipelineView({
+  pipelines,
   stages,
   initialDeals,
   lossReasons,
 }: {
+  pipelines: Pipeline[];
   stages: PipelineStage[];
   initialDeals: Deal[];
   lossReasons: LossReason[];
@@ -518,6 +722,19 @@ export function PipelineView({
   const [, startTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const filterMenu = useDropdown();
+  const pipelineMenu = useDropdown();
+
+  // Pipeline state
+  const defaultPipeline = pipelines.find((p) => p.is_default) ?? pipelines[0];
+  const [activePipelineId, setActivePipelineId] = useState(defaultPipeline?.id ?? "");
+  const [newPipelineName, setNewPipelineName] = useState("");
+  const [showNewPipeline, setShowNewPipeline] = useState(false);
+
+  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
+  const pipelineStages = useMemo(
+    () => stages.filter((s) => s.pipeline_id === activePipelineId),
+    [stages, activePipelineId]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -525,19 +742,22 @@ export function PipelineView({
 
   const deals = useMemo(() => {
     let result = initialDeals;
+    // Filter to current pipeline's stages
+    const stageIds = new Set(pipelineStages.map((s) => s.id));
+    result = result.filter((d) => stageIds.has(d.stage_id));
     if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
     if (filterStageId) result = result.filter((d) => d.stage_id === filterStageId);
     return result;
-  }, [initialDeals, showClosed, filterStageId]);
+  }, [initialDeals, showClosed, filterStageId, pipelineStages]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
-    for (const s of stages) map[s.id] = [];
+    for (const s of pipelineStages) map[s.id] = [];
     for (const d of deals) {
       if (map[d.stage_id]) map[d.stage_id].push(d);
     }
     return map;
-  }, [stages, deals]);
+  }, [pipelineStages, deals]);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -553,7 +773,7 @@ export function PipelineView({
     let targetStageId: string | null = null;
 
     // Check if dropped on a stage directly
-    const isStage = stages.some((s) => s.id === over.id);
+    const isStage = pipelineStages.some((s) => s.id === over.id);
     if (isStage) {
       targetStageId = over.id as string;
     } else {
@@ -575,9 +795,98 @@ export function PipelineView({
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <header className="flex justify-between items-center px-8 md:px-12 h-24 shrink-0">
-        <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
-          Pipeline
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
+            Pipeline
+          </h1>
+
+          {/* Pipeline selector */}
+          {pipelines.length > 0 && (
+            <div className="relative" ref={pipelineMenu.ref}>
+              <button
+                type="button"
+                onClick={() => pipelineMenu.setOpen(!pipelineMenu.open)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
+              >
+                {activePipeline?.name ?? "Select Pipeline"}
+                <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
+              </button>
+              {pipelineMenu.open && (
+                <div className="absolute left-0 top-full mt-2 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Pipelines</span>
+                  </div>
+                  {pipelines.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
+                        p.id === activePipelineId
+                          ? "text-(--color-accent) bg-(--color-accent-muted)"
+                          : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                      )}
+                    >
+                      <span>{p.name}</span>
+                      {p.is_default && (
+                        <span className="text-[10px] text-(--color-fg-subtle) uppercase tracking-wider">Default</span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-(--color-border)/15 my-1" />
+                  {showNewPipeline ? (
+                    <div className="px-4 py-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Pipeline name"
+                        value={newPipelineName}
+                        onChange={(e) => setNewPipelineName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newPipelineName.trim()) {
+                            startTransition(async () => {
+                              await createPipeline(newPipelineName.trim());
+                              setNewPipelineName("");
+                              setShowNewPipeline(false);
+                              pipelineMenu.setOpen(false);
+                            });
+                          }
+                          if (e.key === "Escape") setShowNewPipeline(false);
+                        }}
+                        autoFocus
+                        className="flex-1 h-8 rounded-lg bg-(--color-surface-2) border-none px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newPipelineName.trim()) {
+                            startTransition(async () => {
+                              await createPipeline(newPipelineName.trim());
+                              setNewPipelineName("");
+                              setShowNewPipeline(false);
+                              pipelineMenu.setOpen(false);
+                            });
+                          }
+                        }}
+                        className="text-sm text-(--color-accent) font-medium hover:underline"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPipeline(true)}
+                      className="w-full text-left px-4 py-2 text-sm text-(--color-accent) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> New Pipeline
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-4">
           {/* View toggle */}
           <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
@@ -662,7 +971,7 @@ export function PipelineView({
                 >
                   All stages
                 </button>
-                {stages.map((s) => (
+                {pipelineStages.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -700,7 +1009,7 @@ export function PipelineView({
             onDragEnd={handleDragEnd}
           >
             <div className="flex gap-6 px-8 md:px-12 pb-8 h-full min-w-max">
-              {stages.map((stage) => (
+              {pipelineStages.map((stage) => (
                 <KanbanColumn
                   key={stage.id}
                   stage={stage}
@@ -753,7 +1062,7 @@ export function PipelineView({
             </thead>
             <tbody>
               {deals.map((deal) => {
-                const stage = stages.find((s) => s.id === deal.stage_id);
+                const stage = pipelineStages.find((s) => s.id === deal.stage_id);
                 return (
                   <tr
                     key={deal.id}
@@ -797,7 +1106,7 @@ export function PipelineView({
           setCreateOpen(v);
           if (!v) setCreateStageId(null);
         }}
-        stages={stages}
+        stages={pipelineStages}
         defaultStageId={createStageId}
       />
 
@@ -805,7 +1114,7 @@ export function PipelineView({
       {selectedDeal && (
         <DealDetail
           deal={selectedDeal}
-          stages={stages}
+          stages={pipelineStages}
           onClose={() => setSelectedDeal(null)}
         />
       )}

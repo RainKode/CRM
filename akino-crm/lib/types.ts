@@ -118,11 +118,23 @@ export interface BatchLead {
 export interface PipelineStage {
   id: string;
   name: string;
+  pipeline_id: string;
   position: number;
   is_won: boolean;
   is_lost: boolean;
   is_archived: boolean;
   created_at: string;
+}
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  description: string | null;
+  is_default: boolean;
+  is_archived: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LossReason {

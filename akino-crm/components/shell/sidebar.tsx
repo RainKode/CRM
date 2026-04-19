@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   Settings2,
   AlertCircle,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Enrichment",
     icon: Sparkles,
     matchPrefix: "/enrichment",
+  },
+  {
+    href: "/enriched",
+    label: "Enriched Clients",
+    icon: Star,
+    matchPrefix: "/enriched",
   },
   { href: "/team", label: "Team", icon: Users, disabled: true },
 ];
