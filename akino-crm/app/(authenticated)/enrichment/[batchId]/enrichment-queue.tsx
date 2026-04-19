@@ -204,7 +204,10 @@ export function EnrichmentQueue({
   return (
     <div className="flex h-full overflow-hidden bg-(--color-bg)">
       {/* ── Pane 1: Lead Queue List ── */}
-      <section className="w-[300px] min-w-[260px] shrink-0 flex flex-col bg-(--color-bg) border-r border-(--color-card-border) overflow-hidden">
+      <section
+        className="shrink-0 flex flex-col bg-(--color-bg) border-r-2 border-(--color-card-border) overflow-hidden"
+        style={{ width: 300, minWidth: 220, maxWidth: 440, resize: "horizontal", overflow: "hidden" }}
+      >
         <header className="p-6 pb-4 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <Link
@@ -277,59 +280,57 @@ export function EnrichmentQueue({
           <p className="text-sm text-(--color-fg-muted) mt-2">Existing Data</p>
         </header>
         <div className="flex-1 overflow-y-auto p-8 pt-4">
-          <div className="space-y-6">
-            {/* Top-level lead fields */}
-            {lead.name && (
-              <div>
-                <p className="text-xs font-medium text-(--color-fg-subtle) uppercase tracking-widest mb-1">Company Name</p>
-                <p className="text-lg text-(--color-fg)">{lead.company || lead.name}</p>
-              </div>
-            )}
-            {lead.email && (
-              <div>
-                <p className="text-xs font-medium text-(--color-fg-subtle) uppercase tracking-widest mb-1">Email</p>
-                <a href={`mailto:${lead.email}`} className="text-lg text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4">
-                  {lead.email}
-                </a>
-              </div>
-            )}
-            {/* Dynamic data fields */}
-            {Object.entries(leadData).map(([key, val]) => {
-              if (!val || String(val).trim() === "") return null;
-              const displayKey = key
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase());
-              const strVal = String(val);
-              const isUrl = strVal.startsWith("http://") || strVal.startsWith("https://") || strVal.includes(".com");
-              return (
-                <div key={key}>
-                  <p className="text-xs font-medium text-(--color-fg-subtle) uppercase tracking-widest mb-1">{displayKey}</p>
-                  {isUrl ? (
-                    <a
-                      href={strVal.startsWith("http") ? strVal : `https://${strVal}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-lg text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4"
-                    >
-                      {strVal}
-                    </a>
-                  ) : (
-                    <p className={cn(
-                      "text-lg",
-                      strVal.length > 100 ? "text-(--color-fg-muted) text-base leading-relaxed" : "text-(--color-fg)"
-                    )}>
-                      {strVal}
-                    </p>
-                  )}
+          <div className="rounded-2xl border-2 border-(--color-card-border) shadow-(--shadow-card-3d) bg-(--color-surface-1) p-6">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              {/* Top-level lead fields */}
+              {lead.name && (
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Company Name</p>
+                  <p className="text-sm text-(--color-fg) break-words">{lead.company || lead.name}</p>
                 </div>
-              );
-            })}
-            {lead.notes && (
-              <div>
-                <p className="text-xs font-medium text-(--color-fg-subtle) uppercase tracking-widest mb-1">Notes</p>
-                <p className="text-(--color-fg-muted) leading-relaxed">{lead.notes}</p>
-              </div>
-            )}
+              )}
+              {lead.email && (
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Email</p>
+                  <a href={`mailto:${lead.email}`} className="text-sm text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4 break-all">
+                    {lead.email}
+                  </a>
+                </div>
+              )}
+              {/* Dynamic data fields */}
+              {Object.entries(leadData).map(([key, val]) => {
+                if (!val || String(val).trim() === "") return null;
+                const displayKey = key
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase());
+                const strVal = String(val);
+                const isUrl = strVal.startsWith("http://") || strVal.startsWith("https://") || strVal.includes(".com");
+                const isLong = strVal.length > 80;
+                return (
+                  <div key={key} className={cn("min-w-0", isLong && "col-span-2")}>
+                    <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">{displayKey}</p>
+                    {isUrl ? (
+                      <a
+                        href={strVal.startsWith("http") ? strVal : `https://${strVal}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4 break-all"
+                      >
+                        {strVal}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-(--color-fg) break-words">{strVal}</p>
+                    )}
+                  </div>
+                );
+              })}
+              {lead.notes && (
+                <div className="col-span-2 min-w-0">
+                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Notes</p>
+                  <p className="text-sm text-(--color-fg-muted) leading-relaxed break-words">{lead.notes}</p>
+                </div>
+              )}
+            </div>
             {/* Empty state */}
             {!lead.name && !lead.email && Object.keys(leadData).length === 0 && !lead.notes && (
               <p className="text-sm text-(--color-fg-subtle) py-8 text-center">No existing data for this lead.</p>
@@ -339,7 +340,10 @@ export function EnrichmentQueue({
       </section>
 
       {/* ── Pane 3: Enrichment Form ── */}
-      <section className="w-[380px] min-w-[320px] shrink-0 flex flex-col bg-(--color-bg) border-l border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]">
+      <section
+        className="shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]"
+        style={{ width: 420, minWidth: 320, maxWidth: 600, resize: "horizontal", overflow: "auto" }}
+      >
         <header className="p-8 pb-4 shrink-0">
           <h2 className="text-xl font-semibold text-(--color-fg) tracking-tight">Fill in what you find</h2>
           {current.is_completed && (
@@ -417,6 +421,21 @@ export function EnrichmentQueue({
                   </div>
                 );
               })}
+
+              {/* Notes / Comments — resizable */}
+              <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+                <label className="block text-sm font-medium text-(--color-fg)">
+                  Notes / Comments
+                </label>
+                <textarea
+                  value={(formData["__notes"] as string) ?? ""}
+                  onChange={(e) => updateField("__notes", e.target.value)}
+                  placeholder="Add any notes or comments about this lead…"
+                  rows={3}
+                  className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
+                  style={{ resize: "vertical", minHeight: 80 }}
+                />
+              </div>
 
               {/* Quality Rating */}
               <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">

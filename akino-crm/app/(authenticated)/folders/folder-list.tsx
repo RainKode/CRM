@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   FolderOpen,
   Plus,
@@ -13,12 +12,6 @@ import {
   Users,
   Sparkles,
   Workflow,
-  GripVertical,
-  Lock,
-  Minus,
-  X,
-  ChevronDown,
-  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,19 +26,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn, formatCount, relativeTime } from "@/lib/utils";
-import type { FolderWithCounts, FieldDefinition, FieldType } from "@/lib/types";
+import type { FolderWithCounts } from "@/lib/types";
 import {
   createFolder,
   renameFolder,
   deleteFolder,
   archiveFolder,
 } from "./actions";
-import {
-  getFieldDefinitions,
-  createField,
-  deleteField,
-  updateField,
-} from "./[folderId]/actions";
 
 // ─────────────────────────────────────────────
 // Create folder dialog
@@ -251,284 +238,6 @@ function DeleteFolderDialog({
 }
 
 // ─────────────────────────────────────────────
-// Configure Enrichment Fields modal
-// ─────────────────────────────────────────────
-const FIELD_TYPE_OPTIONS: { value: FieldType; label: string }[] = [
-  { value: "text", label: "Text" },
-  { value: "number", label: "Number" },
-  { value: "email", label: "Email" },
-  { value: "phone", label: "Phone" },
-  { value: "url", label: "URL" },
-  { value: "date", label: "Date" },
-  { value: "dropdown", label: "Dropdown" },
-  { value: "checkbox", label: "Checkbox" },
-];
-
-const STANDARD_FIELDS = ["Email", "Name", "LinkedIn URL", "Decision Maker"];
-
-type DraftField = {
-  id?: string;       // existing field id — absent for new unsaved rows
-  label: string;
-  type: FieldType;
-};
-
-function EnrichmentFieldsModal({
-  folderId,
-  folderName,
-  open,
-  onOpenChange,
-}: {
-  folderId: string;
-  folderName: string;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isLoading, setIsLoading] = useState(true);
-  const [existingFields, setExistingFields] = useState<FieldDefinition[]>([]);
-  const [customFields, setCustomFields] = useState<DraftField[]>([]);
-  const [typeDropdown, setTypeDropdown] = useState<number | null>(null);
-
-  const loadFields = useCallback(async () => {
-    setIsLoading(true);
-    const fields = await getFieldDefinitions(folderId);
-    setExistingFields(fields);
-    // Populate custom (enrichment) fields
-    const enrichment = fields.filter((f) => f.is_enrichment);
-    setCustomFields(
-      enrichment.map((f) => ({ id: f.id, label: f.label, type: f.type }))
-    );
-    setIsLoading(false);
-  }, [folderId]);
-
-  useEffect(() => {
-    if (open) loadFields();
-  }, [open, loadFields]);
-
-  function addRow() {
-    setCustomFields((prev) => [...prev, { label: "", type: "text" }]);
-  }
-
-  function removeRow(idx: number) {
-    setCustomFields((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  function updateRow(idx: number, patch: Partial<DraftField>) {
-    setCustomFields((prev) =>
-      prev.map((f, i) => (i === idx ? { ...f, ...patch } : f))
-    );
-  }
-
-  function handleApply() {
-    startTransition(async () => {
-      // Determine which existing enrichment fields were removed
-      const existingEnrichment = existingFields.filter((f) => f.is_enrichment);
-      const keptIds = new Set(customFields.map((f) => f.id).filter(Boolean));
-
-      for (const ef of existingEnrichment) {
-        if (!keptIds.has(ef.id)) {
-          await deleteField(ef.id, folderId);
-        }
-      }
-
-      // Update existing fields that changed
-      for (const cf of customFields) {
-        if (cf.id) {
-          const orig = existingEnrichment.find((f) => f.id === cf.id);
-          if (orig && (orig.label !== cf.label || orig.type !== cf.type)) {
-            await updateField(cf.id, folderId, { label: cf.label });
-          }
-        }
-      }
-
-      // Create new fields (those without id)
-      for (const cf of customFields) {
-        if (!cf.id && cf.label.trim()) {
-          const key = cf.label
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_|_$/g, "");
-          await createField(folderId, {
-            key,
-            label: cf.label.trim(),
-            type: cf.type,
-            is_enrichment: true,
-          });
-        }
-      }
-
-      router.refresh();
-      onOpenChange(false);
-    });
-  }
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={() => onOpenChange(false)}
-      />
-      <div className="relative z-10 w-full max-w-[640px] bg-(--color-surface-1) rounded-xl shadow-(--shadow-popover) flex flex-col border border-(--color-card-border)">
-        {/* Header */}
-        <div className="px-8 pt-8 pb-4 flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-semibold text-(--color-fg) tracking-tight">
-              Configure Enrichment Fields
-            </h2>
-            <p className="text-[15px] text-(--color-fg-muted) mt-2">
-              Define the data points your team needs to research for this folder.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="px-8 py-4 flex flex-col gap-8 max-h-[60vh] overflow-y-auto">
-          {isLoading ? (
-            <p className="text-sm text-(--color-fg-muted) py-8 text-center">
-              Loading fields…
-            </p>
-          ) : (
-            <>
-              {/* Standard Fields */}
-              <div>
-                <h3 className="text-[13px] font-medium text-(--color-fg-subtle) uppercase tracking-wider mb-4">
-                  Standard Fields
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {STANDARD_FIELDS.map((name) => (
-                    <div
-                      key={name}
-                      className="flex items-center justify-between p-3 rounded-lg bg-(--color-surface-2)"
-                    >
-                      <span className="text-[15px] text-(--color-fg) font-medium">
-                        {name}
-                      </span>
-                      <Lock className="h-4 w-4 text-(--color-fg-subtle)" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Fields */}
-              <div>
-                <h3 className="text-[13px] font-medium text-(--color-fg-subtle) uppercase tracking-wider mb-4">
-                  Custom Fields
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {customFields.map((field, idx) => (
-                    <div key={field.id ?? `new-${idx}`} className="flex items-center gap-4 group">
-                      <GripVertical className="h-5 w-5 text-(--color-fg-subtle) cursor-grab opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />
-                      <div className="flex-1 bg-(--color-surface-3) rounded px-3 py-2 border-b-2 border-transparent focus-within:border-(--color-accent) transition-colors">
-                        <input
-                          type="text"
-                          value={field.label}
-                          onChange={(e) =>
-                            updateRow(idx, { label: e.target.value })
-                          }
-                          placeholder="Field Name"
-                          className="bg-transparent border-none outline-none text-[15px] text-(--color-fg) w-full p-0 placeholder:text-(--color-fg-subtle)"
-                        />
-                      </div>
-                      {/* Type selector */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTypeDropdown(typeDropdown === idx ? null : idx)
-                          }
-                          className="w-32 bg-(--color-surface-3) rounded px-3 py-2 flex items-center justify-between cursor-pointer text-[15px] text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
-                        >
-                          <span>
-                            {FIELD_TYPE_OPTIONS.find((t) => t.value === field.type)?.label ?? "Type"}
-                          </span>
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
-                        {typeDropdown === idx && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-40"
-                              onClick={() => setTypeDropdown(null)}
-                            />
-                            <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) py-1">
-                              {FIELD_TYPE_OPTIONS.map((t) => (
-                                <button
-                                  key={t.value}
-                                  type="button"
-                                  onClick={() => {
-                                    updateRow(idx, { type: t.value });
-                                    setTypeDropdown(null);
-                                  }}
-                                  className={cn(
-                                    "w-full text-left px-3 py-1.5 text-sm hover:bg-(--color-surface-3) transition-colors",
-                                    field.type === t.value
-                                      ? "text-(--color-accent) font-medium"
-                                      : "text-(--color-fg)"
-                                  )}
-                                >
-                                  {t.label}
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeRow(idx)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-(--color-surface-3) text-(--color-fg-subtle) hover:text-(--color-danger) transition-colors shrink-0"
-                      >
-                        <Minus className="h-5 w-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="mt-4 flex items-center gap-2 text-(--color-accent) text-[15px] font-medium hover:text-(--color-accent-hover) transition-colors py-2 px-3 rounded-full hover:bg-(--color-accent-muted)"
-                >
-                  <Plus className="h-5 w-5" />
-                  Add Custom Field
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-8 py-6 bg-(--color-surface-2) rounded-b-xl flex justify-end gap-4 mt-4">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-(--color-fg-muted) border border-(--color-card-border) hover:bg-(--color-surface-3) transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleApply}
-            disabled={isPending}
-            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-(--color-accent-fg) bg-(--color-accent) hover:bg-(--color-accent-hover) transition-colors disabled:opacity-50"
-          >
-            {isPending ? "Applying…" : "Apply Configuration"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
 // Context menu for each folder card
 // ─────────────────────────────────────────────
 function FolderMenu({
@@ -609,9 +318,6 @@ export function FolderList({
     null
   );
   const [deleteTarget, setDeleteTarget] = useState<FolderWithCounts | null>(
-    null
-  );
-  const [enrichTarget, setEnrichTarget] = useState<FolderWithCounts | null>(
     null
   );
   const [, startTransition] = useTransition();
@@ -735,18 +441,6 @@ export function FolderList({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEnrichTarget(folder);
-                    }}
-                    className="flex items-center gap-1.5 text-(--color-accent-text) font-semibold hover:text-(--color-fg) transition-colors text-sm"
-                    title="Configure Enrichment Fields"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    <span className="hidden lg:inline">Fields</span>
-                  </button>
                   <Link
                     href={`/folders/${folder.id}`}
                     className="text-(--color-accent-text) font-semibold hover:text-(--color-fg) transition-colors text-sm uppercase tracking-wide"
@@ -804,14 +498,6 @@ export function FolderList({
           folder={deleteTarget}
           open
           onOpenChange={(v) => !v && setDeleteTarget(null)}
-        />
-      )}
-      {enrichTarget && (
-        <EnrichmentFieldsModal
-          folderId={enrichTarget.id}
-          folderName={enrichTarget.name}
-          open
-          onOpenChange={(v) => !v && setEnrichTarget(null)}
         />
       )}
     </>
