@@ -96,6 +96,53 @@ export async function createBatchFromFolder(folderId: string, name: string) {
   });
 }
 
+export async function createMultipleBatches(input: {
+  folder_id: string;
+  name_prefix: string;
+  lead_ids: string[];
+  batch_size: number;
+}) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { lead_ids, batch_size, name_prefix, folder_id } = input;
+  const totalBatches = Math.ceil(lead_ids.length / batch_size);
+  const created: Batch[] = [];
+
+  for (let i = 0; i < totalBatches; i++) {
+    const chunk = lead_ids.slice(i * batch_size, (i + 1) * batch_size);
+    const batchName = `${name_prefix} - Batch #${i + 1}`;
+
+    const { data: batch, error } = await sb
+      .from("batches")
+      .insert({
+        folder_id,
+        name: batchName,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Insert batch_leads in chunks of 500
+    for (let j = 0; j < chunk.length; j += 500) {
+      const slice = chunk.slice(j, j + 500);
+      const { error: blErr } = await sb.from("batch_leads").insert(
+        slice.map((lid) => ({ batch_id: batch.id, lead_id: lid }))
+      );
+      if (blErr) throw blErr;
+    }
+
+    created.push(batch as Batch);
+  }
+
+  revalidatePath("/enrichment");
+  return created;
+}
+
 export async function getBatchLeads(
   batchId: string
 ): Promise<(BatchLead & { lead: Lead })[]> {
@@ -206,4 +253,69 @@ export async function getEnrichmentFields(
     .order("position");
   if (error) throw error;
   return data as FieldDefinition[];
+}
+
+export async function updateLeadRating(
+  leadId: string,
+  rating: number | null
+) {
+  const sb = await createClient();
+  const { error } = await sb
+    .from("leads")
+    .update({ quality_rating: rating })
+    .eq("id", leadId);
+  if (error) throw error;
+}
+
+export type FolderBatchGroup = {
+  folder_id: string;
+  folder_name: string;
+  batches: (Batch & { total: number; completed: number })[];
+};
+
+export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
+  const sb = await createClient();
+
+  const { data: batches, error } = await sb
+    .from("batches")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  // Get unique folder IDs
+  const folderIds = [...new Set((batches as Batch[]).map((b) => b.folder_id))];
+
+  // Fetch folder names
+  const { data: folders } = await sb
+    .from("folders")
+    .select("id, name")
+    .in("id", folderIds);
+  const folderMap = new Map((folders ?? []).map((f) => [f.id, f.name]));
+
+  // Attach counts
+  const batchesWithCounts: (Batch & { total: number; completed: number })[] = [];
+  for (const b of batches as Batch[]) {
+    const { count: total } = await sb
+      .from("batch_leads")
+      .select("batch_id", { count: "exact", head: true })
+      .eq("batch_id", b.id);
+    const { count: completed } = await sb
+      .from("batch_leads")
+      .select("batch_id", { count: "exact", head: true })
+      .eq("batch_id", b.id)
+      .eq("is_completed", true);
+    batchesWithCounts.push({ ...b, total: total ?? 0, completed: completed ?? 0 });
+  }
+
+  // Group by folder
+  const groups: FolderBatchGroup[] = [];
+  for (const folderId of folderIds) {
+    groups.push({
+      folder_id: folderId,
+      folder_name: folderMap.get(folderId) ?? "Unknown Folder",
+      batches: batchesWithCounts.filter((b) => b.folder_id === folderId),
+    });
+  }
+
+  return groups;
 }

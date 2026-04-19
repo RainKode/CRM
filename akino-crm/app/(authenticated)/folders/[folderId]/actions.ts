@@ -202,7 +202,7 @@ export async function getLeads(
 export async function updateLead(
   leadId: string,
   folderId: string,
-  updates: Partial<Pick<Lead, "name" | "email" | "company" | "data" | "tags" | "notes" | "status">>
+  updates: Partial<Pick<Lead, "name" | "email" | "company" | "data" | "tags" | "notes" | "status" | "quality_rating">>
 ) {
   const sb = await createClient();
   const { error } = await sb.from("leads").update(updates).eq("id", leadId);
@@ -226,6 +226,78 @@ export async function deleteAllLeadsInFolder(folderId: string) {
   const { error } = await sb.from("leads").delete().eq("folder_id", folderId);
   if (error) throw error;
   revalidatePath(`/folders/${folderId}`);
+}
+
+// ─── Filtered lead queries for batch creation ─────────────────────────
+
+export async function getFilteredLeadIds(
+  folderId: string,
+  options: {
+    sortField?: string;
+    sortDir?: "asc" | "desc";
+    filterField?: string;
+    filterValue?: string;
+  }
+): Promise<string[]> {
+  const sb = await createClient();
+  let q = sb.from("leads").select("id, data").eq("folder_id", folderId);
+
+  // Server-side sort by top-level column or jsonb field
+  const sortField = options.sortField;
+  const sortDir = options.sortDir ?? "asc";
+  if (sortField === "name" || sortField === "email" || sortField === "company" || sortField === "created_at") {
+    q = q.order(sortField, { ascending: sortDir === "asc" });
+  } else if (sortField) {
+    // For jsonb data fields, we sort client-side below
+    q = q.order("created_at", { ascending: false });
+  } else {
+    q = q.order("created_at", { ascending: false });
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  let leads = data as { id: string; data: Record<string, unknown> }[];
+
+  // Client-side filter by jsonb field value
+  if (options.filterField && options.filterValue !== undefined && options.filterValue !== "") {
+    const fk = options.filterField;
+    const fv = options.filterValue.toLowerCase();
+
+    leads = leads.filter((l) => {
+      // Check top-level columns first
+      if (fk === "name" || fk === "email" || fk === "company") {
+        const val = (l as unknown as Record<string, unknown>)[fk];
+        return val != null && String(val).toLowerCase().includes(fv);
+      }
+      // Check jsonb data
+      const val = l.data?.[fk];
+      if (val == null) return fv === "" || fv === "empty";
+      return String(val).toLowerCase().includes(fv);
+    });
+  }
+
+  // Client-side sort by jsonb data field
+  if (sortField && !["name", "email", "company", "created_at"].includes(sortField)) {
+    leads.sort((a, b) => {
+      const av = String(a.data?.[sortField] ?? "");
+      const bv = String(b.data?.[sortField] ?? "");
+      const cmp = av.localeCompare(bv, undefined, { numeric: true });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  return leads.map((l) => l.id);
+}
+
+export async function getFilteredLeadCount(
+  folderId: string,
+  options: {
+    filterField?: string;
+    filterValue?: string;
+  }
+): Promise<number> {
+  const ids = await getFilteredLeadIds(folderId, options);
+  return ids.length;
 }
 
 export async function importLeads(

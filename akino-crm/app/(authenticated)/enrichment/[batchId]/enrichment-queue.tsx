@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   SkipForward,
   Flag,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
   completeBatchLead,
   skipBatchLead,
   flagBatchLead,
+  updateLeadRating,
 } from "../actions";
 
 type BLWithLead = BatchLead & { lead: Lead };
@@ -39,6 +41,10 @@ export function EnrichmentQueue({
     return idx >= 0 ? idx : 0;
   });
   const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [rating, setRating] = useState<number | null>(() => {
+    const idx = batchLeads.findIndex((bl) => !bl.is_completed && !bl.is_skipped);
+    return batchLeads[idx >= 0 ? idx : 0]?.lead?.quality_rating ?? null;
+  });
   const [isPending, startTransition] = useTransition();
 
   const current = batchLeads[currentIdx];
@@ -51,12 +57,20 @@ export function EnrichmentQueue({
     const nextIdx = batchLeads.findIndex(
       (bl, i) => i > currentIdx && !bl.is_completed && !bl.is_skipped
     );
-    if (nextIdx >= 0) setCurrentIdx(nextIdx);
-    else if (currentIdx < total - 1) setCurrentIdx(currentIdx + 1);
+    if (nextIdx >= 0) {
+      setCurrentIdx(nextIdx);
+      setRating(batchLeads[nextIdx]?.lead?.quality_rating ?? null);
+    } else if (currentIdx < total - 1) {
+      setCurrentIdx(currentIdx + 1);
+      setRating(batchLeads[currentIdx + 1]?.lead?.quality_rating ?? null);
+    }
   }
 
   function goPrev() {
-    if (currentIdx > 0) setCurrentIdx(currentIdx - 1);
+    if (currentIdx > 0) {
+      setCurrentIdx(currentIdx - 1);
+      setRating(batchLeads[currentIdx - 1]?.lead?.quality_rating ?? null);
+    }
   }
 
   function handleComplete() {
@@ -206,6 +220,43 @@ export function EnrichmentQueue({
                 </div>
               </div>
             )}
+
+            {/* Star Rating */}
+            <div className="mb-8 space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle)">
+                Lead Quality Rating
+              </h3>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => {
+                      const newRating = rating === star ? null : star;
+                      setRating(newRating);
+                      startTransition(async () => {
+                        await updateLeadRating(current.lead_id, newRating);
+                      });
+                    }}
+                    className="group p-0.5 transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={cn(
+                        "h-6 w-6 transition-colors",
+                        star <= (rating ?? 0)
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-(--color-fg-subtle) group-hover:text-amber-300"
+                      )}
+                    />
+                  </button>
+                ))}
+                {rating && (
+                  <span className="ml-2 text-sm font-medium text-(--color-fg-muted)">
+                    {rating}/5
+                  </span>
+                )}
+              </div>
+            </div>
 
             {/* Enrichment form */}
             {enrichmentFields.length === 0 ? (

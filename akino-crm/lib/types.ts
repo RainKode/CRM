@@ -85,6 +85,7 @@ export interface Lead {
   tags: string[];
   notes: string | null;
   enriched_at: string | null;
+  quality_rating: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

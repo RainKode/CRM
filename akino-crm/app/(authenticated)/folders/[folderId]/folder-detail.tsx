@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ArrowLeft, Table2, Settings2, Upload, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Folder, FieldDefinition, Lead } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { LeadTable } from "./lead-table";
 import { FieldSchemaBuilder } from "./field-schema-builder";
 import { CsvUpload } from "./csv-upload";
-import { createBatchFromFolder } from "@/app/(authenticated)/enrichment/actions";
+import { BatchCreationWizard } from "./batch-creation-wizard";
 
 type Tab = "leads" | "schema" | "upload";
 
@@ -32,20 +31,7 @@ export function FolderDetail({
   totalCount: number;
 }) {
   const [tab, setTab] = useState<Tab>("leads");
-  const [showEnrichDialog, setShowEnrichDialog] = useState(false);
-  const [batchName, setBatchName] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
-  function handleCreateBatch() {
-    if (!batchName.trim()) return;
-    startTransition(async () => {
-      await createBatchFromFolder(folder.id, batchName.trim());
-      setShowEnrichDialog(false);
-      setBatchName("");
-      router.push("/enrichment");
-    });
-  }
+  const [showEnrichWizard, setShowEnrichWizard] = useState(false);
 
   return (
     <div className="flex h-full flex-col bg-(--color-bg)">
@@ -65,7 +51,7 @@ export function FolderDetail({
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => setShowEnrichDialog(true)}
+          onClick={() => setShowEnrichWizard(true)}
           disabled={totalCount === 0}
         >
           <Sparkles className="h-4 w-4" />
@@ -118,45 +104,14 @@ export function FolderDetail({
         )}
       </div>
 
-      {/* Enrichment Batch Dialog */}
-      {showEnrichDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-(--color-surface-1) rounded-2xl p-8 w-full max-w-md shadow-xl border border-(--color-card-border)">
-            <h3 className="text-lg font-bold text-(--color-fg) mb-1">
-              Create Enrichment Batch
-            </h3>
-            <p className="text-sm text-(--color-fg-muted) mb-6">
-              All {totalCount} leads in this folder will be added to the batch.
-            </p>
-            <input
-              value={batchName}
-              onChange={(e) => setBatchName(e.target.value)}
-              placeholder="Batch name"
-              className="w-full h-11 rounded-xl border border-(--color-card-border) bg-(--color-surface-2) px-4 text-sm text-(--color-fg) mb-4 focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") handleCreateBatch(); }}
-            />
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setShowEnrichDialog(false);
-                  setBatchName("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={!batchName.trim() || isPending}
-                onClick={handleCreateBatch}
-              >
-                {isPending ? "Creating…" : "Create Batch"}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Batch Creation Wizard */}
+      {showEnrichWizard && (
+        <BatchCreationWizard
+          folder={folder}
+          fields={fields}
+          totalCount={totalCount}
+          onClose={() => setShowEnrichWizard(false)}
+        />
       )}
     </div>
   );

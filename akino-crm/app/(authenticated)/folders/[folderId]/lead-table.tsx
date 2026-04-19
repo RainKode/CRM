@@ -22,9 +22,11 @@ import {
   EyeOff,
   Columns3,
   X,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import type { FieldDefinition, Lead } from "@/lib/types";
 import { updateLead, deleteLeads, deleteAllLeadsInFolder, getLeads, getAllLeadIds } from "./actions";
 
@@ -153,6 +155,23 @@ export function LeadTable({
         ),
         size: 50,
       }),
+      COL.display({
+        id: "rating",
+        header: "Rating",
+        cell: ({ row }) => {
+          const r = row.original.quality_rating;
+          if (!r) return <span className="text-(--color-fg-subtle)">—</span>;
+          return (
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: r }, (_, i) => (
+                <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              ))}
+              <span className="ml-1 text-xs text-(--color-fg-muted)">{r}</span>
+            </div>
+          );
+        },
+        size: 100,
+      }),
       ...visibleFields.map((field) =>
         COL.accessor(
           (row) => (row.data as Record<string, unknown>)[field.key],
@@ -162,6 +181,18 @@ export function LeadTable({
             size: 150,
             cell: (info) => {
               const val = info.getValue();
+              const lead = info.row.original;
+              // Make name column clickable
+              if (field.key === "name") {
+                return (
+                  <Link
+                    href={`/folders/${folderId}/leads/${lead.id}`}
+                    className="text-(--color-accent) hover:underline font-medium"
+                  >
+                    {val != null && val !== "" ? String(val) : lead.name || "—"}
+                  </Link>
+                );
+              }
               if (val === undefined || val === null) return "\u2014";
               if (field.type === "checkbox") return val ? "\u2713" : "\u2014";
               if (Array.isArray(val)) return val.join(", ");
