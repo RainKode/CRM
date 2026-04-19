@@ -71,17 +71,35 @@ export async function bulkCreateFields(
     description?: string;
   }[]
 ) {
+  if (fields.length === 0) return [];
+
   const sb = await createClient();
 
-  // Get current count for positioning
-  const { count } = await sb
+  // Deduplicate input keys (keep first occurrence)
+  const seen = new Set<string>();
+  const uniqueFields = fields.filter((f) => {
+    if (seen.has(f.key)) return false;
+    seen.add(f.key);
+    return true;
+  });
+
+  // Fetch existing keys to avoid conflict entirely
+  const { data: existing } = await sb
     .from("field_definitions")
-    .select("id", { count: "exact", head: true })
+    .select("key")
     .eq("folder_id", folderId);
 
-  const startPos = count ?? 0;
+  const existingKeys = new Set((existing ?? []).map((e) => e.key));
+  const newFields = uniqueFields.filter((f) => !existingKeys.has(f.key));
 
-  const rows = fields.map((field, i) => ({
+  if (newFields.length === 0) {
+    revalidatePath(`/folders/${folderId}`);
+    return [];
+  }
+
+  const startPos = (existing ?? []).length;
+
+  const rows = newFields.map((field, i) => ({
     folder_id: folderId,
     key: field.key,
     label: field.label,
@@ -95,7 +113,7 @@ export async function bulkCreateFields(
 
   const { data, error } = await sb
     .from("field_definitions")
-    .upsert(rows, { onConflict: "folder_id,key", ignoreDuplicates: true })
+    .insert(rows)
     .select();
 
   if (error) throw error;

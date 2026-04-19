@@ -18,6 +18,7 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
   matchPrefix?: string;
+  disabled?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -40,11 +41,22 @@ const NAV_ITEMS: NavItem[] = [
     icon: Sparkles,
     matchPrefix: "/enrichment",
   },
-  { href: "/team", label: "Team", icon: Users },
+  { href: "/team", label: "Team", icon: Users, disabled: true },
 ];
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
+  if (item.disabled) {
+    return (
+      <span
+        className="flex items-center gap-4 px-4 py-3 rounded-full text-[15px] text-(--color-fg-subtle) opacity-40 cursor-not-allowed"
+      >
+        <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+        <span>{item.label}</span>
+        <span className="ml-auto text-[10px] uppercase tracking-wider font-semibold">Soon</span>
+      </span>
+    );
+  }
   return (
     <Link
       href={item.href}
