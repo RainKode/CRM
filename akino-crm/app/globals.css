@@ -105,9 +105,9 @@
   --color-fg-subtle: #6b7280;
   --color-fg-disabled: #374151;
 
-  /* Borders — sharp coral for definition */
-  --color-border: rgba(239, 82, 93, 0.18);
-  --color-border-strong: rgba(239, 82, 93, 0.35);
+  /* Borders — thick black */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
 
   /* Primary — Teal */
   --color-accent: #00c2cc;
@@ -144,27 +144,27 @@
   --color-chart-5: #38bdf8;
 
   /* Grid / Data tables */
-  --color-grid-line: rgba(239, 82, 93, 0.08);
-  --color-grid-line-strong: rgba(239, 82, 93, 0.16);
+  --color-grid-line: rgba(255, 255, 255, 0.06);
+  --color-grid-line-strong: rgba(255, 255, 255, 0.12);
   --color-grid-header: #111827;
   --color-grid-row-hover: rgba(0, 194, 204, 0.05);
   --color-grid-row-selected: rgba(0, 194, 204, 0.12);
   --color-grid-cell-focus: #00c2cc;
 
-  /* Shadows — clean dark, no glow */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
-  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.45);
+  /* Shadows — 3D uplift feel */
+  --shadow-card: 0 2px 4px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-card-hover: 0 4px 8px rgba(0,0,0,0.25), 0 16px 40px rgba(0,0,0,0.45);
   --shadow-popover: 0 8px 40px rgba(0, 0, 0, 0.5);
-  --shadow-focus: 0 0 0 2px #ef525d;
-  --shadow-glow: 0 0 0 2px #ef525d;
-  --color-card-border: rgba(239, 82, 93, 0.65);
+  --shadow-focus: 0 0 0 2px var(--color-accent);
+  --shadow-glow: 0 0 16px rgba(0, 194, 204, 0.25);
+  --color-card-border: rgba(255, 255, 255, 0.10);
   --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.4);
 
-  --shadow-btn: 0 2px 6px rgba(0,0,0,0.3);
-  --shadow-btn-hover: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-btn-active: inset 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-card-3d: 0 4px 24px rgba(0, 0, 0, 0.35);
-  --shadow-card-3d-hover: 0 8px 36px rgba(0, 0, 0, 0.45);
+  --shadow-btn: 0 2px 4px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-btn-hover: 0 4px 8px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.3);
+  --shadow-btn-active: inset 0 2px 4px rgba(0,0,0,0.4);
+  --shadow-card-3d: 0 2px 4px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-card-3d-hover: 0 4px 8px rgba(0,0,0,0.25), 0 16px 40px rgba(0,0,0,0.45);
 }
 
 /* ═══════════════════════════════════════
@@ -186,26 +186,26 @@
   --color-fg-subtle: #64748b;
   --color-fg-disabled: #94a3b8;
 
-  /* Borders — sharp coral for definition */
-  --color-border: rgba(239, 82, 93, 0.18);
-  --color-border-strong: rgba(239, 82, 93, 0.35);
+  /* Borders — thick black */
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.22);
 
-  /* Primary — Teal */
-  --color-accent: #00969e;
-  --color-accent-hover: #007e85;
-  --color-accent-pressed: #00666b;
-  --color-accent-muted: rgba(0, 150, 158, 0.08);
-  --color-accent-text: #00767d;
+  /* Primary — Red */
+  --color-accent: #ef525d;
+  --color-accent-hover: #d64550;
+  --color-accent-pressed: #b83a43;
+  --color-accent-muted: rgba(239, 82, 93, 0.08);
+  --color-accent-text: #d64550;
 
-  /* Secondary — Coral-red */
-  --color-secondary: #ef525d;
-  --color-secondary-hover: #d64550;
-  --color-secondary-active: #b83a43;
+  /* Secondary — Teal */
+  --color-secondary: #00969e;
+  --color-secondary-hover: #007e85;
+  --color-secondary-active: #00666b;
 
-  /* Tertiary — Subtle teal surface */
-  --color-tertiary: #e6f4f5;
-  --color-tertiary-hover: #cde9eb;
-  --color-tertiary-fg: #00969e;
+  /* Tertiary — Subtle red surface */
+  --color-tertiary: #fef2f2;
+  --color-tertiary-hover: #fecaca;
+  --color-tertiary-fg: #ef525d;
 
   /* Highlight */
   --color-highlight: #16a34a;
@@ -218,34 +218,34 @@
   --color-info: #0284c7;
 
   /* Chart palette */
-  --color-chart-1: #00969e;
-  --color-chart-2: #ef525d;
+  --color-chart-1: #ef525d;
+  --color-chart-2: #00969e;
   --color-chart-3: #f59e0b;
   --color-chart-4: #16a34a;
   --color-chart-5: #0284c7;
 
   /* Grid / Data tables */
-  --color-grid-line: rgba(239, 82, 93, 0.06);
-  --color-grid-line-strong: rgba(239, 82, 93, 0.12);
+  --color-grid-line: rgba(0, 0, 0, 0.06);
+  --color-grid-line-strong: rgba(0, 0, 0, 0.12);
   --color-grid-header: #f1f5f9;
-  --color-grid-row-hover: rgba(0, 150, 158, 0.04);
-  --color-grid-row-selected: rgba(0, 150, 158, 0.08);
-  --color-grid-cell-focus: #00969e;
+  --color-grid-row-hover: rgba(239, 82, 93, 0.04);
+  --color-grid-row-selected: rgba(239, 82, 93, 0.08);
+  --color-grid-cell-focus: #ef525d;
 
-  /* Shadows — clean, no glow */
-  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.10);
+  /* Shadows — 3D uplift feel */
+  --shadow-card: 0 2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 4px 8px rgba(0,0,0,0.08), 0 16px 40px rgba(0,0,0,0.14);
   --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.14);
-  --shadow-focus: 0 0 0 2px #ef525d;
-  --shadow-glow: 0 0 0 2px #ef525d;
-  --color-card-border: rgba(239, 82, 93, 0.45);
+  --shadow-focus: 0 0 0 2px var(--color-accent);
+  --shadow-glow: 0 0 16px rgba(239, 82, 93, 0.2);
+  --color-card-border: rgba(0, 0, 0, 0.12);
   --shadow-sidebar: 4px 0 16px rgba(0, 0, 0, 0.06);
 
-  --shadow-btn: 0 2px 6px rgba(0,0,0,0.08);
-  --shadow-btn-hover: 0 4px 12px rgba(0,0,0,0.12);
-  --shadow-btn-active: inset 0 1px 2px rgba(0,0,0,0.10);
-  --shadow-card-3d: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-card-3d-hover: 0 8px 28px rgba(0, 0, 0, 0.10);
+  --shadow-btn: 0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-btn-hover: 0 4px 8px rgba(0,0,0,0.08), 0 8px 20px rgba(0,0,0,0.1);
+  --shadow-btn-active: inset 0 2px 4px rgba(0,0,0,0.12);
+  --shadow-card-3d: 0 2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-card-3d-hover: 0 4px 8px rgba(0,0,0,0.08), 0 16px 40px rgba(0,0,0,0.14);
 }
 
 :root {
