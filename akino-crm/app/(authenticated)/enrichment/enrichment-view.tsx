@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   FolderOpen,
@@ -10,11 +11,14 @@ import {
   Circle,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, relativeTime } from "@/lib/utils";
 import type { BatchStatus } from "@/lib/types";
 import type { FolderBatchGroup } from "./actions";
+import { deleteAllBatches } from "./actions";
+import { Button } from "@/components/ui/button";
 
 const STATUS_META: Record<
   BatchStatus,
@@ -28,6 +32,8 @@ const STATUS_META: Record<
 export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
   const [filter, setFilter] = useState<"all" | BatchStatus>("all");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   function toggleCollapse(folderId: string) {
     setCollapsed((prev) => {
@@ -65,6 +71,23 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
               {groups.length} folder{groups.length !== 1 ? "s" : ""}
             </p>
           </div>
+          {totalBatches > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isPending}
+              onClick={() => {
+                if (!window.confirm("Delete ALL enrichment batches? This cannot be undone.")) return;
+                startTransition(async () => {
+                  await deleteAllBatches();
+                  router.refresh();
+                });
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isPending ? "Deleting…" : "Delete All"}
+            </Button>
+          )}
         </div>
 
         {/* Filters */}

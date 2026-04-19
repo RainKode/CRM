@@ -240,23 +240,35 @@ export async function getFilteredLeadIds(
   }
 ): Promise<string[]> {
   const sb = await createClient();
-  let q = sb.from("leads").select("id, data").eq("folder_id", folderId);
 
   // Server-side sort by top-level column or jsonb field
   const sortField = options.sortField;
   const sortDir = options.sortDir ?? "asc";
-  if (sortField === "name" || sortField === "email" || sortField === "company" || sortField === "created_at") {
-    q = q.order(sortField, { ascending: sortDir === "asc" });
-  } else if (sortField) {
-    // For jsonb data fields, we sort client-side below
-    q = q.order("created_at", { ascending: false });
-  } else {
-    q = q.order("created_at", { ascending: false });
+
+  // Build a query page helper (Supabase defaults to 1000 rows max)
+  function buildQuery() {
+    let q = sb.from("leads").select("id, data").eq("folder_id", folderId);
+    if (sortField === "name" || sortField === "email" || sortField === "company" || sortField === "created_at") {
+      q = q.order(sortField, { ascending: sortDir === "asc" });
+    } else {
+      q = q.order("created_at", { ascending: false });
+    }
+    return q;
   }
 
-  const { data, error } = await q;
-  if (error) throw error;
-  let leads = data as { id: string; data: Record<string, unknown> }[];
+  // Paginate to fetch ALL leads (Supabase caps at 1000 per request)
+  const PAGE = 1000;
+  let allData: { id: string; data: Record<string, unknown> }[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + PAGE - 1);
+    if (error) throw error;
+    allData = allData.concat(data as { id: string; data: Record<string, unknown> }[]);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  let leads = allData;
 
   // Client-side filter by jsonb field value
   if (options.filterField && options.filterValue !== undefined && options.filterValue !== "") {

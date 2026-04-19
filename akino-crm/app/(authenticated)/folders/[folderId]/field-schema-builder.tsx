@@ -452,6 +452,12 @@ export function FieldSchemaBuilder({
     );
   }
 
+  function toggleEnrichment(field: FieldDefinition) {
+    startTransition(() =>
+      updateField(field.id, folderId, { is_enrichment: !field.is_enrichment })
+    );
+  }
+
   function handleDelete(field: FieldDefinition) {
     if (
       !window.confirm(
@@ -542,9 +548,19 @@ export function FieldSchemaBuilder({
                 )}
               </button>
               <div className="mx-auto">
-                {field.is_enrichment && (
-                  <Sparkles className="h-3.5 w-3.5 text-(--color-accent)" />
-                )}
+                <button
+                  type="button"
+                  onClick={() => toggleEnrichment(field)}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
+                    field.is_enrichment
+                      ? "bg-(--color-accent)/10 text-(--color-accent) hover:bg-(--color-accent)/20"
+                      : "text-(--color-fg-disabled) hover:bg-(--color-surface-3) hover:text-(--color-fg-subtle)"
+                  )}
+                  title={field.is_enrichment ? "Remove from enrichment" : "Mark as enrichment field"}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                </button>
               </div>
               <button
                 type="button"

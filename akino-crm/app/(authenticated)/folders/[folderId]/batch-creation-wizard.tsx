@@ -57,6 +57,7 @@ export function BatchCreationWizard({
   // Step 3: Review
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const effectiveCount = filteredCount ?? totalCount;
   const totalBatches = batchSize > 0 ? Math.ceil(effectiveCount / batchSize) : 0;
@@ -114,6 +115,7 @@ export function BatchCreationWizard({
   function handleCreate() {
     if (filteredIds.length === 0 || batchSize <= 0) return;
     setIsCreating(true);
+    setCreateError(null);
     startTransition(async () => {
       try {
         await createMultipleBatches({
@@ -124,7 +126,11 @@ export function BatchCreationWizard({
         });
         onClose();
         router.push("/enrichment");
-      } catch {
+      } catch (err) {
+        console.error("Batch creation failed:", err);
+        setCreateError(
+          err instanceof Error ? err.message : "Failed to create batches. Please try again."
+        );
         setIsCreating(false);
       }
     });
@@ -405,6 +411,12 @@ export function BatchCreationWizard({
                   )}
                 </div>
               </div>
+
+              {createError && (
+                <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
+                  <p className="text-sm font-medium text-red-400">{createError}</p>
+                </div>
+              )}
 
               {/* Batch list preview */}
               <div className="space-y-1.5 max-h-48 overflow-y-auto">

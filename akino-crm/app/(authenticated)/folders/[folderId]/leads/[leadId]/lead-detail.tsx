@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import {
   ArrowLeft,
-  Star,
   Mail,
   Building2,
   Calendar,
@@ -16,9 +15,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { cn, relativeTime } from "@/lib/utils";
+import { relativeTime } from "@/lib/utils";
 import type { Folder, FieldDefinition, Lead, Batch, BatchLead } from "@/lib/types";
-import { updateLead } from "../../actions";
 import { updateLeadRating } from "@/app/(authenticated)/enrichment/actions";
 
 type BLWithBatch = BatchLead & { batch: Batch };
@@ -41,14 +39,6 @@ export function LeadDetail({
   // Separate enrichment fields from regular fields
   const enrichmentFields = fields.filter((f) => f.is_enrichment);
   const regularFields = fields.filter((f) => !f.is_enrichment);
-
-  function handleRating(star: number) {
-    const newRating = rating === star ? null : star;
-    setRating(newRating);
-    startTransition(async () => {
-      await updateLeadRating(lead.id, newRating);
-    });
-  }
 
   return (
     <div className="flex h-full flex-col bg-(--color-bg)">
@@ -116,29 +106,31 @@ export function LeadDetail({
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
                 Lead Quality
               </h3>
-              <div className="flex items-center gap-1 mb-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => handleRating(star)}
-                    className="group p-0.5 transition-transform hover:scale-110"
-                  >
-                    <Star
-                      className={cn(
-                        "h-7 w-7 transition-colors",
-                        star <= (rating ?? 0)
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-(--color-fg-subtle) group-hover:text-amber-300"
-                      )}
-                    />
-                  </button>
-                ))}
+              <div className="flex items-center gap-3 mb-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={rating ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? null : Math.min(10, Math.max(0, parseFloat(e.target.value)));
+                    setRating(val);
+                  }}
+                  onBlur={() => {
+                    startTransition(async () => {
+                      await updateLeadRating(lead.id, rating);
+                    });
+                  }}
+                  placeholder="—"
+                  className="h-12 w-24 rounded-xl border-0 bg-(--color-surface-2) px-3 text-center text-2xl font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                />
+                <span className="text-lg font-medium text-(--color-fg-muted)">/ 10</span>
               </div>
               <p className="text-sm text-(--color-fg-muted)">
-                {rating
-                  ? `${rating} out of 5 stars`
-                  : "Not rated yet — click to rate"}
+                {rating != null
+                  ? `Rated ${rating} out of 10`
+                  : "Not rated yet — enter a score"}
               </p>
             </div>
 

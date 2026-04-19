@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   SkipForward,
   Flag,
-  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -221,40 +220,33 @@ export function EnrichmentQueue({
               </div>
             )}
 
-            {/* Star Rating */}
+            {/* Quality Rating */}
             <div className="mb-8 space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle)">
                 Lead Quality Rating
               </h3>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => {
-                      const newRating = rating === star ? null : star;
-                      setRating(newRating);
-                      startTransition(async () => {
-                        await updateLeadRating(current.lead_id, newRating);
-                      });
-                    }}
-                    className="group p-0.5 transition-transform hover:scale-110"
-                  >
-                    <Star
-                      className={cn(
-                        "h-6 w-6 transition-colors",
-                        star <= (rating ?? 0)
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-(--color-fg-subtle) group-hover:text-amber-300"
-                      )}
-                    />
-                  </button>
-                ))}
-                {rating && (
-                  <span className="ml-2 text-sm font-medium text-(--color-fg-muted)">
-                    {rating}/5
-                  </span>
-                )}
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={rating ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? null : Math.min(10, Math.max(0, parseFloat(e.target.value)));
+                    setRating(val);
+                  }}
+                  onBlur={() => {
+                    startTransition(async () => {
+                      await updateLeadRating(current.lead_id, rating);
+                    });
+                  }}
+                  placeholder="—"
+                  className="h-10 w-20 rounded-xl border-0 bg-(--color-surface-2) px-3 text-center text-lg font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                />
+                <span className="text-sm font-medium text-(--color-fg-muted)">
+                  / 10
+                </span>
               </div>
             </div>
 

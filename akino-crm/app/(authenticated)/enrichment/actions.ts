@@ -241,6 +241,17 @@ export async function flagBatchLead(
   revalidatePath("/enrichment");
 }
 
+export async function deleteAllBatches() {
+  const sb = await createClient();
+  // Delete all batch_leads first (FK constraint)
+  const { error: blErr } = await sb.from("batch_leads").delete().neq("batch_id", "00000000-0000-0000-0000-000000000000");
+  if (blErr) throw blErr;
+  // Delete all batches
+  const { error } = await sb.from("batches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  if (error) throw error;
+  revalidatePath("/enrichment");
+}
+
 export async function getEnrichmentFields(
   folderId: string
 ): Promise<FieldDefinition[]> {

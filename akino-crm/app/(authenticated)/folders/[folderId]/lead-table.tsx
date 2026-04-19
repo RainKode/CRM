@@ -22,7 +22,6 @@ import {
   EyeOff,
   Columns3,
   X,
-  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -69,7 +68,7 @@ export function LeadTable({
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const visibleFields = useMemo(
-    () => fields.filter((f) => !hiddenFieldIds.has(f.id)),
+    () => fields.filter((f) => !hiddenFieldIds.has(f.id) && !f.is_enrichment),
     [fields, hiddenFieldIds]
   );
 
@@ -160,17 +159,14 @@ export function LeadTable({
         header: "Rating",
         cell: ({ row }) => {
           const r = row.original.quality_rating;
-          if (!r) return <span className="text-(--color-fg-subtle)">—</span>;
+          if (r == null) return <span className="text-(--color-fg-subtle)">—</span>;
           return (
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: r }, (_, i) => (
-                <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              ))}
-              <span className="ml-1 text-xs text-(--color-fg-muted)">{r}</span>
-            </div>
+            <span className="font-bold text-(--color-fg)">
+              {r}<span className="text-xs font-normal text-(--color-fg-muted)">/10</span>
+            </span>
           );
         },
-        size: 100,
+        size: 70,
       }),
       ...visibleFields.map((field) =>
         COL.accessor(
@@ -311,7 +307,7 @@ export function LeadTable({
                 </button>
               </div>
               <div className="max-h-72 overflow-y-auto py-1">
-                {fields.map((field) => {
+                {fields.filter((f) => !f.is_enrichment).map((field) => {
                   const isVisible = !hiddenFieldIds.has(field.id);
                   return (
                     <button
