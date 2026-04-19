@@ -294,12 +294,12 @@ function NavLink({
         "flex items-center rounded-full text-[15px] transition-all",
         collapsed ? "justify-center p-3" : "gap-4 px-4 py-3",
         active
-          ? "bg-(--color-surface-3) text-(--color-fg) font-bold"
+          ? "bg-(--color-secondary)/15 text-(--color-secondary) font-bold border-2 border-(--color-secondary)/40"
           : "text-(--color-fg-subtle) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
       )}
     >
       <Icon
-        className={cn("h-5 w-5 shrink-0", active && "text-(--color-accent)")}
+        className={cn("h-5 w-5 shrink-0", active && "text-(--color-secondary)")}
         strokeWidth={active ? 2.25 : 1.75}
       />
       {!collapsed && <span>{item.label}</span>}
@@ -344,7 +344,7 @@ export function Sidebar() {
     <>
       <aside
         className={cn(
-          "hidden md:flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 transition-all duration-300 border-r border-(--color-border)",
+          "hidden md:flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 transition-all duration-300 rounded-r-2xl",
           collapsed ? "w-20 px-3" : "w-72 px-6"
         )}
         style={{ boxShadow: "var(--shadow-sidebar)" }}

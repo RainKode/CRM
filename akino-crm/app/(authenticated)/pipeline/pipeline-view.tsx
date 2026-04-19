@@ -168,10 +168,10 @@ function KanbanColumn({
   return (
     <div
       className={cn(
-        "w-[320px] flex flex-col h-full rounded-2xl p-4 border",
+        "w-[320px] flex flex-col h-full rounded-2xl p-4 border-2",
         isWon
-          ? "bg-(--color-success)/10 border-(--color-success)/10"
-          : "bg-(--color-surface-2)/30 border-(--color-border)/15"
+          ? "bg-(--color-success)/10 border-(--color-success)/40"
+          : "bg-(--color-surface-2)/30 border-(--color-card-border)"
       )}
     >
       <div className="flex justify-between items-center mb-6 px-2">

@@ -105,9 +105,9 @@
   --color-fg-subtle: #6b7280;
   --color-fg-disabled: #374151;
 
-  /* Borders — coral-tinted for definition */
-  --color-border: rgba(255, 107, 117, 0.12);
-  --color-border-strong: rgba(255, 107, 117, 0.25);
+  /* Borders — sharp coral for definition */
+  --color-border: rgba(239, 82, 93, 0.18);
+  --color-border-strong: rgba(239, 82, 93, 0.35);
 
   /* Primary — Teal */
   --color-accent: #00c2cc;
@@ -144,27 +144,27 @@
   --color-chart-5: #38bdf8;
 
   /* Grid / Data tables */
-  --color-grid-line: rgba(255, 107, 117, 0.06);
-  --color-grid-line-strong: rgba(255, 107, 117, 0.12);
+  --color-grid-line: rgba(239, 82, 93, 0.08);
+  --color-grid-line-strong: rgba(239, 82, 93, 0.16);
   --color-grid-header: #111827;
   --color-grid-row-hover: rgba(0, 194, 204, 0.05);
   --color-grid-row-selected: rgba(0, 194, 204, 0.12);
   --color-grid-cell-focus: #00c2cc;
 
-  /* Shadows — coral-tinted for warmth */
-  --shadow-card: 0 2px 16px rgba(255, 107, 117, 0.10), 0 4px 32px rgba(0, 0, 0, 0.25);
-  --shadow-card-hover: 0 4px 20px rgba(255, 107, 117, 0.16), 0 8px 40px rgba(0, 0, 0, 0.3);
-  --shadow-popover: 0 4px 24px rgba(255, 107, 117, 0.12), 0 12px 48px rgba(0, 0, 0, 0.4);
-  --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 12px rgba(255, 107, 117, 0.35);
-  --color-card-border: rgba(255, 107, 117, 0.22);
-  --shadow-sidebar: none;
+  /* Shadows — clean dark, no glow */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 2px #ef525d;
+  --shadow-glow: 0 0 0 2px #ef525d;
+  --color-card-border: rgba(239, 82, 93, 0.65);
+  --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.4);
 
-  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.3), 0 1px 4px rgba(255,107,117,0.12);
-  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.35), 0 2px 10px rgba(255,107,117,0.18);
-  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.35), inset 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-card-3d: 0 2px 0 0 rgba(255,107,117,0.08), 0 2px 16px rgba(255,107,117,0.10), 0 4px 32px rgba(0,0,0,0.25);
-  --shadow-card-3d-hover: 0 4px 0 0 rgba(255,107,117,0.12), 0 4px 20px rgba(255,107,117,0.16), 0 8px 40px rgba(0,0,0,0.3);
+  --shadow-btn: 0 2px 6px rgba(0,0,0,0.3);
+  --shadow-btn-hover: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-btn-active: inset 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-card-3d: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow-card-3d-hover: 0 8px 36px rgba(0, 0, 0, 0.45);
 }
 
 /* ═══════════════════════════════════════
@@ -186,9 +186,9 @@
   --color-fg-subtle: #64748b;
   --color-fg-disabled: #94a3b8;
 
-  /* Borders — coral-tinted for definition */
-  --color-border: rgba(239, 82, 93, 0.15);
-  --color-border-strong: rgba(239, 82, 93, 0.30);
+  /* Borders — sharp coral for definition */
+  --color-border: rgba(239, 82, 93, 0.18);
+  --color-border-strong: rgba(239, 82, 93, 0.35);
 
   /* Primary — Teal */
   --color-accent: #00969e;
@@ -232,20 +232,20 @@
   --color-grid-row-selected: rgba(0, 150, 158, 0.08);
   --color-grid-cell-focus: #00969e;
 
-  /* Shadows — coral-tinted for warmth */
-  --shadow-card: 0 2px 12px rgba(239, 82, 93, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 4px 16px rgba(239, 82, 93, 0.14), 0 8px 32px rgba(0, 0, 0, 0.08);
-  --shadow-popover: 0 4px 20px rgba(239, 82, 93, 0.10), 0 12px 48px rgba(0, 0, 0, 0.12);
-  --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 12px rgba(239, 82, 93, 0.25);
-  --color-card-border: rgba(239, 82, 93, 0.18);
-  --shadow-sidebar: 1px 0 6px rgba(239, 82, 93, 0.06);
+  /* Shadows — clean, no glow */
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.10);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.14);
+  --shadow-focus: 0 0 0 2px #ef525d;
+  --shadow-glow: 0 0 0 2px #ef525d;
+  --color-card-border: rgba(239, 82, 93, 0.45);
+  --shadow-sidebar: 4px 0 16px rgba(0, 0, 0, 0.06);
 
-  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.08), 0 1px 3px rgba(239,82,93,0.10);
-  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.10), 0 2px 8px rgba(239,82,93,0.14);
-  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.10), inset 0 1px 2px rgba(0,0,0,0.08);
-  --shadow-card-3d: 0 2px 0 0 rgba(239,82,93,0.06), 0 2px 12px rgba(239,82,93,0.08), 0 4px 24px rgba(0,0,0,0.06);
-  --shadow-card-3d-hover: 0 4px 0 0 rgba(239,82,93,0.10), 0 4px 16px rgba(239,82,93,0.14), 0 8px 32px rgba(0,0,0,0.08);
+  --shadow-btn: 0 2px 6px rgba(0,0,0,0.08);
+  --shadow-btn-hover: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-btn-active: inset 0 1px 2px rgba(0,0,0,0.10);
+  --shadow-card-3d: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-card-3d-hover: 0 8px 28px rgba(0, 0, 0, 0.10);
 }
 
 :root {
