@@ -95,7 +95,7 @@ export async function bulkCreateFields(
 
   const { data, error } = await sb
     .from("field_definitions")
-    .insert(rows)
+    .upsert(rows, { onConflict: "folder_id,key", ignoreDuplicates: true })
     .select();
 
   if (error) throw error;

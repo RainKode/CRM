@@ -258,19 +258,24 @@ function BulkAddDialog({
     if (entries.length === 0) return;
 
     startTransition(async () => {
-      const fields = entries.map((entry) => ({
-        key: entry.label
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_|_$/g, ""),
-        label: entry.label.trim(),
-        type: entry.type,
-      }));
-      await bulkCreateFields(folderId, fields);
-      setPasteValue("");
-      setEntries([]);
-      onOpenChange(false);
+      try {
+        const fields = entries.map((entry) => ({
+          key: entry.label
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_|_$/g, ""),
+          label: entry.label.trim(),
+          type: entry.type,
+        }));
+        await bulkCreateFields(folderId, fields);
+        setPasteValue("");
+        setEntries([]);
+        onOpenChange(false);
+      } catch (err) {
+        console.error("Bulk add failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to add columns. Some may already exist.");
+      }
     });
   }
 
