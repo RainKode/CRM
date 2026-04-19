@@ -160,6 +160,16 @@ export async function reorderFields(
 
 // ─── Leads ────────────────────────────────────────────────────────────
 
+export async function getLeadCount(folderId: string): Promise<number> {
+  const sb = await createClient();
+  const { count, error } = await sb
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("folder_id", folderId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getLeads(
   folderId: string,
   options?: { limit?: number; offset?: number }

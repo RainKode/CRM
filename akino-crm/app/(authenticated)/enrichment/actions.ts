@@ -73,6 +73,29 @@ export async function createBatch(input: {
   return batch as Batch;
 }
 
+export async function createBatchFromFolder(folderId: string, name: string) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Get all lead IDs from the folder
+  const { data: leads, error: leadsErr } = await sb
+    .from("leads")
+    .select("id")
+    .eq("folder_id", folderId);
+  if (leadsErr) throw leadsErr;
+
+  const lead_ids = (leads ?? []).map((l) => l.id);
+
+  return createBatch({
+    folder_id: folderId,
+    name,
+    lead_ids,
+  });
+}
+
 export async function getBatchLeads(
   batchId: string
 ): Promise<(BatchLead & { lead: Lead })[]> {

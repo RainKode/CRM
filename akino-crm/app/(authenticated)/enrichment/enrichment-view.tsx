@@ -80,7 +80,8 @@ export function EnrichmentView({
               <Sparkles className="h-6 w-6 text-(--color-fg-subtle)" />
             </div>
             <p className="text-sm text-(--color-fg-muted)">
-              No enrichment batches yet. Create one from a lead folder.
+              No enrichment batches yet. Open a lead folder and click
+              &ldquo;Create Enrichment Batch&rdquo; to get started.
             </p>
           </div>
         ) : (

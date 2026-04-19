@@ -40,22 +40,38 @@ export function CsvUpload({
   const autoMap = useCallback(
     (headers: string[]) => {
       const map: Record<string, string> = {};
-      const builtins = ["name", "email", "company"];
-      const allTargets = [
-        ...builtins,
-        ...fields.map((f) => f.key),
-      ];
+      const allTargets = fields.map((f) => f.key);
+      const claimedTargets = new Set<string>();
 
+      // Pass 1: exact normalized matches
       for (const h of headers) {
         const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
         for (const t of allTargets) {
+          if (claimedTargets.has(t)) continue;
           const normT = t.toLowerCase().replace(/[^a-z0-9]/g, "");
-          if (norm === normT || norm.includes(normT) || normT.includes(norm)) {
+          if (norm === normT) {
             map[h] = t;
+            claimedTargets.add(t);
             break;
           }
         }
       }
+
+      // Pass 2: prefix matches for remaining unmapped headers
+      for (const h of headers) {
+        if (map[h]) continue;
+        const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (const t of allTargets) {
+          if (claimedTargets.has(t)) continue;
+          const normT = t.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (normT.length >= 3 && norm.startsWith(normT)) {
+            map[h] = t;
+            claimedTargets.add(t);
+            break;
+          }
+        }
+      }
+
       return map;
     },
     [fields]
