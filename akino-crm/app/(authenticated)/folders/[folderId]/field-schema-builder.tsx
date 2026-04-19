@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { FieldDefinition, FieldType } from "@/lib/types";
-import { createField, updateField, deleteField } from "./actions";
+import { createField, bulkCreateFields, updateField, deleteField } from "./actions";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "text", label: "Text" },
@@ -258,18 +258,16 @@ function BulkAddDialog({
     if (entries.length === 0) return;
 
     startTransition(async () => {
-      for (const entry of entries) {
-        const key = entry.label
+      const fields = entries.map((entry) => ({
+        key: entry.label
           .trim()
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_|_$/g, "");
-        await createField(folderId, {
-          key,
-          label: entry.label.trim(),
-          type: entry.type,
-        });
-      }
+          .replace(/^_|_$/g, ""),
+        label: entry.label.trim(),
+        type: entry.type,
+      }));
+      await bulkCreateFields(folderId, fields);
       setPasteValue("");
       setEntries([]);
       onOpenChange(false);

@@ -59,6 +59,50 @@ export async function createField(
   return data as FieldDefinition;
 }
 
+export async function bulkCreateFields(
+  folderId: string,
+  fields: {
+    key: string;
+    label: string;
+    type: FieldDefinition["type"];
+    options?: string[];
+    is_required?: boolean;
+    is_enrichment?: boolean;
+    description?: string;
+  }[]
+) {
+  const sb = await createClient();
+
+  // Get current count for positioning
+  const { count } = await sb
+    .from("field_definitions")
+    .select("id", { count: "exact", head: true })
+    .eq("folder_id", folderId);
+
+  const startPos = count ?? 0;
+
+  const rows = fields.map((field, i) => ({
+    folder_id: folderId,
+    key: field.key,
+    label: field.label,
+    type: field.type,
+    options: field.options ?? null,
+    is_required: field.is_required ?? false,
+    is_enrichment: field.is_enrichment ?? false,
+    description: field.description ?? null,
+    position: startPos + i,
+  }));
+
+  const { data, error } = await sb
+    .from("field_definitions")
+    .insert(rows)
+    .select();
+
+  if (error) throw error;
+  revalidatePath(`/folders/${folderId}`);
+  return data as FieldDefinition[];
+}
+
 export async function updateField(
   fieldId: string,
   folderId: string,
