@@ -241,6 +241,56 @@ export async function flagBatchLead(
   revalidatePath("/enrichment");
 }
 
+export async function unflagBatchLead(batchId: string, leadId: string) {
+  const sb = await createClient();
+  await sb
+    .from("batch_leads")
+    .update({ is_flagged: false, flag_reason: null })
+    .eq("batch_id", batchId)
+    .eq("lead_id", leadId);
+  revalidatePath("/enrichment");
+}
+
+export async function disqualifyBatchLead(batchId: string, leadId: string) {
+  const sb = await createClient();
+  await sb
+    .from("batch_leads")
+    .update({ is_disqualified: true })
+    .eq("batch_id", batchId)
+    .eq("lead_id", leadId);
+  revalidatePath("/enrichment");
+}
+
+export async function updateLeadField(
+  leadId: string,
+  field: string,
+  value: unknown
+) {
+  const sb = await createClient();
+  const topLevel = ["email", "name", "company", "notes"];
+  if (topLevel.includes(field)) {
+    const { error } = await sb
+      .from("leads")
+      .update({ [field]: value })
+      .eq("id", leadId);
+    if (error) throw error;
+  } else {
+    const { data: lead } = await sb
+      .from("leads")
+      .select("data")
+      .eq("id", leadId)
+      .single();
+    if (lead) {
+      const { error } = await sb
+        .from("leads")
+        .update({ data: { ...lead.data, [field]: value } })
+        .eq("id", leadId);
+      if (error) throw error;
+    }
+  }
+  revalidatePath("/enrichment");
+}
+
 export async function deleteAllBatches() {
   const sb = await createClient();
   // Delete all batch_leads first (FK constraint)

@@ -267,7 +267,7 @@ export async function deleteDeal(dealId: string) {
 
 export async function updateDeal(
   dealId: string,
-  updates: Partial<Pick<Deal, "contact_name" | "company" | "email" | "phone" | "linkedin_url" | "notes">>
+  updates: Partial<Pick<Deal, "contact_name" | "company" | "email" | "phone" | "linkedin_url" | "notes" | "deal_value">>
 ) {
   const sb = await createClient();
   const { error } = await sb.from("deals").update(updates).eq("id", dealId);

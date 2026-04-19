@@ -109,6 +109,7 @@ export interface BatchLead {
   is_completed: boolean;
   is_skipped: boolean;
   is_flagged: boolean;
+  is_disqualified: boolean;
   flag_reason: string | null;
   completed_at: string | null;
   completed_by: string | null;

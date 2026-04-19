@@ -32,6 +32,8 @@ import {
   Search,
   UserPlus,
   Star,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +47,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn, relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, LossReason, Pipeline } from "@/lib/types";
-import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, type LeadSearchResult } from "./actions";
+import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType } from "@/lib/types";
+import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, type LeadSearchResult } from "./actions";
 
 // ─────────────────────────────────────────────
 // Generic dropdown hook (click-outside to close)
@@ -508,192 +510,796 @@ function CreateDealDialog({
 }
 
 // ─────────────────────────────────────────────
-// Deal detail panel
+// Timeline helpers
+// ─────────────────────────────────────────────
+type TimelineEventType = ActivityType | "created";
+
+function getTimelineIcon(type: TimelineEventType) {
+  switch (type) {
+    case "created": return <Plus className="h-3.5 w-3.5" />;
+    case "call": return <Phone className="h-3.5 w-3.5" />;
+    case "email": return <Mail className="h-3.5 w-3.5" />;
+    case "note": return <StickyNote className="h-3.5 w-3.5" />;
+    case "stage_change": return <ChevronRight className="h-3.5 w-3.5" />;
+    case "follow_up_set": return <CalendarClock className="h-3.5 w-3.5" />;
+    case "won": return <CheckCircle2 className="h-3.5 w-3.5" />;
+    case "lost": return <XCircle className="h-3.5 w-3.5" />;
+  }
+}
+
+function getTimelineTitle(type: TimelineEventType): string {
+  switch (type) {
+    case "created": return "Deal Created";
+    case "call": return "Call Logged";
+    case "email": return "Email Logged";
+    case "note": return "Note Added";
+    case "stage_change": return "Stage Changed";
+    case "follow_up_set": return "Follow-up Set";
+    case "won": return "Deal Won";
+    case "lost": return "Deal Lost";
+  }
+}
+
+function getTimelineColor(type: TimelineEventType): string {
+  switch (type) {
+    case "created": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "won": return "bg-(--color-success)/15 text-(--color-success)";
+    case "lost": return "bg-(--color-danger)/15 text-(--color-danger)";
+    case "email": return "bg-(--color-info)/15 text-(--color-info)";
+    case "call": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
+    case "follow_up_set": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
+  }
+}
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// ─────────────────────────────────────────────
+// Deal detail panel (full-width with timeline)
 // ─────────────────────────────────────────────
 function DealDetail({
   deal,
   stages,
+  lossReasons,
   onClose,
 }: {
   deal: Deal;
   stages: PipelineStage[];
+  lossReasons: LossReason[];
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"details" | "activity">(
-    "details"
-  );
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
   const [, startTransition] = useTransition();
+
+  // Activity logging
   const [summary, setSummary] = useState("");
   const [actType, setActType] = useState<"call" | "email" | "note">("call");
+
+  // Loss reason menu
+  const lossMenu = useDropdown();
+
+  // Follow-up
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [followUpNote, setFollowUpNote] = useState("");
+
+  // Delete
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Inline editing
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  const currentStage = stages.find((s) => s.id === deal.stage_id);
+  const activeStages = stages.filter((s) => !s.is_won && !s.is_lost);
+  const wonStage = stages.find((s) => s.is_won);
+  const isWon = !!deal.won_at;
+  const isLost = !!deal.lost_at;
+  const isClosed = isWon || isLost;
+
+  // Load activities
+  useEffect(() => {
+    setLoadingActivities(true);
+    getDealActivities(deal.id)
+      .then(setActivities)
+      .finally(() => setLoadingActivities(false));
+  }, [deal.id]);
+
+  // Auto-scroll timeline to bottom
+  useEffect(() => {
+    if (timelineRef.current && !loadingActivities) {
+      timelineRef.current.scrollTop = timelineRef.current.scrollHeight;
+    }
+  }, [loadingActivities, activities.length]);
+
+  // Build timeline events (chronological, oldest first)
+  const timelineEvents = useMemo(() => {
+    const created = {
+      id: "created",
+      type: "created" as TimelineEventType,
+      summary: `Deal created for ${deal.contact_name}`,
+      notes: deal.company ? `Company: ${deal.company}` : null,
+      occurred_at: deal.created_at,
+      stage_from: null as string | null,
+      stage_to: null as string | null,
+      email_subject: null as string | null,
+      call_direction: null as string | null,
+      call_duration_seconds: null as number | null,
+    };
+    const mapped = activities.map((a) => ({
+      id: a.id,
+      type: a.type as TimelineEventType,
+      summary: a.summary,
+      notes: a.notes,
+      occurred_at: a.occurred_at,
+      stage_from: a.stage_from,
+      stage_to: a.stage_to,
+      email_subject: a.email_subject,
+      call_direction: a.call_direction as string | null,
+      call_duration_seconds: a.call_duration_seconds,
+    }));
+    const events = [created, ...mapped];
+    events.sort(
+      (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+    );
+    return events;
+  }, [activities, deal]);
+
+  function handleStageChange(stageId: string) {
+    if (stageId === deal.stage_id || isClosed) return;
+    startTransition(() => moveDeal(deal.id, stageId));
+  }
+
+  function handleMarkWon() {
+    if (!wonStage) return;
+    startTransition(() => moveDeal(deal.id, wonStage.id));
+  }
+
+  function handleMarkLost(reasonId: string) {
+    startTransition(async () => {
+      await markDealLost(deal.id, reasonId);
+      lossMenu.setOpen(false);
+    });
+  }
 
   function handleLogActivity(e: React.FormEvent) {
     e.preventDefault();
     if (!summary.trim()) return;
     startTransition(async () => {
-      await logActivity({
-        deal_id: deal.id,
-        type: actType,
-        summary: summary.trim(),
-      });
+      await logActivity({ deal_id: deal.id, type: actType, summary: summary.trim() });
       setSummary("");
+      const updated = await getDealActivities(deal.id);
+      setActivities(updated);
     });
   }
 
-  const currentStage = stages.find((s) => s.id === deal.stage_id);
+  function handleSetFollowUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!followUpDate) return;
+    startTransition(async () => {
+      await setFollowUp(deal.id, followUpDate, followUpNote || undefined);
+      setShowFollowUp(false);
+      setFollowUpDate("");
+      setFollowUpNote("");
+      const updated = await getDealActivities(deal.id);
+      setActivities(updated);
+    });
+  }
+
+  function startEditing(field: string, currentValue: string) {
+    setEditingField(field);
+    setEditValue(currentValue);
+  }
+
+  function saveEdit(field: string) {
+    if (editingField !== field) return;
+    startTransition(async () => {
+      if (field === "deal_value") {
+        const num = parseFloat(editValue.replace(/[^0-9.-]/g, ""));
+        await updateDeal(deal.id, { deal_value: isNaN(num) ? null : num });
+      } else {
+        await updateDeal(deal.id, { [field]: editValue.trim() || null } as Record<string, string | null>);
+      }
+      setEditingField(null);
+    });
+  }
+
+  function cancelEdit() {
+    setEditingField(null);
+    setEditValue("");
+  }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col bg-(--color-bg) shadow-(--shadow-popover)">
-      <div className="flex items-center justify-between px-6 py-5">
-        <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">{deal.contact_name}</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full h-8 w-8 flex items-center justify-center text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
-        >
-          ✕
-        </button>
-      </div>
+    <div className="fixed inset-0 z-40 flex">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Tabs */}
-      <div className="flex gap-2 px-6 pb-4">
-        {(["details", "activity"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setActiveTab(t)}
-            className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium capitalize transition-colors",
-              activeTab === t
-                ? "bg-(--color-accent) text-(--color-accent-fg)"
-                : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5">
-        {activeTab === "details" && (
-          <div className="space-y-4 text-sm">
-            <div>
-              <span className="text-(--color-fg-subtle)">Company</span>
-              <p>{deal.company || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Email</span>
-              <p>{deal.email || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Phone</span>
-              <p>{deal.phone || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Stage</span>
-              <p>
-                <Badge tone="accent">{currentStage?.name ?? "—"}</Badge>
-              </p>
-            </div>
-            {deal.follow_up_at && (
-              <div>
-                <span className="text-(--color-fg-subtle)">
-                  Follow-up
-                </span>
-                <p>
-                  {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </p>
-              </div>
-            )}
-            {deal.notes && (
-              <div>
-                <span className="text-(--color-fg-subtle)">Notes</span>
-                <p className="whitespace-pre-wrap text-(--color-fg-muted)">
-                  {deal.notes}
-                </p>
-              </div>
-            )}
-
-            {/* Delete deal */}
-            <div className="pt-4 border-t border-(--color-border)/15">
-              {!confirmDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="flex items-center gap-2 text-sm text-(--color-danger) hover:underline"
-                >
-                  <Trash2 className="h-4 w-4" /> Delete deal
-                </button>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-(--color-danger)">Delete this deal?</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      startTransition(async () => {
-                        await deleteDeal(deal.id);
-                        onClose();
-                      });
-                    }}
-                    className="rounded-lg bg-(--color-danger) px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
-                  >
-                    Yes, delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-xs text-(--color-fg-muted) hover:underline"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
+      {/* Panel container */}
+      <div className="relative ml-auto flex h-full w-full max-w-5xl">
+        {/* ── Left: Client Timeline ── */}
+        <div className="hidden lg:flex w-[380px] shrink-0 bg-(--color-surface-1) border-r border-(--color-border)/15 flex-col overflow-hidden">
+          <div className="px-6 py-6 border-b border-(--color-border)/15 shrink-0">
+            <h2 className="font-semibold text-lg text-(--color-fg) tracking-tight">Client Timeline</h2>
+            <p className="text-sm text-(--color-fg-muted) mt-0.5">Full activity history</p>
           </div>
-        )}
-
-        {activeTab === "activity" && (
-          <div className="space-y-4">
-            {/* Log form */}
-            <form onSubmit={handleLogActivity} className="space-y-2">
-              <div className="flex gap-2">
-                {(
-                  [
-                    { val: "call", Icon: Phone },
-                    { val: "email", Icon: Mail },
-                    { val: "note", Icon: StickyNote },
-                  ] as const
-                ).map(({ val, Icon }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setActType(val)}
-                    className={cn(
-                      "flex items-center gap-1 rounded-md px-2 py-1 text-xs",
-                      actType === val
-                        ? "bg-(--color-accent-muted) text-(--color-accent)"
-                        : "text-(--color-fg-muted) hover:bg-(--color-surface-2)"
+          <div ref={timelineRef} className="flex-1 overflow-y-auto px-6 py-6" style={{ scrollbarWidth: "thin" }}>
+            {loadingActivities ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+              </div>
+            ) : timelineEvents.length === 0 ? (
+              <p className="text-sm text-(--color-fg-subtle) text-center py-12">No activity yet</p>
+            ) : (
+              <div className="relative">
+                {timelineEvents.map((event, i) => (
+                  <div key={event.id} className="relative flex gap-4 pb-8 last:pb-0">
+                    {/* Vertical connector line */}
+                    {i < timelineEvents.length - 1 && (
+                      <div className="absolute left-[15px] top-9 bottom-0 w-px bg-(--color-border)/30" />
                     )}
-                  >
-                    <Icon className="h-3 w-3" /> {val}
-                  </button>
+                    {/* Icon bubble */}
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-(--color-surface-1)",
+                        getTimelineColor(event.type)
+                      )}
+                    >
+                      {getTimelineIcon(event.type)}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-(--color-fg)">{getTimelineTitle(event.type)}</p>
+                        {event.type === "won" && (
+                          <span className="text-[10px] bg-(--color-success)/15 text-(--color-success) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Won</span>
+                        )}
+                        {event.type === "lost" && (
+                          <span className="text-[10px] bg-(--color-danger)/15 text-(--color-danger) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Lost</span>
+                        )}
+                      </div>
+                      {event.summary && (
+                        <p className="text-sm text-(--color-fg-muted) mt-0.5 leading-relaxed">{event.summary}</p>
+                      )}
+                      {event.email_subject && (
+                        <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
+                      )}
+                      {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
+                        <p className="text-xs text-(--color-fg-subtle) mt-1">
+                          Duration: {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
+                          {event.call_direction && ` · ${event.call_direction}`}
+                        </p>
+                      )}
+                      {event.notes && (
+                        <div className="mt-2 p-3 rounded-lg bg-(--color-surface-2)/50 border border-(--color-border)/10">
+                          <p className="text-xs text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-(--color-fg-subtle) mt-1.5">
+                        {formatTimestamp(event.occurred_at)}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <Input
-                placeholder={`Log a ${actType}…`}
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-              />
-              <Button type="submit" size="sm" disabled={!summary.trim()}>
-                Log
-              </Button>
-            </form>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* ── Right: Detail panel ── */}
+        <div className="flex-1 bg-(--color-bg) flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-8 pt-8 pb-6 shrink-0">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-[28px] font-semibold tracking-tight text-(--color-fg) leading-tight">
+                  {deal.contact_name}
+                </h1>
+                <p className="text-(--color-fg-muted) text-[15px] mt-1 font-medium">
+                  {[deal.company, currentStage?.name].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Pipeline stage indicator */}
+            {!isClosed && (
+              <>
+                <div className="mb-6">
+                  <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-3">
+                    Pipeline Stage
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {activeStages.map((stage) => (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => handleStageChange(stage.id)}
+                        className={cn(
+                          "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                          stage.id === deal.stage_id
+                            ? "bg-(--color-accent) text-(--color-accent-fg) shadow-[0_4px_12px_rgba(0,194,204,0.25)]"
+                            : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
+                        )}
+                      >
+                        {stage.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick actions: Mark Won / Mark Lost */}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleMarkWon}
+                    className="flex-1 bg-(--color-success) text-white font-medium py-3 rounded-full hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="h-5 w-5" />
+                    Mark as Won
+                  </button>
+                  <div className="relative flex-1" ref={lossMenu.ref}>
+                    <button
+                      type="button"
+                      onClick={() => lossMenu.setOpen(!lossMenu.open)}
+                      className="w-full border border-(--color-border)/30 text-(--color-fg-muted) font-medium py-3 rounded-full hover:bg-(--color-danger)/10 hover:text-(--color-danger) hover:border-(--color-danger)/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="h-5 w-5" />
+                      Mark as Lost
+                    </button>
+                    {lossMenu.open && (
+                      <div className="absolute left-0 right-0 top-full mt-2 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                        <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">
+                          Select Reason
+                        </p>
+                        {lossReasons.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => handleMarkLost(r.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+                          >
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Won/Lost status badge */}
+            {isClosed && (
+              <div
+                className={cn(
+                  "rounded-xl p-4 flex items-center gap-3",
+                  isWon
+                    ? "bg-(--color-success)/10 border border-(--color-success)/30"
+                    : "bg-(--color-danger)/10 border border-(--color-danger)/30"
+                )}
+              >
+                {isWon ? (
+                  <CheckCircle2 className="h-6 w-6 text-(--color-success)" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-(--color-danger)" />
+                )}
+                <div>
+                  <p className={cn("font-semibold", isWon ? "text-(--color-success)" : "text-(--color-danger)")}>
+                    {isWon ? "Deal Won" : "Deal Lost"}
+                  </p>
+                  <p className="text-xs text-(--color-fg-muted)">
+                    {new Date((isWon ? deal.won_at : deal.lost_at)!).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="px-8 border-b border-(--color-border)/15 flex gap-8 shrink-0">
+            {(["details", "activity"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setActiveTab(t)}
+                className={cn(
+                  "pb-4 text-[15px] font-medium capitalize border-b-2 transition-colors",
+                  activeTab === t
+                    ? "text-(--color-fg) border-(--color-accent)"
+                    : "text-(--color-fg-muted) border-transparent hover:text-(--color-fg)"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-10">
+            {activeTab === "details" && (
+              <>
+                {/* Deal value & follow-up */}
+                <div className="grid grid-cols-2 gap-8">
+                  <div
+                    className="group cursor-pointer"
+                    onClick={() => !editingField && startEditing("deal_value", deal.deal_value?.toString() || "")}
+                  >
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                      Deal Value
+                    </p>
+                    {editingField === "deal_value" ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit("deal_value");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="w-full h-9 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                          placeholder="e.g. 125000"
+                        />
+                        <button type="button" onClick={() => saveEdit("deal_value")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xl font-semibold text-(--color-fg)">
+                        {deal.deal_value != null ? formatDealValue(deal.deal_value, deal.currency) : "—"}
+                      </p>
+                    )}
+                  </div>
+                  {deal.follow_up_at && (
+                    <div>
+                      <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">
+                        Next Follow-up
+                      </p>
+                      <p className="text-[17px] text-(--color-fg)">
+                        {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                      {deal.follow_up_note && (
+                        <p className="text-xs text-(--color-fg-muted) mt-1">{deal.follow_up_note}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact information */}
+                <div>
+                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Contact Information</h3>
+                  <div className="space-y-4">
+                    {/* Email */}
+                    <div
+                      className="group flex items-start gap-4 cursor-pointer"
+                      onClick={() => !editingField && startEditing("email", deal.email || "")}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                          Email Address
+                        </p>
+                        {editingField === "email" ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="email"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit("email");
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              autoFocus
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                            />
+                            <button type="button" onClick={() => saveEdit("email")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[15px] text-(--color-fg)">{deal.email || "—"}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div
+                      className="group flex items-start gap-4 cursor-pointer"
+                      onClick={() => !editingField && startEditing("phone", deal.phone || "")}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                          Phone Number
+                        </p>
+                        {editingField === "phone" ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="tel"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit("phone");
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              autoFocus
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                            />
+                            <button type="button" onClick={() => saveEdit("phone")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[15px] text-(--color-fg)">{deal.phone || "—"}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* LinkedIn */}
+                    {deal.linkedin_url && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                          <Star className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">LinkedIn</p>
+                          <a
+                            href={deal.linkedin_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[15px] text-(--color-accent) hover:underline"
+                          >
+                            View Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deal Context / Notes */}
+                <div>
+                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Deal Context</h3>
+                  <div
+                    className="group cursor-pointer"
+                    onClick={() => !editingField && startEditing("notes", deal.notes || "")}
+                  >
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-2 group-hover:text-(--color-accent) transition-colors">
+                      Notes
+                    </p>
+                    {editingField === "notes" ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          rows={4}
+                          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-accent)/50 p-4 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent) resize-none"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button type="button" onClick={cancelEdit} className="text-xs text-(--color-fg-muted) hover:underline">
+                            Cancel
+                          </button>
+                          <button type="button" onClick={() => saveEdit("notes")} className="text-(--color-accent) text-xs font-medium hover:underline">
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-(--color-surface-1) border border-(--color-border)/10 group-hover:border-(--color-border)/30 transition-colors">
+                        <p className="text-[15px] leading-relaxed text-(--color-fg-muted) whitespace-pre-wrap">
+                          {deal.notes || "No notes yet. Click to add."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delete deal */}
+                <div className="pt-4 border-t border-(--color-border)/15">
+                  {!confirmDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex items-center gap-2 text-sm text-(--color-danger) hover:underline"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete deal
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-(--color-danger)">Delete this deal?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          startTransition(async () => {
+                            await deleteDeal(deal.id);
+                            onClose();
+                          });
+                        }}
+                        className="rounded-lg bg-(--color-danger) px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                      >
+                        Yes, delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="text-xs text-(--color-fg-muted) hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Spacer for bottom bar */}
+                <div className="h-16" />
+              </>
+            )}
+
+            {activeTab === "activity" && (
+              <div className="space-y-6">
+                {/* Log activity form */}
+                <form onSubmit={handleLogActivity} className="space-y-3">
+                  <div className="flex gap-2">
+                    {([
+                      { val: "call" as const, Icon: Phone, label: "Call" },
+                      { val: "email" as const, Icon: Mail, label: "Email" },
+                      { val: "note" as const, Icon: StickyNote, label: "Note" },
+                    ]).map(({ val, Icon, label }) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setActType(val)}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                          actType === val
+                            ? "bg-(--color-accent)/15 text-(--color-accent)"
+                            : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={`Log a ${actType}…`}
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button type="submit" size="sm" disabled={!summary.trim()}>
+                      Log
+                    </Button>
+                  </div>
+                </form>
+
+                {/* Activity list */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle) mb-3">
+                    Recent Activity
+                  </h4>
+                  {loadingActivities ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-5 h-5 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <p className="text-sm text-(--color-fg-subtle) text-center py-8">No activity logged yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {activities.map((a) => (
+                        <div key={a.id} className="flex items-start gap-3 py-3 border-b border-(--color-border)/10 last:border-b-0">
+                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", getTimelineColor(a.type))}>
+                            {getTimelineIcon(a.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-(--color-fg)">{getTimelineTitle(a.type)}</p>
+                              <span className="text-[11px] text-(--color-fg-subtle) shrink-0">{relativeTime(a.occurred_at)}</span>
+                            </div>
+                            {a.summary && <p className="text-sm text-(--color-fg-muted) mt-0.5">{a.summary}</p>}
+                            {a.notes && <p className="text-xs text-(--color-fg-subtle) mt-1">{a.notes}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Spacer for bottom bar */}
+                <div className="h-16" />
+              </div>
+            )}
+          </div>
+
+          {/* Fixed bottom bar */}
+          <div className="shrink-0 border-t border-(--color-border)/15 bg-(--color-bg)/80 backdrop-blur-xl px-8 py-4 flex items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setActType("call"); setActiveTab("activity"); }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors flex items-center gap-2"
+              >
+                <Phone className="h-4 w-4" /> Log Call
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActType("email"); setActiveTab("activity"); }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" /> Log Email
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActType("note"); setActiveTab("activity"); }}
+                className="w-10 h-10 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors"
+                title="Add Note"
+              >
+                <StickyNote className="h-4 w-4" />
+              </button>
+            </div>
+            {showFollowUp ? (
+              <form onSubmit={handleSetFollowUp} className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-xs text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                  autoFocus
+                />
+                <button type="submit" disabled={!followUpDate} className="text-(--color-accent) text-xs font-medium hover:underline disabled:opacity-40">
+                  Set
+                </button>
+                <button type="button" onClick={() => setShowFollowUp(false)} className="text-xs text-(--color-fg-muted) hover:underline">
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowFollowUp(true)}
+                className="text-(--color-accent) font-medium text-sm hover:underline flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-(--color-accent)/10 transition-colors"
+              >
+                <Calendar className="h-4 w-4" /> Set Follow-up
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1115,6 +1721,7 @@ export function PipelineView({
         <DealDetail
           deal={selectedDeal}
           stages={pipelineStages}
+          lossReasons={lossReasons}
           onClose={() => setSelectedDeal(null)}
         />
       )}

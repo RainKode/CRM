@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
-  ArrowRight,
   CheckCircle2,
   SkipForward,
   Flag,
+  BanIcon,
+  Pencil,
+  Check,
   Phone,
   Mail,
   Link2,
@@ -30,6 +32,9 @@ import {
   completeBatchLead,
   skipBatchLead,
   flagBatchLead,
+  unflagBatchLead,
+  disqualifyBatchLead,
+  updateLeadField,
   updateLeadRating,
 } from "../actions";
 
@@ -70,6 +75,13 @@ export function EnrichmentQueue({
   const [isPending, startTransition] = useTransition();
   const { pipWindow, isOpening, snapBack, isSupported, openPip, closePip } = useEnrichmentPip();
   const [isPopping, setIsPopping] = useState(false);
+  // Flag popover state
+  const [showFlagMenu, setShowFlagMenu] = useState(false);
+  const [customFlagReason, setCustomFlagReason] = useState("");
+  const flagMenuRef = useRef<HTMLDivElement>(null);
+  // Inline editing state for Pane 2
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const current = batchLeads[currentIdx];
   const lead = current?.lead;
@@ -163,11 +175,37 @@ export function EnrichmentQueue({
     });
   }
 
-  function handleFlag() {
-    const reason = window.prompt("Flag reason:");
-    if (!reason) return;
+  function handleFlag(reason: string) {
+    setShowFlagMenu(false);
+    setCustomFlagReason("");
     startTransition(async () => {
       await flagBatchLead(batch.id, current.lead_id, reason);
+    });
+  }
+
+  function handleUnflag() {
+    startTransition(async () => {
+      await unflagBatchLead(batch.id, current.lead_id);
+    });
+  }
+
+  function handleDisqualify() {
+    startTransition(async () => {
+      await disqualifyBatchLead(batch.id, current.lead_id);
+      goNext();
+    });
+  }
+
+  function startEdit(key: string, value: string) {
+    setEditingField(key);
+    setEditValue(value);
+  }
+
+  function commitEdit(key: string) {
+    const val = editValue;
+    setEditingField(null);
+    startTransition(async () => {
+      await updateLeadField(current.lead_id, key, val);
     });
   }
 
