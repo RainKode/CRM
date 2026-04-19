@@ -73,7 +73,7 @@ function DealCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-(--color-surface-1) rounded-2xl cursor-pointer p-4 space-y-2 hover:-translate-y-0.5 transition-all duration-200 border border-(--color-card-border) hover:border-(--color-border) shadow-(--shadow-card) hover:shadow-(--shadow-card-hover)"
+      className="bg-(--color-surface-1) rounded-2xl cursor-pointer p-4 space-y-2 hover:-translate-y-0.5 transition-all duration-200 border border-(--color-card-border) hover:border-(--color-border) shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover)"
     >
       <p className="text-sm font-medium">{deal.contact_name}</p>
       {deal.company && (
@@ -534,7 +534,7 @@ export function PipelineView({
             </div>
             <DragOverlay>
               {draggedDeal && (
-                <div className="bg-(--color-surface-1) rounded-2xl p-4 w-80 opacity-90 shadow-(--shadow-card-hover) border border-(--color-card-border)">
+                <div className="bg-(--color-surface-1) rounded-2xl p-4 w-80 opacity-90 shadow-(--shadow-card-3d-hover) border border-(--color-card-border)">
                   <p className="text-sm font-medium">
                     {draggedDeal.contact_name}
                   </p>

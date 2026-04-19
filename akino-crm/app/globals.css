@@ -18,9 +18,29 @@
 
   /* Accent — Blue (shared) */
   --color-accent: #0071e3;
-  --color-accent-hover: #3d8eeb;
+  --color-accent-hover: #2d8cf0;
   --color-accent-pressed: #005cbb;
   --color-accent-fg: #ffffff;
+
+  /* Tertiary — Soft blue for hover states */
+  --color-tertiary: #5ac8fa;
+  --color-tertiary-hover: #40b4e5;
+  --color-tertiary-fg: #003e6b;
+
+  /* Complementary palette */
+  --color-secondary: #5856d6;
+  --color-secondary-hover: #7674e0;
+  --color-secondary-fg: #ffffff;
+  --color-highlight: #34c759;
+  --color-highlight-hover: #2aad4a;
+  --color-highlight-fg: #ffffff;
+
+  /* 3D button shadows */
+  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.12);
+  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.14), inset 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-card-3d: 0 2px 0 0 rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-card-3d-hover: 0 4px 0 0 rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 8px 28px rgba(0,0,0,0.1);
 
   /* ---- Color tokens come from .dark / .light below ---- */
   --color-bg: initial;
@@ -53,6 +73,24 @@
   --shadow-glow: initial;
   --color-card-border: initial;
   --shadow-sidebar: initial;
+
+  /* Tertiary / Secondary / Highlight tokens */
+  --color-tertiary: initial;
+  --color-tertiary-hover: initial;
+  --color-tertiary-fg: initial;
+  --color-secondary: initial;
+  --color-secondary-hover: initial;
+  --color-secondary-fg: initial;
+  --color-highlight: initial;
+  --color-highlight-hover: initial;
+  --color-highlight-fg: initial;
+
+  /* 3D shadow tokens */
+  --shadow-btn: initial;
+  --shadow-btn-hover: initial;
+  --shadow-btn-active: initial;
+  --shadow-card-3d: initial;
+  --shadow-card-3d-hover: initial;
 }
 
 /* ═══════════════════════════════════════
@@ -72,8 +110,8 @@
   --color-fg-subtle: #8b919f;
   --color-fg-disabled: #414753;
 
-  --color-border: #414753;
-  --color-border-strong: #8b919f;
+  --color-border: #52576a;
+  --color-border-strong: #9ea3b0;
 
   --color-accent-muted: rgba(0, 113, 227, 0.12);
   --color-accent-text: #abc7ff;
@@ -95,8 +133,14 @@
   --shadow-popover: 0 10px 40px 0 rgba(0, 0, 0, 0.55);
   --shadow-focus: 0 0 0 2px var(--color-accent);
   --shadow-glow: 0 0 10px rgba(0, 113, 227, 0.5);
-  --color-card-border: transparent;
+  --color-card-border: rgba(255,255,255,0.08);
   --shadow-sidebar: none;
+
+  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.25);
+  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.35), inset 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-card-3d: 0 2px 0 0 rgba(0,0,0,0.25), 0 3px 30px rgba(0,0,0,0.4);
+  --shadow-card-3d-hover: 0 4px 0 0 rgba(0,0,0,0.3), 0 8px 40px rgba(0,0,0,0.5);
 }
 
 /* ═══════════════════════════════════════
@@ -116,8 +160,8 @@
   --color-fg-subtle: #6e6e73;
   --color-fg-disabled: #aeaeb2;
 
-  --color-border: #d1d1d6;
-  --color-border-strong: #8e8e93;
+  --color-border: #b0b0b5;
+  --color-border-strong: #6e6e73;
 
   --color-accent-muted: rgba(0, 113, 227, 0.08);
   --color-accent-text: #0058b0;
@@ -139,8 +183,8 @@
   --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.14), 0 12px 40px rgba(0, 0, 0, 0.1);
   --shadow-focus: 0 0 0 2px var(--color-accent);
   --shadow-glow: 0 0 8px rgba(0, 113, 227, 0.25);
-  --color-card-border: rgba(0, 0, 0, 0.1);
-  --shadow-sidebar: 1px 0 4px rgba(0, 0, 0, 0.08);
+  --color-card-border: rgba(0, 0, 0, 0.14);
+  --shadow-sidebar: 1px 0 4px rgba(0, 0, 0, 0.1);
 }
 
 :root {
@@ -162,6 +206,15 @@ body {
 ::selection {
   background: var(--color-accent);
   color: white;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Scrollbars */

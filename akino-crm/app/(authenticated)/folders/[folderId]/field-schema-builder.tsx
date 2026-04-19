@@ -493,7 +493,7 @@ export function FieldSchemaBuilder({
       </div>
 
       {fields.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-(--color-surface-1) py-20 text-center shadow-(--shadow-card) border border-(--color-card-border)">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-(--color-surface-1) py-20 text-center shadow-(--shadow-card-3d) border border-(--color-card-border)">
           <p className="text-sm text-(--color-fg-subtle)">
             No columns defined yet. Add columns to define your lead data
             structure.

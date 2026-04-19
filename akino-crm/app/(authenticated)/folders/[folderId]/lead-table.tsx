@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState, useCallback, useTransition } from "react";
 import {
@@ -159,7 +159,7 @@ export function LeadTable({
         header: "Rating",
         cell: ({ row }) => {
           const r = row.original.quality_rating;
-          if (r == null) return <span className="text-(--color-fg-subtle)">—</span>;
+          if (r == null) return <span className="text-(--color-fg-subtle)">�</span>;
           return (
             <span className="font-bold text-(--color-fg)">
               {r}<span className="text-xs font-normal text-(--color-fg-muted)">/10</span>
@@ -185,7 +185,7 @@ export function LeadTable({
                     href={`/folders/${folderId}/leads/${lead.id}`}
                     className="text-(--color-accent) hover:underline font-medium"
                   >
-                    {val != null && val !== "" ? String(val) : lead.name || "—"}
+                    {val != null && val !== "" ? String(val) : lead.name || "�"}
                   </Link>
                 );
               }
@@ -271,7 +271,7 @@ export function LeadTable({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card) relative">
+    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d) relative">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-card-border)">
         <div className="text-xs text-(--color-fg-muted)">

@@ -196,7 +196,7 @@ export function EnrichmentQueue({
       ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Lead sidebar (quick nav) */}
-          <div className="w-64 shrink-0 overflow-y-auto bg-(--color-surface-1) rounded-2xl m-3 shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="w-64 shrink-0 overflow-y-auto bg-(--color-surface-1) rounded-2xl m-3 shadow-(--shadow-card-3d) border border-(--color-card-border)">
             <div className="p-3 space-y-0.5">
             {batchLeads.map((bl, i) => (
               <button
@@ -253,7 +253,7 @@ export function EnrichmentQueue({
 
             {/* Existing data preview */}
             {Object.keys(lead.data).length > 0 && (
-              <div className="mb-8 rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card) border border-(--color-card-border)">
+              <div className="mb-8 rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border border-(--color-card-border)">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle)">
                   Existing Data
                 </h3>
@@ -302,7 +302,7 @@ export function EnrichmentQueue({
 
             {/* Enrichment form */}
             {enrichmentFields.length === 0 ? (
-              <div className="rounded-2xl bg-(--color-surface-1) p-8 text-center text-sm text-(--color-fg-subtle) shadow-(--shadow-card) border border-(--color-card-border)">
+              <div className="rounded-2xl bg-(--color-surface-1) p-8 text-center text-sm text-(--color-fg-subtle) shadow-(--shadow-card-3d) border border-(--color-card-border)">
                 No enrichment fields defined. Go to the folder&apos;s Columns
                 tab and mark fields as enrichment fields.
               </div>
