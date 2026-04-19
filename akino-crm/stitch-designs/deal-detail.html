@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Akino CRM - Pipeline Deal Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-low": "#1b1b1d",
+                      "surface-container": "#1f1f21",
+                      "on-secondary-fixed-variant": "#2e4772",
+                      "tertiary": "#ffb693",
+                      "inverse-surface": "#e4e2e4",
+                      "on-surface-variant": "#c1c6d6",
+                      "on-surface": "#e4e2e4",
+                      "secondary-fixed-dim": "#aec7f9",
+                      "primary": "#abc7ff",
+                      "primary-fixed": "#d7e2ff",
+                      "inverse-primary": "#005cbb",
+                      "secondary-fixed": "#d7e2ff",
+                      "surface-dim": "#131315",
+                      "on-error": "#690005",
+                      "surface": "#131315",
+                      "surface-tint": "#abc7ff",
+                      "on-tertiary-container": "#fffaf9",
+                      "secondary": "#aec7f9",
+                      "error": "#ffb4ab",
+                      "on-secondary": "#14305a",
+                      "secondary-container": "#2e4772",
+                      "tertiary-fixed-dim": "#ffb693",
+                      "background": "#131315",
+                      "error-container": "#93000a",
+                      "tertiary-fixed": "#ffdbcb",
+                      "outline": "#8b919f",
+                      "on-primary-fixed-variant": "#00458f",
+                      "on-primary-fixed": "#001b3f",
+                      "on-primary": "#002f66",
+                      "surface-variant": "#353437",
+                      "surface-container-highest": "#353437",
+                      "inverse-on-surface": "#303032",
+                      "surface-container-lowest": "#0e0e10",
+                      "outline-variant": "#414753",
+                      "on-secondary-fixed": "#001b3f",
+                      "on-secondary-container": "#9db5e7",
+                      "tertiary-container": "#c25100",
+                      "primary-fixed-dim": "#abc7ff",
+                      "on-tertiary-fixed-variant": "#7a3000",
+                      "on-error-container": "#ffdad6",
+                      "surface-bright": "#39393b",
+                      "on-tertiary": "#562000",
+                      "on-background": "#e4e2e4",
+                      "on-tertiary-fixed": "#341000",
+                      "on-primary-container": "#fcfbff",
+                      "primary-container": "#0071e3",
+                      "surface-container-high": "#2a2a2c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": ["Inter", "sans-serif"],
+                      "body": ["Inter", "sans-serif"],
+                      "label": ["Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+      </script>
+<style>
+          .ghost-border {
+              box-shadow: 0 0 0 1px rgba(65, 71, 83, 0.15);
+          }
+          .ambient-shadow {
+              box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 80px rgba(0, 113, 227, 0.05);
+          }
+      </style>
+</head>
+<body class="bg-background text-on-surface font-body h-screen flex overflow-hidden">
+<!-- TopNavBar (Nav Shell Suppressed for Detail View as per Semantic Shell Mandate - "focused journey") -->
+<!-- Main Background (Simulated behind the drawer) -->
+<div class="flex-1 bg-surface-container-lowest relative">
+<div class="absolute inset-0 p-8 flex gap-8 opacity-20 pointer-events-none">
+<!-- Dummy background content to show the drawer context -->
+<div class="w-64 h-full bg-surface-container-low rounded-lg ghost-border"></div>
+<div class="flex-1 h-full bg-surface-container-low rounded-lg ghost-border"></div>
+</div>
+<!-- Overlay -->
+<div class="absolute inset-0 bg-black/40 backdrop-blur-sm z-40"></div>
+</div>
+<!-- Drawer Container -->
+<aside class="w-[560px] bg-surface-container h-full z-50 flex flex-col absolute right-0 top-0 ambient-shadow border-l border-outline-variant/10">
+<!-- Header -->
+<header class="px-8 pt-8 pb-6 bg-surface-container-highest/30">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h1 class="font-headline text-[28px] font-semibold text-on-surface leading-tight tracking-tight">Elena Rostova</h1>
+<p class="text-on-surface-variant font-medium mt-1">Acme Corp · Enterprise</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Stage Selector -->
+<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+<div class="px-4 py-2 rounded-full text-sm font-medium bg-surface-container-high text-on-surface-variant whitespace-nowrap">Discovery</div>
+<div class="px-4 py-2 rounded-full text-sm font-medium bg-surface-container-high text-on-surface-variant whitespace-nowrap">Demo</div>
+<div class="px-4 py-2 rounded-full text-sm font-medium bg-primary-container text-white whitespace-nowrap ambient-shadow">Negotiation</div>
+<div class="px-4 py-2 rounded-full text-sm font-medium bg-surface-container-high text-on-surface-variant whitespace-nowrap">Contract</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-3">
+<button class="flex-1 bg-[#2e7d32] text-white py-3 rounded-full font-medium hover:bg-[#1b5e20] transition-colors ambient-shadow">
+                    Mark as Won
+                </button>
+<button class="flex-1 bg-transparent text-error py-3 rounded-full font-medium ghost-border hover:bg-error/10 transition-colors">
+                    Mark as Lost
+                </button>
+</div>
+</header>
+<!-- Tabs -->
+<div class="flex px-8 gap-8 border-b border-outline-variant/10">
+<button class="pb-3 text-primary font-medium border-b-2 border-primary">Details</button>
+<button class="pb-3 text-on-surface-variant font-medium hover:text-on-surface transition-colors">Activity</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-12">
+<!-- Details Tab Content -->
+<section class="space-y-8">
+<!-- Data Grid -->
+<div class="grid grid-cols-2 gap-y-8 gap-x-6">
+<!-- Value Pair -->
+<div class="group cursor-pointer">
+<span class="text-xs font-label uppercase tracking-[0.02em] text-on-surface-variant block mb-1">Deal Value</span>
+<div class="flex items-center gap-2 border-b border-transparent group-hover:border-primary pb-1 transition-colors">
+<span class="text-lg text-on-surface">$125,000</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity" data-icon="edit">edit</span>
+</div>
+</div>
+<div class="group cursor-pointer">
+<span class="text-xs font-label uppercase tracking-[0.02em] text-on-surface-variant block mb-1">Close Date</span>
+<div class="flex items-center gap-2 border-b border-transparent group-hover:border-primary pb-1 transition-colors">
+<span class="text-lg text-on-surface">Nov 15, 2024</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity" data-icon="edit">edit</span>
+</div>
+</div>
+<div class="group cursor-pointer">
+<span class="text-xs font-label uppercase tracking-[0.02em] text-on-surface-variant block mb-1">Contact Email</span>
+<div class="flex items-center gap-2 border-b border-transparent group-hover:border-primary pb-1 transition-colors">
+<span class="text-on-surface">elena.r@acmecorp.com</span>
+</div>
+</div>
+<div class="group cursor-pointer">
+<span class="text-xs font-label uppercase tracking-[0.02em] text-on-surface-variant block mb-1">Phone</span>
+<div class="flex items-center gap-2 border-b border-transparent group-hover:border-primary pb-1 transition-colors">
+<span class="text-on-surface">+1 (555) 019-2834</span>
+</div>
+</div>
+</div>
+<!-- Notes Section -->
+<div class="bg-surface-container-low p-6 rounded-lg ghost-border hover:bg-surface-container-highest/20 transition-colors">
+<span class="text-xs font-label uppercase tracking-[0.02em] text-on-surface-variant block mb-3">Deal Notes</span>
+<p class="text-on-surface leading-relaxed text-[15px]">
+                        Client is highly interested in the enterprise tier. Main concern is migration timeline from their current legacy system. We need to provide a detailed implementation schedule before the next sync.
+                    </p>
+</div>
+</section>
+</div>
+<!-- Fixed Bottom Action Bar -->
+<div class="p-6 bg-surface-container border-t border-outline-variant/10 flex flex-col gap-4 z-10">
+<div class="flex gap-3">
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors ghost-border">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="call">call</span>
+<span class="font-medium text-sm">Log Call</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors ghost-border">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="mail">mail</span>
+<span class="font-medium text-sm">Log Email</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors ghost-border">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="edit_note">edit_note</span>
+<span class="font-medium text-sm">Add Note</span>
+</button>
+</div>
+<div class="flex justify-center">
+<button class="text-primary hover:text-primary-fixed transition-colors font-medium text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="event">event</span>
+                    Set Follow-up
+                </button>
+</div>
+</div>
+</aside>
+</body></html>

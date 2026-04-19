@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enrichment Queue - Akino CRM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#1b1b1d",
+                        "surface-container": "#1f1f21",
+                        "on-secondary-fixed-variant": "#2e4772",
+                        "tertiary": "#ffb693",
+                        "inverse-surface": "#e4e2e4",
+                        "on-surface-variant": "#c1c6d6",
+                        "on-surface": "#e4e2e4",
+                        "secondary-fixed-dim": "#aec7f9",
+                        "primary": "#abc7ff",
+                        "primary-fixed": "#d7e2ff",
+                        "inverse-primary": "#005cbb",
+                        "secondary-fixed": "#d7e2ff",
+                        "surface-dim": "#131315",
+                        "on-error": "#690005",
+                        "surface": "#131315",
+                        "surface-tint": "#abc7ff",
+                        "on-tertiary-container": "#fffaf9",
+                        "secondary": "#aec7f9",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#14305a",
+                        "secondary-container": "#2e4772",
+                        "tertiary-fixed-dim": "#ffb693",
+                        "background": "#131315",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#ffdbcb",
+                        "outline": "#8b919f",
+                        "on-primary-fixed-variant": "#00458f",
+                        "on-primary-fixed": "#001b3f",
+                        "on-primary": "#002f66",
+                        "surface-variant": "#353437",
+                        "surface-container-highest": "#353437",
+                        "inverse-on-surface": "#303032",
+                        "surface-container-lowest": "#0e0e10",
+                        "outline-variant": "#414753",
+                        "on-secondary-fixed": "#001b3f",
+                        "on-secondary-container": "#9db5e7",
+                        "tertiary-container": "#c25100",
+                        "primary-fixed-dim": "#abc7ff",
+                        "on-tertiary-fixed-variant": "#7a3000",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#39393b",
+                        "on-tertiary": "#562000",
+                        "on-background": "#e4e2e4",
+                        "on-tertiary-fixed": "#341000",
+                        "on-primary-container": "#fcfbff",
+                        "primary-container": "#0071e3",
+                        "surface-container-high": "#2a2a2c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .sf-pro-display { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex flex-col md:flex-row overflow-hidden">
+<!-- Top Navigation (Web) -->
+<header class="hidden md:flex justify-between items-center px-12 h-16 w-full fixed top-0 z-50 bg-black/80 backdrop-blur-lg shadow-2xl shadow-black/40">
+<div class="text-xl font-bold text-white tracking-tight">Akino CRM</div>
+<nav class="flex gap-8">
+<a class="text-zinc-400 font-medium hover:text-white transition-colors duration-200" href="#">Leads</a>
+<a class="text-white border-b-2 border-[#0071e3] pb-1 font-medium active:scale-95 transition-transform" href="#">Enrichment</a>
+<a class="text-zinc-400 font-medium hover:text-white transition-colors duration-200" href="#">Pipeline</a>
+<a class="text-zinc-400 font-medium hover:text-white transition-colors duration-200" href="#">Analytics</a>
+</nav>
+<div class="flex items-center gap-4 text-zinc-400">
+<button class="hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<img alt="User profile" class="w-8 h-8 rounded-full ml-4" data-alt="Close up portrait of a professional man with short hair wearing a dark shirt in soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2JJGL_WQ_Dn5dovX9HyNjD2QkItbnQSp5l3v0VwnKd_tIhyLILQLcHniyRb3w-MlyBDFvYPpPtOCnAkjlKQI6NxnYBJUAE9EvfqVLMtrLOStZzWVnjP8MU8FuL4QiMxIGBqkA8bEd4AzOa28C7AlKxEjccGnk18wammCjhHjSmvH5wrdYw47wpkrua6vHv_hgE1z2WWlUWVcb0EWs37Y3pLxVd-SeW6ds44qSXOBgouWyq_yibzcPWVYMdWDiireXj8Jm6Wjv6Qhx"/>
+</div>
+</header>
+<!-- Left Panel: Read-only Data (60%) -->
+<main class="w-full md:w-[60%] bg-surface-container-lowest h-full pt-20 px-8 pb-8 flex flex-col overflow-y-auto">
+<div class="flex items-center justify-between mb-8">
+<div>
+<p class="text-on-surface-variant text-sm font-medium tracking-wide uppercase">Batch: Q3 Tech Startups</p>
+<p class="text-on-surface text-sm mt-1">Lead 12 of 50</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/20 text-on-surface hover:bg-surface-container-low transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="flag">flag</span>
+<span class="text-sm font-medium">Flag</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/20 text-on-surface hover:bg-surface-container-low transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="skip_next">skip_next</span>
+<span class="text-sm font-medium">Skip</span>
+</button>
+</div>
+</div>
+<div class="flex-1 mt-12 max-w-2xl mx-auto w-full">
+<h1 class="sf-pro-display text-[28px] font-semibold text-white mb-2 tracking-tight">Acme Innovate Corp.</h1>
+<div class="flex gap-6 mb-12 border-b border-surface-container-low pb-6">
+<a class="text-primary-container hover:text-primary-fixed transition-colors flex items-center gap-1 text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="language">language</span>
+                    acmeinnovate.com
+                </a>
+<a class="text-primary-container hover:text-primary-fixed transition-colors flex items-center gap-1 text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="link">link</span>
+                    LinkedIn Profile
+                </a>
+</div>
+<div class="grid grid-cols-2 gap-y-8 gap-x-12">
+<div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-1">Industry</p>
+<p class="text-on-surface text-base">Software Development</p>
+</div>
+<div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-1">Location</p>
+<p class="text-on-surface text-base">San Francisco, CA</p>
+</div>
+<div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-1">Founded</p>
+<p class="text-on-surface text-base">2019</p>
+</div>
+<div>
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-1">Current Focus</p>
+<p class="text-on-surface text-base">AI Logistics</p>
+</div>
+</div>
+<div class="mt-16 p-6 bg-surface-container-low rounded-xl">
+<p class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest mb-3">Context Notes</p>
+<p class="text-on-surface-variant text-sm leading-relaxed">
+                     Recently raised Series A. They are expanding their engineering team rapidly. Mentioned on TechCrunch as a top startup to watch in the supply chain sector.
+                 </p>
+</div>
+</div>
+</main>
+<!-- Right Panel: Enrichment Form (40%) -->
+<aside class="w-full md:w-[40%] bg-surface-bright h-full pt-20 px-10 pb-8 flex flex-col shadow-2xl shadow-black/50 z-10 overflow-y-auto">
+<h2 class="sf-pro-display text-[21px] font-semibold text-white mb-8 tracking-tight">Fill in what you find</h2>
+<form class="flex-1 flex flex-col gap-6">
+<div class="relative group">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Decision Maker Name</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="e.g. Jane Doe" type="text"/>
+</div>
+<div class="relative group">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Email Address</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="jane@example.com" type="email"/>
+</div>
+<div class="relative group">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Phone Number</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="(555) 123-4567" type="tel"/>
+</div>
+<div class="relative group">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Decision Maker LinkedIn</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="linkedin.com/in/..." type="url"/>
+</div>
+<div class="flex gap-6">
+<div class="relative group flex-1">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Company Size</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="10-50" type="text"/>
+</div>
+<div class="relative group flex-1">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Est. Revenue</label>
+<input class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors" placeholder="$1M-$5M" type="text"/>
+</div>
+</div>
+<div class="relative group mt-4">
+<label class="absolute text-xs text-on-surface-variant top-1 left-0 transition-all">Enrichment Notes</label>
+<textarea class="w-full bg-transparent border-0 border-b border-outline-variant/30 text-white text-base pt-6 pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors resize-none" placeholder="Any specific details found..." rows="3"></textarea>
+</div>
+<div class="mt-auto pt-8">
+<button class="w-full bg-primary-container text-white rounded-full py-4 font-semibold text-base hover:bg-inverse-primary transition-colors flex justify-center items-center gap-2" type="button">
+                    Mark as Enriched
+                    <span class="material-symbols-outlined text-lg" data-icon="check_circle">check_circle</span>
+</button>
+<div class="text-center mt-4">
+<button class="text-on-surface-variant text-sm font-medium hover:text-white transition-colors border-b-2 border-transparent hover:border-white pb-1" type="button">
+                        Save &amp; Come Back
+                    </button>
+</div>
+</div>
+</form>
+</aside>
+</body></html>

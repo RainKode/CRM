@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Akino CRM - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb693",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#414753",
+                        "surface-container-lowest": "#0e0e10",
+                        "tertiary-container": "#c25100",
+                        "surface-container": "#1f1f21",
+                        "on-primary-fixed": "#001b3f",
+                        "background": "#131315",
+                        "surface-bright": "#39393b",
+                        "on-tertiary": "#562000",
+                        "surface-tint": "#abc7ff",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#ffdbcb",
+                        "on-surface": "#e4e2e4",
+                        "inverse-on-surface": "#303032",
+                        "secondary": "#aec7f9",
+                        "on-background": "#e4e2e4",
+                        "secondary-container": "#2e4772",
+                        "on-secondary-fixed-variant": "#2e4772",
+                        "on-secondary-container": "#9db5e7",
+                        "primary-container": "#0071e3",
+                        "on-surface-variant": "#c1c6d6",
+                        "inverse-surface": "#e4e2e4",
+                        "surface-container-highest": "#353437",
+                        "on-tertiary-fixed": "#341000",
+                        "surface-dim": "#131315",
+                        "surface": "#131315",
+                        "primary-fixed": "#d7e2ff",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#abc7ff",
+                        "primary": "#abc7ff",
+                        "tertiary": "#ffb693",
+                        "secondary-fixed-dim": "#aec7f9",
+                        "surface-container-high": "#2a2a2c",
+                        "surface-container-low": "#1b1b1d",
+                        "on-primary": "#002f66",
+                        "inverse-primary": "#005cbb",
+                        "secondary-fixed": "#d7e2ff",
+                        "on-tertiary-container": "#fffaf9",
+                        "on-primary-container": "#fcfbff",
+                        "on-secondary": "#14305a",
+                        "on-primary-fixed-variant": "#00458f",
+                        "surface-variant": "#353437",
+                        "on-tertiary-fixed-variant": "#7a3000",
+                        "outline": "#8b919f",
+                        "on-secondary-fixed": "#001b3f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased selection:bg-primary-container selection:text-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background dark group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col w-full max-w-[960px] flex-1 gap-4">
+<!-- Sticky Header -->
+<header class="sticky top-0 z-50 -mx-4 px-4 sm:-mx-10 sm:px-10 lg:-mx-40 lg:px-40 flex items-center justify-between whitespace-nowrap bg-background/80 backdrop-blur-[20px] py-4 mb-4">
+<div class="flex items-center justify-between w-full max-w-[960px] mx-auto">
+<div class="flex items-center gap-4 text-on-surface">
+<div class="size-5 text-primary-container">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-on-surface text-xl font-bold font-headline tracking-tight">Akino CRM</h2>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<button class="flex items-center justify-center rounded-full size-10 bg-surface-container-high hover:bg-surface-container-highest transition-colors text-on-surface">
+<div class="text-on-surface flex items-center justify-center" data-icon="Notifications">
+<span class="material-symbols-outlined" style="font-size: 20px;">notifications</span>
+</div>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-background ring-offset-2 ring-offset-surface-container-high" data-alt="close up portrait of a young professional man with short hair and a subtle smile against a neutral gray background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBdL_05hPLPLdYCLVF5ZAzi1BWn9KU6DbvWuVW0zTi7HKPo-47HvsRqPqKQkn5fIRH1HYbLrqUOdmFZnjogZH2kfQayWV9AA7xT3LpygNKs0x0wkISLTfclvnhTCGWOsxiOCmt1t2Pu7dK4vuZAU7ScOUtvvSCqMNoPcCP5CEOGUuK48gljzHnPu3iH8KGkjR3ChaYBahCg5kKRuMR9sWGjaJxQ_ca1Y-XxT73RtbsTEMI-JnjXfVvnA5-_MpbY6CVxj0xIgso5Dzem");'></div>
+</div>
+</div>
+</header>
+<!-- Greeting -->
+<div class="px-4 py-2">
+<h2 class="text-on-surface tracking-tight text-[32px] sm:text-[40px] font-bold font-headline leading-tight pb-1">Good morning, RainKode</h2>
+<p class="text-on-surface-variant text-base font-medium leading-normal uppercase tracking-[0.02em] font-label">October 24, 2023</p>
+</div>
+<!-- Featured Card -->
+<div class="p-4">
+<div class="flex items-stretch justify-between gap-6 rounded-2xl bg-surface-container-low p-6 sm:p-8 transition-transform hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] duration-300">
+<div class="flex flex-[2_2_0px] flex-col gap-6 justify-between">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 mb-1">
+<div class="size-2 rounded-full bg-primary-container animate-pulse"></div>
+<p class="text-primary-container text-xs font-bold leading-normal uppercase tracking-wider font-label">Overdue</p>
+</div>
+<p class="text-on-surface text-2xl font-bold font-headline leading-tight">Today's Follow-ups</p>
+<p class="text-on-surface-variant text-base font-normal leading-relaxed mt-2 max-w-md">Acme Corp Deal - Follow up on pricing proposal and finalize the architecture review document.</p>
+</div>
+<button class="flex items-center justify-center rounded-full h-10 px-6 bg-primary-container text-white gap-2 text-sm font-bold leading-normal w-fit transition-transform hover:scale-105">
+<span>View Deal</span>
+<div class="flex items-center" data-icon="arrow_forward">
+<span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+</div>
+</button>
+</div>
+<div class="hidden sm:block w-1/3 bg-center bg-no-repeat bg-cover rounded-xl" data-alt="modern minimalist office space with geometric shadows, wooden desk, and a bright window casting light onto an abstract architectural model" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWjKIzrZuIMl1JIdhreKn0GmqhegQfhh5rO78fbWIK9bfbcgYfJ1lLMFUwMOuaQjcI_klvN0vDWcD7f4AVuV8FUiofDefFgP8PBK3AvjGebR0lAWOSD44x4oJzTuTnHgK3Kw4Vp26u8BVmM-nF6kFJy-QkrWTASSadwJy5EPZ1mtne40GB5h5WSoaVtOmuGKWC6n2kzKqcPhLGLoMOUlDoKMY4kXHtiZFG0dhUlb-tV_uc1eJ1sQk-VAaiMvVClx6zsSa31xwkQcoD");'></div>
+</div>
+</div>
+<!-- Pipeline Summary -->
+<div class="flex flex-wrap gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-surface-container hover:bg-surface-container-high transition-colors">
+<p class="text-on-surface-variant text-xs font-bold leading-normal uppercase tracking-wider font-label">New</p>
+<p class="text-on-surface tracking-tight text-3xl font-bold font-headline leading-none">12</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-surface-container hover:bg-surface-container-high transition-colors">
+<p class="text-on-surface-variant text-xs font-bold leading-normal uppercase tracking-wider font-label">In Progress</p>
+<p class="text-on-surface tracking-tight text-3xl font-bold font-headline leading-none">24</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-surface-container hover:bg-surface-container-high transition-colors relative overflow-hidden">
+<div class="absolute inset-0 bg-primary-container/5 pointer-events-none"></div>
+<p class="text-primary-container text-xs font-bold leading-normal uppercase tracking-wider font-label relative z-10">Won</p>
+<p class="text-primary-container tracking-tight text-3xl font-bold font-headline leading-none relative z-10">8</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-surface-container hover:bg-surface-container-high transition-colors opacity-70">
+<p class="text-on-surface-variant text-xs font-bold leading-normal uppercase tracking-wider font-label">Lost</p>
+<p class="text-on-surface-variant tracking-tight text-3xl font-bold font-headline leading-none">2</p>
+</div>
+</div>
+<!-- Two Column Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 mt-4">
+<!-- Folder Summary -->
+<div class="flex flex-col gap-6 rounded-2xl bg-surface-container-low p-6 sm:p-8">
+<div class="flex justify-between items-center">
+<h3 class="text-on-surface text-xl font-bold font-headline tracking-tight">Folder Summary</h3>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" data-icon="more_horiz" style="font-size: 20px;">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-6">
+<!-- Folder Item -->
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-end">
+<p class="text-on-surface text-base font-medium">Enterprise Tech</p>
+<p class="text-on-surface-variant text-sm"><span class="text-on-surface font-semibold">142</span> / 200</p>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[71%] rounded-full shadow-[0_0_10px_rgba(0,113,227,0.5)]"></div>
+</div>
+</div>
+<!-- Folder Item -->
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-end">
+<p class="text-on-surface text-base font-medium">Q4 EMEA Targets</p>
+<p class="text-on-surface-variant text-sm"><span class="text-on-surface font-semibold">89</span> / 100</p>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[89%] rounded-full shadow-[0_0_10px_rgba(0,113,227,0.5)]"></div>
+</div>
+</div>
+<!-- Folder Item -->
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-end">
+<p class="text-on-surface text-base font-medium">Series B Startups</p>
+<p class="text-on-surface-variant text-sm"><span class="text-on-surface font-semibold">24</span> / 150</p>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[16%] rounded-full shadow-[0_0_10px_rgba(0,113,227,0.5)]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity -->
+<div class="flex flex-col gap-6 rounded-2xl bg-surface-container-low p-6 sm:p-8">
+<div class="flex justify-between items-center">
+<h3 class="text-on-surface text-xl font-bold font-headline tracking-tight">Recent Activity</h3>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors text-sm font-medium">View All</button>
+</div>
+<div class="flex flex-col gap-5">
+<!-- Activity Item -->
+<div class="flex items-start gap-4">
+<div class="size-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface" data-icon="mail" style="font-size: 18px;">mail</span>
+</div>
+<div class="flex flex-col gap-1 pt-0.5">
+<p class="text-on-surface text-sm font-medium leading-snug">Sent proposal to <span class="font-bold">Sarah Jenkins</span></p>
+<p class="text-on-surface-variant text-xs">10 mins ago</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex items-start gap-4">
+<div class="size-10 rounded-full bg-primary-container/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary-container" data-icon="check_circle" style="font-size: 18px;">check_circle</span>
+</div>
+<div class="flex flex-col gap-1 pt-0.5">
+<p class="text-on-surface text-sm font-medium leading-snug">Deal closed: <span class="font-bold text-primary-container">Globex Inc.</span></p>
+<p class="text-on-surface-variant text-xs">2 hours ago</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex items-start gap-4">
+<div class="size-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface" data-icon="call" style="font-size: 18px;">call</span>
+</div>
+<div class="flex flex-col gap-1 pt-0.5">
+<p class="text-on-surface text-sm font-medium leading-snug">Discovery call with <span class="font-bold">TechCorp</span></p>
+<p class="text-on-surface-variant text-xs">Yesterday, 3:00 PM</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

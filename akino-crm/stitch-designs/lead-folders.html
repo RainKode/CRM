@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lead Folders - Akino CRM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-container-low": "#1b1b1d",
+                            "surface-container": "#1f1f21",
+                            "on-secondary-fixed-variant": "#2e4772",
+                            "tertiary": "#ffb693",
+                            "inverse-surface": "#e4e2e4",
+                            "on-surface-variant": "#c1c6d6",
+                            "on-surface": "#e4e2e4",
+                            "secondary-fixed-dim": "#aec7f9",
+                            "primary": "#abc7ff",
+                            "primary-fixed": "#d7e2ff",
+                            "inverse-primary": "#005cbb",
+                            "secondary-fixed": "#d7e2ff",
+                            "surface-dim": "#131315",
+                            "on-error": "#690005",
+                            "surface": "#131315",
+                            "surface-tint": "#abc7ff",
+                            "on-tertiary-container": "#fffaf9",
+                            "secondary": "#aec7f9",
+                            "error": "#ffb4ab",
+                            "on-secondary": "#14305a",
+                            "secondary-container": "#2e4772",
+                            "tertiary-fixed-dim": "#ffb693",
+                            "background": "#131315",
+                            "error-container": "#93000a",
+                            "tertiary-fixed": "#ffdbcb",
+                            "outline": "#8b919f",
+                            "on-primary-fixed-variant": "#00458f",
+                            "on-primary-fixed": "#001b3f",
+                            "on-primary": "#002f66",
+                            "surface-variant": "#353437",
+                            "surface-container-highest": "#353437",
+                            "inverse-on-surface": "#303032",
+                            "surface-container-lowest": "#0e0e10",
+                            "outline-variant": "#414753",
+                            "on-secondary-fixed": "#001b3f",
+                            "on-secondary-container": "#9db5e7",
+                            "tertiary-container": "#c25100",
+                            "primary-fixed-dim": "#abc7ff",
+                            "on-tertiary-fixed-variant": "#7a3000",
+                            "on-error-container": "#ffdad6",
+                            "surface-bright": "#39393b",
+                            "on-tertiary": "#562000",
+                            "on-background": "#e4e2e4",
+                            "on-tertiary-fixed": "#341000",
+                            "on-primary-container": "#fcfbff",
+                            "primary-container": "#0071e3",
+                            "surface-container-high": "#2a2a2c"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "1rem",
+                            "lg": "2rem",
+                            "xl": "3rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                            "headline": [
+                                    "Inter"
+                            ],
+                            "body": [
+                                    "Inter"
+                            ],
+                            "label": [
+                                    "Inter"
+                            ]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="h-screen w-72 fixed left-0 top-0 bg-[#131315] flex flex-col py-10 px-6 gap-y-2 flat no-border layout ease-in-out duration-300 z-40 hidden md:flex">
+<div class="mb-12 px-4 flex items-center gap-4">
+<img alt="Akino Brand Avatar" class="w-10 h-10 rounded-lg object-cover" data-alt="Abstract geometric minimal 3d rendered logo element with soft lighting on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGe5W4QP3z4--kaAvAdzsXvikryUPxlW4NVOx5NlO5-C9jZQ_qkA_-il5dumongbzeO7Wvu3yUPdBZv5qFsQw7EIMyE6IY7b3OG69DE8csKLZD58GOEnCaid7f7Q7I_9JN4uH4IieUhbLPfjEsvLzW6hjqQuZqKpcf9czAOxbcxDTtvlYFiOT4ZJAEi6kvn6xq2scJ53R5cbP2m_M5NeuBe45KQLjvRT5t8B2C11nO-6dhtM_6m46pOP3SN6cTS-aE7esF-FqAzWWN"/>
+<div>
+<h1 class="text-lg font-bold text-white tracking-tight">Akino CRM</h1>
+<p class="text-xs text-zinc-500 font-medium tracking-wide">The Digital Architect</p>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center gap-4 px-4 py-3 rounded-full hover:bg-zinc-800/40 hover:text-white transition-all text-zinc-500 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-full hover:bg-zinc-800/40 hover:text-white transition-all text-zinc-500 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined" data-icon="person_search">person_search</span>
+<span>Prospecting</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-full bg-zinc-800/40 text-white font-bold transition-all font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[#0071e3]" data-icon="layers">layers</span>
+<span>Data Batches</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-full hover:bg-zinc-800/40 hover:text-white transition-all text-zinc-500 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span>Sales Pipeline</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-full hover:bg-zinc-800/40 hover:text-white transition-all text-zinc-500 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span>Team</span>
+</a>
+</nav>
+<button class="mt-auto w-full py-4 px-6 bg-primary-container text-white rounded-full font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+            Create Lead List
+        </button>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-72 flex flex-col min-h-screen">
+<!-- TopNavBar (Mobile Only Fallback/Header) -->
+<header class="bg-black/80 backdrop-blur-lg fixed top-0 w-full z-50 flex justify-between items-center px-6 md:px-12 h-16 shadow-2xl shadow-black/40 md:hidden">
+<h1 class="text-xl font-bold text-white tracking-tight">Akino CRM</h1>
+<div class="flex gap-4">
+<button class="text-zinc-400 hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-zinc-400 hover:text-white transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 pt-24 pb-12 px-6 md:px-16 max-w-7xl mx-auto w-full">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
+<div>
+<h2 class="text-4xl md:text-[40px] font-bold text-white tracking-tight mb-2">Data Batches</h2>
+<p class="text-on-surface-variant font-medium text-lg">Manage and enrich your organized lead segments.</p>
+</div>
+<div class="flex gap-4 w-full md:w-auto">
+<div class="relative flex-1 md:w-64">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low text-on-surface border-0 rounded-full py-3 pl-12 pr-4 focus:ring-1 focus:ring-primary-container outline-none transition-all placeholder:text-on-surface-variant font-medium" placeholder="Search batches..." type="text"/>
+</div>
+</div>
+</div>
+<!-- Bento Grid - Data Batches -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Batch Card 1 -->
+<div class="bg-surface-container-low rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+<div class="flex justify-between items-start relative z-10">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="folder_special">folder_special</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+<div class="relative z-10">
+<h3 class="text-[21px] font-bold text-white mb-1">Enterprise SaaS Q3</h3>
+<p class="text-sm text-on-surface-variant font-medium">Updated 2h ago</p>
+</div>
+<div class="grid grid-cols-2 gap-4 relative z-10">
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Total</p>
+<p class="text-xl font-bold text-white">1,240</p>
+</div>
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Enriched</p>
+<p class="text-xl font-bold text-white">892</p>
+</div>
+</div>
+<div class="relative z-10 mt-auto pt-4 flex justify-between items-center">
+<div class="flex-1 mr-6">
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[72%] rounded-full"></div>
+</div>
+</div>
+<a class="text-primary-container font-semibold hover:text-white transition-colors text-sm uppercase tracking-wide" href="#">Open List</a>
+</div>
+</div>
+<!-- Batch Card 2 -->
+<div class="bg-surface-container-low rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+<div class="flex justify-between items-start relative z-10">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface" data-icon="folder">folder</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+<div class="relative z-10">
+<h3 class="text-[21px] font-bold text-white mb-1">Fintech Founders NY</h3>
+<p class="text-sm text-on-surface-variant font-medium">Updated 1d ago</p>
+</div>
+<div class="grid grid-cols-2 gap-4 relative z-10">
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Total</p>
+<p class="text-xl font-bold text-white">450</p>
+</div>
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Enriched</p>
+<p class="text-xl font-bold text-white">450</p>
+</div>
+</div>
+<div class="relative z-10 mt-auto pt-4 flex justify-between items-center">
+<div class="flex-1 mr-6">
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[100%] rounded-full"></div>
+</div>
+</div>
+<a class="text-primary-container font-semibold hover:text-white transition-colors text-sm uppercase tracking-wide" href="#">Open List</a>
+</div>
+</div>
+<!-- Batch Card 3 -->
+<div class="bg-surface-container-low rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden">
+<div class="flex justify-between items-start relative z-10">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface" data-icon="folder">folder</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+<div class="relative z-10">
+<h3 class="text-[21px] font-bold text-white mb-1">EU Logistics Leads</h3>
+<p class="text-sm text-on-surface-variant font-medium">Updated 3d ago</p>
+</div>
+<div class="grid grid-cols-2 gap-4 relative z-10">
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Total</p>
+<p class="text-xl font-bold text-white">3,100</p>
+</div>
+<div class="bg-surface-container p-4 rounded-xl">
+<p class="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Enriched</p>
+<p class="text-xl font-bold text-white">400</p>
+</div>
+</div>
+<div class="relative z-10 mt-auto pt-4 flex justify-between items-center">
+<div class="flex-1 mr-6">
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[15%] rounded-full"></div>
+</div>
+</div>
+<a class="text-primary-container font-semibold hover:text-white transition-colors text-sm uppercase tracking-wide" href="#">Open List</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

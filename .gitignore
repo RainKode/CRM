@@ -1,0 +1,7 @@
+# Secrets / IDE config
+.vscode/mcp.json
+.env*
+
+# Python caches
+__pycache__/
+*.pyc

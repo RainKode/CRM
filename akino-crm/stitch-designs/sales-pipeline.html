@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Akino CRM - Sales Pipeline</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=SF+Pro+Display:wght@600&amp;family=SF+Pro+Text:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#1b1b1d",
+                        "surface-container": "#1f1f21",
+                        "on-secondary-fixed-variant": "#2e4772",
+                        "tertiary": "#ffb693",
+                        "inverse-surface": "#e4e2e4",
+                        "on-surface-variant": "#c1c6d6",
+                        "on-surface": "#e4e2e4",
+                        "secondary-fixed-dim": "#aec7f9",
+                        "primary": "#abc7ff",
+                        "primary-fixed": "#d7e2ff",
+                        "inverse-primary": "#005cbb",
+                        "secondary-fixed": "#d7e2ff",
+                        "surface-dim": "#131315",
+                        "on-error": "#690005",
+                        "surface": "#131315",
+                        "surface-tint": "#abc7ff",
+                        "on-tertiary-container": "#fffaf9",
+                        "secondary": "#aec7f9",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#14305a",
+                        "secondary-container": "#2e4772",
+                        "tertiary-fixed-dim": "#ffb693",
+                        "background": "#131315",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#ffdbcb",
+                        "outline": "#8b919f",
+                        "on-primary-fixed-variant": "#00458f",
+                        "on-primary-fixed": "#001b3f",
+                        "on-primary": "#002f66",
+                        "surface-variant": "#353437",
+                        "surface-container-highest": "#353437",
+                        "inverse-on-surface": "#303032",
+                        "surface-container-lowest": "#0e0e10",
+                        "outline-variant": "#414753",
+                        "on-secondary-fixed": "#001b3f",
+                        "on-secondary-container": "#9db5e7",
+                        "tertiary-container": "#c25100",
+                        "primary-fixed-dim": "#abc7ff",
+                        "on-tertiary-fixed-variant": "#7a3000",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#39393b",
+                        "on-tertiary": "#562000",
+                        "on-background": "#e4e2e4",
+                        "on-tertiary-fixed": "#341000",
+                        "on-primary-container": "#fcfbff",
+                        "primary-container": "#0071e3",
+                        "surface-container-high": "#2a2a2c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter", "SF Pro Display"],
+                        "body": ["Inter", "SF Pro Text"],
+                        "label": ["Inter", "SF Pro Text"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex h-screen w-72 fixed left-0 top-0 bg-[#131315] flex-col py-10 px-6 gap-y-2 z-40 border-r border-surface-container-low">
+<div class="mb-12">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center font-bold text-on-primary-container text-xl shadow-[0_0_40px_rgba(0,113,227,0.4)]">A</div>
+<div>
+<h1 class="text-lg font-bold text-white tracking-tight">Akino CRM</h1>
+<p class="text-xs text-on-surface-variant uppercase tracking-widest font-label font-medium text-[10px]">The Digital Architect</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 flex-grow">
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-800/40 hover:text-white rounded-full transition-all ease-in-out duration-300 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-800/40 hover:text-white rounded-full transition-all ease-in-out duration-300 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">person_search</span>
+<span>Prospecting</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-800/40 hover:text-white rounded-full transition-all ease-in-out duration-300 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">layers</span>
+<span>Data Batches</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-white font-bold bg-surface-container-low rounded-full transition-all ease-in-out duration-300 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary-container" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span>Sales Pipeline</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-800/40 hover:text-white rounded-full transition-all ease-in-out duration-300 font-['Inter','SF_Pro_Text'] text-[15px]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">groups</span>
+<span>Team</span>
+</a>
+</div>
+<button class="mt-auto w-full py-3 bg-primary-container text-white rounded-full font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(0,113,227,0.3)]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            Create Lead List
+        </button>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-72 flex flex-col h-screen overflow-hidden bg-background">
+<!-- Top App Bar equivalent for inner page -->
+<header class="flex justify-between items-center px-8 md:px-12 h-24 w-full shrink-0 z-30">
+<div>
+<h2 class="font-headline font-semibold text-3xl tracking-tight text-white">Pipeline</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-low p-1 rounded-full border border-outline-variant/10">
+<button class="px-4 py-1.5 rounded-full text-sm font-medium text-on-surface-variant hover:text-white transition-colors">List View</button>
+<button class="px-4 py-1.5 rounded-full text-sm font-medium bg-surface-container-highest text-white shadow-[0_4px_12px_rgba(0,0,0,0.5)]">Board View</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/20 bg-surface-container-low hover:bg-surface-container transition-colors text-sm font-medium text-white">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Filter
+                    <span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+</button>
+<button class="hidden md:flex items-center gap-2 px-6 py-2 rounded-full bg-primary-container text-white font-medium hover:opacity-90 transition-all shadow-[0_4px_20px_rgba(0,113,227,0.3)]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Deal
+                </button>
+</div>
+</header>
+<!-- Kanban Board Area -->
+<div class="flex-1 overflow-x-auto overflow-y-hidden px-8 md:px-12 pb-8 no-scrollbar">
+<div class="flex gap-6 h-full min-w-max">
+<!-- Column 1: Qualified -->
+<div class="w-[320px] flex flex-col h-full bg-surface-container-lowest/50 rounded-2xl p-4">
+<div class="flex justify-between items-center mb-6 px-2">
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-semibold text-white tracking-wide">Qualified</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-xs font-bold text-on-surface-variant">4</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-white text-[20px]">more_horiz</span>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto no-scrollbar pb-4">
+<!-- Card 1 -->
+<div class="bg-surface-container-low rounded-xl p-5 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all cursor-grab border border-outline-variant/10">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-semibold text-white text-[15px] leading-tight mb-1">Acme Corp Enterprise</h4>
+<p class="text-xs text-on-surface-variant">John Doe</p>
+</div>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Inbound</span>
+</div>
+<div class="text-lg font-semibold text-white mb-4">$45,000</div>
+<div class="flex items-center justify-between mt-auto pt-3 border-t border-surface-container-highest">
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+<div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+<span>Today</span>
+</div>
+<div class="flex items-center gap-1 text-xs text-primary-container font-medium">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Tomorrow
+                                </div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-low rounded-xl p-5 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all cursor-grab border border-outline-variant/10">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-semibold text-white text-[15px] leading-tight mb-1">Stark Industries</h4>
+<p class="text-xs text-on-surface-variant">Tony Stark</p>
+</div>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Outbound</span>
+</div>
+<div class="text-lg font-semibold text-white mb-4">$120,000</div>
+<div class="flex items-center justify-between mt-auto pt-3 border-t border-surface-container-highest">
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+<div class="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+<span>2d ago</span>
+</div>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-surface-container-low" data-alt="professional headshot of an executive smiling slightly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrhVBiN7m2LTuVr1R-8oEJm5mX82FWqHUq3xGCihB6a3plIF56A6C7V9ee4uzp2czBnXazC0WY6AYQUhxAmMwePlD4NH2liOsvW8elsdShiUS1_MX-KEYfPiG2HX_SgAWI0A98fbGdU4J5UQ6qhh3h2zyweLp6uHHV9g89thqKSkX5RIo1TO3J0j4J5TjjpJPFOieCbbn4wLPfKbtxk1M1HefgaIAdjGr2fFVmOcurEFJQYoljbLIBdxcjzm2IPrANdPRgfz47UuV4"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: Meeting Set -->
+<div class="w-[320px] flex flex-col h-full bg-surface-container-lowest/50 rounded-2xl p-4">
+<div class="flex justify-between items-center mb-6 px-2">
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-semibold text-white tracking-wide">Meeting Set</h3>
+<span class="px-2 py-0.5 rounded-full bg-primary-container/20 text-primary-container text-xs font-bold border border-primary-container/30">2</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-white text-[20px]">more_horiz</span>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto no-scrollbar pb-4">
+<!-- Active Card (Draggable state example) -->
+<div class="bg-surface-container-low rounded-xl p-5 scale-[1.02] shadow-[0_12px_40px_rgba(0,0,0,0.5)] cursor-grabbing border border-primary-container/50 relative">
+<div class="absolute inset-0 rounded-xl shadow-[0_0_20px_rgba(0,113,227,0.15)] pointer-events-none"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-semibold text-white text-[15px] leading-tight mb-1">Wayne Enterprises</h4>
+<p class="text-xs text-on-surface-variant">Bruce Wayne</p>
+</div>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Partner</span>
+</div>
+<div class="text-lg font-semibold text-white mb-4">$85,000</div>
+<div class="flex items-center justify-between mt-auto pt-3 border-t border-surface-container-highest">
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+<div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+<span>1h ago</span>
+</div>
+<div class="flex items-center gap-1 text-xs text-primary-container font-medium">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                    Oct 12
+                                </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Proposal Sent -->
+<div class="w-[320px] flex flex-col h-full bg-surface-container-lowest/50 rounded-2xl p-4">
+<div class="flex justify-between items-center mb-6 px-2">
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-semibold text-white tracking-wide">Proposal Sent</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-xs font-bold text-on-surface-variant">1</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-white text-[20px]">more_horiz</span>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto no-scrollbar pb-4">
+<div class="bg-surface-container-low rounded-xl p-5 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all cursor-grab border border-outline-variant/10">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-semibold text-white text-[15px] leading-tight mb-1">Oscorp</h4>
+<p class="text-xs text-on-surface-variant">Norman Osborn</p>
+</div>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Inbound</span>
+</div>
+<div class="text-lg font-semibold text-white mb-4">$250,000</div>
+<div class="flex items-center justify-between mt-auto pt-3 border-t border-surface-container-highest">
+<div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+<div class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+<span>5d ago</span>
+</div>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-surface-container-low" data-alt="professional headshot of a woman looking confident" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPHeoRvHnWsHQbbM2WZWlpNWJCiMioGE7c3I4uYWXFSyml4h1Jn_Z1prvboDWpKsfXyTZWPj6cYFyZ932Ek1Qa0bAFqZ6C1sba8wyJkXDlYzTBdWeuQecfRJzzpuq7W3U37nwQNvqs22nzb6hx1diTTEbiw3VJoCxD8p2DMdCw78N83RXa95Mb6__kzwgqwNygw4INAuGs6lg07Ftspsg1qtKJsxXksaI_QIDCRZ6bAsufxTVDUlbGUcRzy_9BrpdgDA6bQ4BfBY9w"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 4: Won (Green Tint) -->
+<div class="w-[320px] flex flex-col h-full bg-green-900/10 rounded-2xl p-4 border border-green-500/10">
+<div class="flex justify-between items-center mb-6 px-2">
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-semibold text-green-400 tracking-wide">Won</h3>
+<span class="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/30">12</span>
+</div>
+<span class="material-symbols-outlined text-green-600/50 cursor-pointer hover:text-green-400 text-[20px]">more_horiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Action Button (Mobile) -->
+<button class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-primary-container rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgba(0,113,227,0.4)] z-50">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</button>
+</main>
+</body></html>

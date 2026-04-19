@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Akino CRM - Enrichment Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-container": "#9db5e7",
+                        "tertiary-fixed": "#ffdbcb",
+                        "secondary-fixed-dim": "#aec7f9",
+                        "tertiary-container": "#c25100",
+                        "surface-container-high": "#2a2a2c",
+                        "on-secondary": "#14305a",
+                        "inverse-surface": "#e4e2e4",
+                        "tertiary-fixed-dim": "#ffb693",
+                        "on-surface-variant": "#c1c6d6",
+                        "on-tertiary-fixed": "#341000",
+                        "surface-container": "#1f1f21",
+                        "secondary": "#aec7f9",
+                        "background": "#131315",
+                        "surface-container-lowest": "#0e0e10",
+                        "secondary-fixed": "#d7e2ff",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#353437",
+                        "on-primary-container": "#fcfbff",
+                        "error-container": "#93000a",
+                        "inverse-primary": "#005cbb",
+                        "surface-bright": "#39393b",
+                        "surface": "#131315",
+                        "on-primary-fixed": "#001b3f",
+                        "on-primary": "#002f66",
+                        "on-primary-fixed-variant": "#00458f",
+                        "primary-fixed-dim": "#abc7ff",
+                        "primary": "#abc7ff",
+                        "surface-container-low": "#1b1b1d",
+                        "on-tertiary": "#562000",
+                        "on-secondary-fixed": "#001b3f",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#ffb693",
+                        "on-tertiary-container": "#fffaf9",
+                        "primary-fixed": "#d7e2ff",
+                        "secondary-container": "#2e4772",
+                        "on-tertiary-fixed-variant": "#7a3000",
+                        "inverse-on-surface": "#303032",
+                        "surface-tint": "#abc7ff",
+                        "on-secondary-fixed-variant": "#2e4772",
+                        "primary-container": "#0071e3",
+                        "surface-container-highest": "#353437",
+                        "outline-variant": "#414753",
+                        "on-surface": "#e4e2e4",
+                        "surface-dim": "#131315",
+                        "outline": "#8b919f",
+                        "on-background": "#e4e2e4",
+                        "on-error": "#690005"
+                    },
+                    borderRadius: {
+                        DEFAULT: "1rem",
+                        lg: "2rem",
+                        xl: "3rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        /* Float label styles */
+        .float-label-input:focus ~ .float-label,
+        .float-label-input:not(:placeholder-shown) ~ .float-label {
+            transform: translateY(-1.5rem) scale(0.85);
+            color: theme('colors.primary-container');
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased min-h-screen flex flex-col md:flex-row overflow-hidden">
+<!-- TopNavBar (Mobile Only) -->
+<nav class="md:hidden fixed top-0 w-full z-50 bg-black/80 backdrop-blur-2xl text-on-surface shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex justify-between items-center px-6 py-4 border-b border-surface-container-low">
+<div class="font-headline font-bold text-white tracking-tighter text-xl">Akino CRM</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-white transition-colors cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-white transition-colors cursor-pointer">settings</span>
+</div>
+</nav>
+<!-- SideNavBar (Web Only) -->
+<nav class="hidden md:flex fixed left-0 top-0 h-screen w-72 overflow-y-auto bg-[#131315] flex-col gap-2 py-10 z-40 border-r border-surface-container-low">
+<div class="px-10 mb-8">
+<div class="text-white font-black uppercase tracking-widest text-lg">Akino CRM</div>
+<div class="text-on-surface-variant text-sm mt-1">Precision Sales</div>
+<button class="mt-8 w-full bg-primary-container text-white rounded-full py-3 font-medium tracking-wide hover:bg-primary-container/90 transition-colors">New Lead</button>
+</div>
+<div class="flex-1 flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 text-slate-500 px-10 py-3 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-10 py-3 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">filter_list</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Lead Queue</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-10 py-3 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">view_kanban</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Sales Pipeline</span>
+</a>
+<a class="flex items-center gap-3 bg-[#1b1b1d] text-[#0071e3] rounded-r-full mr-4 px-10 py-3 border-l-4 border-[#0071e3] scale-102 shadow-lg" href="#">
+<span class="material-symbols-outlined" data-weight="fill">history</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Enrichment</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-10 py-3 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Settings</span>
+</a>
+</div>
+<div class="mt-auto px-10 flex flex-col gap-4">
+<a class="flex items-center gap-3 text-slate-500 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Support</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label text-[15px] tracking-wide uppercase font-medium">Sign Out</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area (Split Screen) -->
+<main class="flex-1 flex flex-col md:flex-row md:ml-72 mt-16 md:mt-0 h-screen overflow-hidden">
+<!-- Left Panel: Reference Data (60%) -->
+<section class="w-full md:w-[60%] bg-surface-container-lowest h-full overflow-y-auto flex flex-col relative">
+<!-- Header & Progress -->
+<header class="p-8 pb-4 sticky top-0 bg-surface-container-lowest/90 backdrop-blur-md z-10">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h1 class="font-headline font-semibold text-2xl text-on-surface tracking-tight">Batch 3 — UK Agencies</h1>
+<p class="text-on-surface-variant text-sm mt-1">Lead 14 of 50</p>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-1 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[28%] rounded-full"></div>
+</div>
+</header>
+<!-- Reference Card -->
+<div class="flex-1 p-8 pt-4 flex flex-col justify-center">
+<div class="bg-surface-container-low rounded-2xl p-10 relative overflow-hidden group hover:scale-[1.01] transition-transform duration-300">
+<!-- Subtle Ambient Shadow effect via pseudo-element or container background -->
+<div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+<h2 class="font-headline font-semibold text-[28px] text-white leading-tight mb-2">Acme Digital Solutions Ltd.</h2>
+<div class="flex flex-wrap gap-6 mb-10">
+<a class="text-primary-container hover:text-primary transition-colors flex items-center gap-1 text-[15px]" href="#">
+<span class="material-symbols-outlined text-[18px]">language</span>
+                            acmedigital.co.uk
+                        </a>
+<a class="text-primary-container hover:text-primary transition-colors flex items-center gap-1 text-[15px]" href="#">
+<span class="material-symbols-outlined text-[18px]">link</span>
+                            linkedin.com/company/acme-digital
+                        </a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+<div>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-widest block mb-1">Industry</span>
+<span class="text-[17px] text-on-surface">Marketing &amp; Advertising</span>
+</div>
+<div>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-widest block mb-1">Location</span>
+<span class="text-[17px] text-on-surface">London, United Kingdom</span>
+</div>
+<div>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-widest block mb-1">Est. Employees</span>
+<span class="text-[17px] text-on-surface">50 - 200</span>
+</div>
+<div>
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-widest block mb-1">Last Funding</span>
+<span class="text-[17px] text-on-surface">Series A ($5M, 2022)</span>
+</div>
+</div>
+<div class="bg-surface-container-highest p-6 rounded-xl border border-outline-variant/20">
+<span class="font-label text-xs text-on-surface-variant uppercase tracking-widest block mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">info</span> Context Note
+                         </span>
+<p class="text-[15px] text-on-surface/80 leading-relaxed">
+                             Recently launched a new programmatic ad platform. Mentioned in TechCrunch last week regarding European expansion. Potential fit for our enterprise tier.
+                         </p>
+</div>
+</div>
+</div>
+<!-- Left Panel Actions -->
+<div class="p-8 pt-4 mt-auto flex gap-4 border-t border-surface-container-high/50">
+<button class="px-8 py-3 rounded-full border border-outline-variant text-on-surface hover:bg-surface-container-low hover:border-outline transition-all text-[15px] font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">flag</span>
+                    Flag this lead
+                </button>
+<button class="px-8 py-3 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-[15px] font-medium ml-auto">
+                    Skip
+                </button>
+</div>
+</section>
+<!-- Right Panel: Enrichment Form (40%) -->
+<section class="w-full md:w-[40%] bg-surface h-full overflow-y-auto flex flex-col border-l border-surface-container-low shadow-[-20px_0_40px_rgba(0,0,0,0.2)] z-20">
+<div class="p-8 lg:p-12 flex-1 flex flex-col">
+<h3 class="font-headline font-semibold text-[21px] mb-10 text-white tracking-tight">Fill in what you find</h3>
+<form class="flex flex-col gap-8 flex-1">
+<!-- Input Group -->
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="dm_name" placeholder=" " type="text"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="dm_name">Decision Maker Name</label>
+</div>
+<!-- Input Group -->
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="dm_email" placeholder=" " type="email"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="dm_email">Email Address</label>
+</div>
+<!-- Input Group -->
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="dm_phone" placeholder=" " type="tel"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="dm_phone">Direct Phone</label>
+</div>
+<!-- Input Group -->
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="dm_linkedin" placeholder=" " type="url"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="dm_linkedin">LinkedIn Profile URL</label>
+</div>
+<!-- Split Row -->
+<div class="grid grid-cols-2 gap-6">
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="comp_size" placeholder=" " type="text"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="comp_size">Company Size</label>
+</div>
+<div class="relative group">
+<input class="float-label-input w-full bg-transparent border-0 border-b border-outline-variant text-on-surface text-[17px] pb-2 px-0 focus:ring-0 focus:border-primary-container transition-colors peer placeholder-transparent" id="comp_rev" placeholder=" " type="text"/>
+<label class="float-label absolute left-0 top-0 text-on-surface-variant text-[17px] transition-all duration-300 pointer-events-none origin-left peer-focus:-translate-y-6 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-6 peer-not-placeholder-shown:scale-85" for="comp_rev">Est. Revenue</label>
+</div>
+</div>
+<!-- Textarea -->
+<div class="relative group mt-4">
+<textarea class="float-label-input w-full bg-surface-container-low border border-transparent rounded-lg text-on-surface text-[15px] p-4 focus:ring-0 focus:border-primary-container/50 focus:bg-surface-container transition-colors peer placeholder-transparent resize-none" id="notes" placeholder=" " rows="3"></textarea>
+<label class="float-label absolute left-4 top-4 text-on-surface-variant text-[15px] transition-all duration-300 pointer-events-none peer-focus:-translate-y-10 peer-focus:-translate-x-4 peer-focus:scale-85 peer-focus:text-primary-container peer-not-placeholder-shown:-translate-y-10 peer-not-placeholder-shown:-translate-x-4 peer-not-placeholder-shown:scale-85" for="notes">Enrichment Notes</label>
+</div>
+</form>
+<!-- Right Panel Actions -->
+<div class="mt-12 flex flex-col gap-4">
+<button class="w-full bg-primary-container text-white rounded-full py-4 font-semibold text-[17px] tracking-wide hover:bg-primary-container/90 transition-colors shadow-[0_4px_20px_rgba(0,113,227,0.3)]">
+                        Mark as Enriched
+                    </button>
+<button class="w-full py-3 text-on-surface-variant text-[15px] font-medium hover:text-white transition-colors text-center border-b-2 border-transparent hover:border-white/20 inline-block mx-auto max-w-fit pb-1">
+                        Save &amp; Come Back
+                    </button>
+</div>
+</div>
+</section>
+</main>
+</body></html>
