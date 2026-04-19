@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   Sparkles,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,6 +182,18 @@ export function FieldSchemaBuilder({
   const [addOpen, setAddOpen] = useState(false);
   const [, startTransition] = useTransition();
 
+  function handleDownloadTemplate() {
+    if (fields.length === 0) return;
+    const headers = fields.map((f) => f.label).join(",");
+    const blob = new Blob([headers + "\n"], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lead-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function toggleHidden(field: FieldDefinition) {
     startTransition(() =>
       updateField(field.id, folderId, { is_hidden: !field.is_hidden })
@@ -206,9 +219,16 @@ export function FieldSchemaBuilder({
             Define what data fields exist in this folder
           </p>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4" /> Add Column
-        </Button>
+        <div className="flex items-center gap-2">
+          {fields.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={handleDownloadTemplate}>
+              <Download className="h-4 w-4" /> Download Template
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" /> Add Column
+          </Button>
+        </div>
       </div>
 
       {fields.length === 0 ? (

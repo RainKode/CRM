@@ -8,6 +8,7 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,14 +90,24 @@ export function CsvUpload({
     });
   }
 
-  // Targets for mapping
+  // Targets for mapping — only user-defined columns
   const targetOptions = [
     { value: "", label: "— Skip —" },
-    { value: "name", label: "Name (built-in)" },
-    { value: "email", label: "Email (built-in)" },
-    { value: "company", label: "Company (built-in)" },
     ...fields.map((f) => ({ value: f.key, label: f.label })),
   ];
+
+  // Download CSV template based on defined columns
+  function handleDownloadTemplate() {
+    if (fields.length === 0) return;
+    const headers = fields.map((f) => f.label).join(",");
+    const blob = new Blob([headers + "\n"], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lead-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ─── Step: Upload ───
   if (step === "upload") {
@@ -126,6 +137,26 @@ export function CsvUpload({
             Supports up to 50,000 rows · Comma or semicolon separated
           </p>
         </div>
+
+        {fields.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadTemplate();
+            }}
+            className="flex items-center gap-2 rounded-full bg-(--color-surface-2) px-5 py-2.5 text-sm font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download CSV Template
+          </button>
+        )}
+
+        {fields.length === 0 && (
+          <p className="text-sm text-(--color-fg-subtle)">
+            Define your columns in the <span className="font-medium text-(--color-fg-muted)">Columns</span> tab first, then download a CSV template here.
+          </p>
+        )}
       </div>
     );
   }

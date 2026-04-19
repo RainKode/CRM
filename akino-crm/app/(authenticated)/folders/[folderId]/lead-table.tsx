@@ -21,14 +21,6 @@ import { updateLead, deleteLeads } from "./actions";
 
 const COL = createColumnHelper<Lead>();
 
-// Status badge tone map
-const STATUS_TONE: Record<string, "neutral" | "accent" | "success" | "info"> = {
-  raw: "neutral",
-  enriched: "accent",
-  in_pipeline: "success",
-  archived: "info",
-};
-
 export function LeadTable({
   folderId,
   fields,
@@ -72,39 +64,6 @@ export function LeadTable({
         ),
         size: 32,
       }),
-      // Fixed cols
-      COL.accessor("name", {
-        header: "Name",
-        size: 180,
-        cell: (info) => (
-          <span className="font-medium">{info.getValue() ?? "—"}</span>
-        ),
-      }),
-      COL.accessor("email", {
-        header: "Email",
-        size: 220,
-        cell: (info) => (
-          <span className="text-(--color-fg-muted)">
-            {info.getValue() ?? "—"}
-          </span>
-        ),
-      }),
-      COL.accessor("company", {
-        header: "Company",
-        size: 160,
-      }),
-      COL.accessor("status", {
-        header: "Status",
-        size: 100,
-        cell: (info) => {
-          const s = info.getValue();
-          return (
-            <Badge tone={STATUS_TONE[s] ?? "neutral"}>
-              {s.replace("_", " ")}
-            </Badge>
-          );
-        },
-      }),
       // Dynamic columns from field schema
       ...visibleFields.map((field) =>
         COL.accessor((row) => (row.data as Record<string, unknown>)[field.key], {
@@ -147,23 +106,25 @@ export function LeadTable({
       setLeads((prev) =>
         prev.map((l) => {
           if (l.id !== leadId) return l;
-          if (["name", "email", "company"].includes(fieldKey)) {
-            return { ...l, [fieldKey]: value };
-          }
-          return { ...l, data: { ...l.data, [fieldKey]: value } };
+          const newData = { ...l.data, [fieldKey]: value };
+          // Also update top-level columns if the key matches
+          const updates: Partial<Lead> = { data: newData };
+          if (fieldKey === "email") updates.email = value as string;
+          if (fieldKey === "name") updates.name = value as string;
+          if (fieldKey === "company") updates.company = value as string;
+          return { ...l, ...updates };
         })
       );
 
       startTransition(async () => {
-        if (["name", "email", "company"].includes(fieldKey)) {
-          await updateLead(leadId, folderId, { [fieldKey]: value } as Record<string, unknown> as Partial<Lead>);
-        } else {
-          const lead = leads.find((l) => l.id === leadId);
-          if (!lead) return;
-          await updateLead(leadId, folderId, {
-            data: { ...lead.data, [fieldKey]: value },
-          });
-        }
+        const lead = leads.find((l) => l.id === leadId);
+        if (!lead) return;
+        const newData = { ...lead.data, [fieldKey]: value };
+        const updates: Partial<Pick<Lead, "data" | "email" | "name" | "company">> = { data: newData };
+        if (fieldKey === "email") updates.email = value as string;
+        if (fieldKey === "name") updates.name = value as string;
+        if (fieldKey === "company") updates.company = value as string;
+        await updateLead(leadId, folderId, updates);
       });
     },
     [folderId, leads]

@@ -154,17 +154,16 @@ export async function importLeads(
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const mapped: Record<string, unknown> = {};
-    let email: string | null = null;
-    let name: string | null = null;
-    let company: string | null = null;
 
     for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
-      const val = row[csvKey];
-      if (fieldKey === "email") email = val as string;
-      else if (fieldKey === "name") name = val as string;
-      else if (fieldKey === "company") company = val as string;
-      else mapped[fieldKey] = val;
+      if (!fieldKey) continue;
+      mapped[fieldKey] = row[csvKey];
     }
+
+    // Extract top-level columns if matching keys exist in the mapped data
+    const email = (mapped["email"] as string) ?? null;
+    const name = (mapped["name"] as string) ?? null;
+    const company = (mapped["company"] as string) ?? null;
 
     // Duplicate check by email
     if (email) {
