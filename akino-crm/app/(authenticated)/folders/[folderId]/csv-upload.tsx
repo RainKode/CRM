@@ -133,7 +133,7 @@ export function CsvUpload({
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2) shadow-(--shadow-card-3d) border border-(--color-card-border)"
+          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)"
           onClick={() => {
             const input = document.createElement("input");
             input.type = "file";
@@ -211,7 +211,7 @@ export function CsvUpload({
           {csvHeaders.map((header) => (
             <div
               key={header}
-              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3 shadow-sm border border-(--color-card-border)"
+              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3 shadow-sm border-2 border-(--color-card-border)"
             >
               <div className="flex w-48 items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-(--color-fg-subtle)" />
@@ -284,7 +284,7 @@ export function CsvUpload({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card-3d) border border-(--color-card-border)">
+        <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
           <table className="w-full text-sm">
             <thead className="bg-(--color-surface-2)">
               <tr>

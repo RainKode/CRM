@@ -375,7 +375,7 @@ export function FolderList({
           return (
             <div
               key={folder.id}
-              className="bg-(--color-surface-1) rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden shadow-(--shadow-card-3d) border border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover)"
+              className="bg-(--color-surface-1) rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover)"
             >
               {/* Hover gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-(--color-accent)/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -462,7 +462,7 @@ export function FolderList({
             {archived.map((folder) => (
               <div
                 key={folder.id}
-                className="bg-(--color-surface-1) rounded-[2rem] p-6 flex items-center justify-between shadow-(--shadow-card-3d) border border-(--color-card-border)"
+                className="bg-(--color-surface-1) rounded-[2rem] p-6 flex items-center justify-between shadow-(--shadow-card-3d) border-2 border-(--color-card-border)"
               >
                 <div className="flex items-center gap-3">
                   <Archive className="h-5 w-5 text-(--color-fg-subtle)" />

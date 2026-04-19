@@ -140,7 +140,7 @@ export function BatchCreationWizard({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-(--color-surface-1) rounded-3xl w-full max-w-2xl shadow-2xl border border-(--color-card-border) overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-(--color-surface-1) rounded-3xl w-full max-w-2xl shadow-2xl border-2 border-(--color-card-border) overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-8 pb-4">
           <div>
@@ -342,7 +342,7 @@ export function BatchCreationWizard({
                         return (
                           <div
                             key={i}
-                            className="flex items-center justify-between rounded-xl bg-(--color-surface-1) px-4 py-2.5 text-sm border border-(--color-card-border)"
+                            className="flex items-center justify-between rounded-xl bg-(--color-surface-1) px-4 py-2.5 text-sm border-2 border-(--color-card-border)"
                           >
                             <span className="font-medium text-(--color-fg)">
                               {namePrefix || folder.name} - Batch #{i + 1}
@@ -413,8 +413,8 @@ export function BatchCreationWizard({
               </div>
 
               {createError && (
-                <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
-                  <p className="text-sm font-medium text-red-400">{createError}</p>
+                <div className="rounded-2xl bg-(--color-danger)/10 border-2 border-(--color-danger)/20 p-4">
+                  <p className="text-sm font-medium text-(--color-danger)">{createError}</p>
                 </div>
               )}
 
@@ -428,7 +428,7 @@ export function BatchCreationWizard({
                   return (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl bg-(--color-surface-2) px-4 py-2.5 text-sm border border-(--color-card-border)"
+                      className="flex items-center justify-between rounded-xl bg-(--color-surface-2) px-4 py-2.5 text-sm border-2 border-(--color-card-border)"
                     >
                       <span className="font-medium text-(--color-fg)">
                         {namePrefix || folder.name} - Batch #{i + 1}

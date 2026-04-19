@@ -271,7 +271,7 @@ export function LeadTable({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d) relative">
+    <div className="flex h-full flex-col rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d) relative">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-card-border)">
         <div className="text-xs text-(--color-fg-muted)">
@@ -293,7 +293,7 @@ export function LeadTable({
           </button>
 
           {showFieldPanel && (
-            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-card-border) shadow-xl overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
                 <span className="text-sm font-bold text-(--color-fg)">
                   Toggle Columns

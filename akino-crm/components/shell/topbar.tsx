@@ -7,7 +7,7 @@ export function Topbar() {
   const { theme, toggle } = useTheme();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between bg-(--color-bg)/80 backdrop-blur-[20px] px-6 md:px-8 py-4 border-b border-(--color-card-border)">
+    <header className="sticky top-0 z-50 flex items-center justify-between bg-(--color-bg)/80 backdrop-blur-[20px] px-6 md:px-8 py-4 border-b-2 border-(--color-card-border)">
       {/* Mobile menu button */}
       <button
         type="button"

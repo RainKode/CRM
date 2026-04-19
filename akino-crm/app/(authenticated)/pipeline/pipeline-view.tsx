@@ -114,7 +114,7 @@ function DealCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border border-(--color-card-border)"
+      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 border-(--color-card-border)"
     >
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -580,7 +580,7 @@ export function PipelineView({
         </h1>
         <div className="flex items-center gap-4">
           {/* View toggle */}
-          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border border-(--color-card-border)">
+          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
             <button
               type="button"
               onClick={() => setView("list")}

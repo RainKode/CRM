@@ -192,7 +192,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                           <Link
                             key={batch.id}
                             href={`/enrichment/${batch.id}`}
-                            className="bg-(--color-surface-1) border border-(--color-card-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-all duration-200 shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-1 active:translate-y-0 active:shadow-(--shadow-btn-active)"
+                            className="bg-(--color-surface-1) border-2 border-(--color-card-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-all duration-200 shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-1 active:translate-y-0 active:shadow-(--shadow-btn-active)"
                           >
                             <div className="flex items-start justify-between">
                               <div className="w-9 h-9 rounded-full bg-(--color-surface-4) flex items-center justify-center">
@@ -250,7 +250,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                     </div>
                   ) : (
                     /* List view (compact) */
-                    <div className="rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d)">
+                    <div className="rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d)">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-(--color-surface-2) text-left text-xs uppercase tracking-wider text-(--color-fg-subtle)">
