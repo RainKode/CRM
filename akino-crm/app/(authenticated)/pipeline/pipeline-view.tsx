@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -27,6 +27,7 @@ import {
   ChevronDown,
   MoreHorizontal,
   Calendar,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,23 @@ import {
 import { cn, relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, LossReason } from "@/lib/types";
 import { createDeal, moveDeal, logActivity, setFollowUp } from "./actions";
+
+// ─────────────────────────────────────────────
+// Generic dropdown hook (click-outside to close)
+// ─────────────────────────────────────────────
+function useDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  return { open, setOpen, ref };
+}
 
 type ViewMode = "kanban" | "list";
 
@@ -137,20 +155,23 @@ function KanbanColumn({
   stage,
   deals,
   onCardClick,
+  onCreateInStage,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   onCardClick: (deal: Deal) => void;
+  onCreateInStage: (stageId: string) => void;
 }) {
   const isWon = stage.is_won;
+  const menu = useDropdown();
 
   return (
     <div
       className={cn(
-        "w-[320px] flex flex-col h-full rounded-2xl p-4",
+        "w-[320px] flex flex-col h-full rounded-2xl p-4 border",
         isWon
-          ? "bg-green-900/10 border border-green-500/10"
-          : "bg-(--color-bg)/50"
+          ? "bg-green-900/10 border-green-500/10"
+          : "bg-(--color-surface-2)/30 border-(--color-border)/15"
       )}
     >
       <div className="flex justify-between items-center mb-6 px-2">
@@ -174,15 +195,29 @@ function KanbanColumn({
             {deals.length}
           </span>
         </div>
-        <button
-          type="button"
-          className={cn(
-            "cursor-pointer hover:text-(--color-fg)",
-            isWon ? "text-green-600/50 hover:text-green-400" : "text-(--color-fg-muted)"
+        <div className="relative" ref={menu.ref}>
+          <button
+            type="button"
+            onClick={() => menu.setOpen(!menu.open)}
+            className={cn(
+              "cursor-pointer hover:text-(--color-fg) p-1 rounded-md hover:bg-(--color-surface-3) transition-colors",
+              isWon ? "text-green-600/50 hover:text-green-400" : "text-(--color-fg-muted)"
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          {menu.open && (
+            <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1 z-50">
+              <button
+                type="button"
+                onClick={() => { onCreateInStage(stage.id); menu.setOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add deal here
+              </button>
+            </div>
           )}
-        >
-          <MoreHorizontal className="h-5 w-5" />
-        </button>
+        </div>
       </div>
       <SortableContext
         items={deals.map((d) => d.id)}
@@ -209,15 +244,23 @@ function CreateDealDialog({
   open,
   onOpenChange,
   stages,
+  defaultStageId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   stages: PipelineStage[];
+  defaultStageId?: string | null;
 }) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
-  const [stageId, setStageId] = useState(stages[0]?.id ?? "");
+  const resolvedDefault = defaultStageId ?? stages[0]?.id ?? "";
+  const [stageId, setStageId] = useState(resolvedDefault);
+
+  // Sync when defaultStageId changes (e.g. opening from a column menu)
+  useEffect(() => {
+    if (open && defaultStageId) setStageId(defaultStageId);
+  }, [open, defaultStageId]);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
@@ -468,19 +511,24 @@ export function PipelineView({
 }) {
   const [view, setView] = useState<ViewMode>("kanban");
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStageId, setCreateStageId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showClosed, setShowClosed] = useState(false);
+  const [filterStageId, setFilterStageId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const filterMenu = useDropdown();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   const deals = useMemo(() => {
-    if (showClosed) return initialDeals;
-    return initialDeals.filter((d) => !d.won_at && !d.lost_at);
-  }, [initialDeals, showClosed]);
+    let result = initialDeals;
+    if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
+    if (filterStageId) result = result.filter((d) => d.stage_id === filterStageId);
+    return result;
+  }, [initialDeals, showClosed, filterStageId]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
@@ -560,14 +608,76 @@ export function PipelineView({
           </div>
 
           {/* Filter */}
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2 rounded-full border border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-            <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
-          </button>
+          <div className="relative" ref={filterMenu.ref}>
+            <button
+              type="button"
+              onClick={() => filterMenu.setOpen(!filterMenu.open)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full border bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)",
+                (showClosed || filterStageId)
+                  ? "border-(--color-accent)/50"
+                  : "border-(--color-card-border)"
+              )}
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+              {(showClosed || filterStageId) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-(--color-accent)" />
+              )}
+              <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
+            </button>
+            {filterMenu.open && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Filters</span>
+                  {(showClosed || filterStageId) && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowClosed(false); setFilterStageId(null); }}
+                      className="text-xs text-(--color-accent) hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="border-t border-(--color-border)/15 my-1" />
+                <label className="flex items-center gap-2 px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showClosed}
+                    onChange={(e) => setShowClosed(e.target.checked)}
+                    className="accent-(--color-accent) rounded"
+                  />
+                  Show closed deals
+                </label>
+                <div className="border-t border-(--color-border)/15 my-1" />
+                <p className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-(--color-fg-subtle)">By stage</p>
+                <button
+                  type="button"
+                  onClick={() => setFilterStageId(null)}
+                  className={cn(
+                    "w-full text-left px-4 py-1.5 text-sm transition-colors",
+                    !filterStageId ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                  )}
+                >
+                  All stages
+                </button>
+                {stages.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setFilterStageId(s.id)}
+                    className={cn(
+                      "w-full text-left px-4 py-1.5 text-sm transition-colors",
+                      filterStageId === s.id ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                    )}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Add Deal */}
           <Button
@@ -596,6 +706,10 @@ export function PipelineView({
                   stage={stage}
                   deals={dealsByStage[stage.id] ?? []}
                   onCardClick={setSelectedDeal}
+                  onCreateInStage={(stageId) => {
+                    setCreateStageId(stageId);
+                    setCreateOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -679,8 +793,12 @@ export function PipelineView({
       {/* Create deal dialog */}
       <CreateDealDialog
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(v) => {
+          setCreateOpen(v);
+          if (!v) setCreateStageId(null);
+        }}
         stages={stages}
+        defaultStageId={createStageId}
       />
 
       {/* Deal detail panel */}
