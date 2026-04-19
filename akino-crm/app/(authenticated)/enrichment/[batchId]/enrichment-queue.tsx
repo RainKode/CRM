@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
-  ArrowRight,
   CheckCircle2,
   SkipForward,
   Flag,
@@ -14,13 +14,15 @@ import {
   Calendar,
   Hash,
   FileText,
-  Globe,
+  ExternalLink,
+  Minimize2,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { usePopout } from "@/lib/use-popout";
 import type { Batch, BatchLead, Lead, FieldDefinition } from "@/lib/types";
 import {
   completeBatchLead,
@@ -64,11 +66,11 @@ export function EnrichmentQueue({
     return batchLeads[idx >= 0 ? idx : 0]?.lead?.quality_rating ?? null;
   });
   const [isPending, startTransition] = useTransition();
+  const popout = usePopout();
 
   const current = batchLeads[currentIdx];
   const lead = current?.lead;
   const total = batchLeads.length;
-  const completed = batchLeads.filter((bl) => bl.is_completed).length;
   const needsEnrichment = batchLeads.filter((bl) => !bl.is_completed && !bl.is_skipped).length;
 
   function goNext() {
@@ -83,14 +85,6 @@ export function EnrichmentQueue({
       setCurrentIdx(currentIdx + 1);
       setFormData({});
       setRating(batchLeads[currentIdx + 1]?.lead?.quality_rating ?? null);
-    }
-  }
-
-  function goPrev() {
-    if (currentIdx > 0) {
-      setCurrentIdx(currentIdx - 1);
-      setFormData({});
-      setRating(batchLeads[currentIdx - 1]?.lead?.quality_rating ?? null);
     }
   }
 
@@ -201,6 +195,198 @@ export function EnrichmentQueue({
 
   const leadData = lead.data as Record<string, unknown>;
 
+  // ── Shared form content (renders inline or in PiP window) ──
+  const formContent = (
+    <div className="flex flex-col h-full bg-(--color-bg)">
+      <header className="p-6 pb-3 shrink-0">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-(--color-fg) tracking-tight">
+            Fill in what you find
+          </h2>
+          {popout.isOpen ? (
+            <button
+              type="button"
+              onClick={popout.closePopout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-surface-4) hover:text-(--color-fg) transition-all"
+              title="Snap back into app"
+            >
+              <Minimize2 className="h-3.5 w-3.5" /> Snap back
+            </button>
+          ) : popout.isSupported ? (
+            <button
+              type="button"
+              onClick={() => popout.openPopout(420, 720)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-all"
+              title="Pop out — stays on top of other windows"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Pop out
+            </button>
+          ) : null}
+        </div>
+        <p className="text-xs text-(--color-fg-muted) mt-1">
+          {lead.name || lead.company || "Lead"} · {currentIdx + 1}/{total}
+        </p>
+        {current.is_completed && (
+          <Badge tone="success" className="mt-2">Already enriched</Badge>
+        )}
+        {current.is_flagged && (
+          <Badge tone="warn" className="mt-2">Flagged: {current.flag_reason}</Badge>
+        )}
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+        {enrichmentFields.length === 0 ? (
+          <div className="rounded-xl bg-(--color-surface-2) p-8 text-center text-sm text-(--color-fg-subtle)">
+            No enrichment fields defined. Configure fields from the folder settings.
+          </div>
+        ) : (
+          <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+            {enrichmentFields.map((field) => {
+              const Icon = fieldIcon(field);
+              const val =
+                (formData[field.key] as string) ??
+                (leadData[field.key] as string) ??
+                "";
+
+              return (
+                <div key={field.id} className="space-y-1.5">
+                  <label className="block text-sm font-medium text-(--color-fg)">
+                    {field.label}
+                    {field.is_required && (
+                      <span className="text-(--color-danger)"> *</span>
+                    )}
+                  </label>
+                  {field.type === "dropdown" ? (
+                    <select
+                      value={String(val)}
+                      onChange={(e) => updateField(field.key, e.target.value)}
+                      className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
+                    >
+                      <option value="">Select…</option>
+                      {(field.options ?? []).map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : field.type === "checkbox" ? (
+                    <div className="flex items-center gap-3 bg-(--color-surface-3) rounded-lg py-3 px-4">
+                      <input
+                        type="checkbox"
+                        checked={!!val}
+                        onChange={(e) => updateField(field.key, e.target.checked)}
+                        className="accent-(--color-accent) h-4 w-4"
+                      />
+                      <span className="text-sm text-(--color-fg-muted)">Yes</span>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Icon className="h-4 w-4 text-(--color-fg-subtle)" />
+                      </div>
+                      <input
+                        type={
+                          field.type === "email" ? "email"
+                            : field.type === "url" ? "url"
+                            : field.type === "phone" ? "tel"
+                            : field.type === "date" ? "date"
+                            : field.type === "number" ? "number"
+                            : "text"
+                        }
+                        value={String(val)}
+                        onChange={(e) => updateField(field.key, e.target.value)}
+                        placeholder={field.description || field.label}
+                        className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Notes / Comments — resizable */}
+            <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+              <label className="block text-sm font-medium text-(--color-fg)">
+                Notes / Comments
+              </label>
+              <textarea
+                value={(formData["__notes"] as string) ?? ""}
+                onChange={(e) => updateField("__notes", e.target.value)}
+                placeholder="Add any notes or comments about this lead…"
+                rows={3}
+                className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
+                style={{ resize: "vertical", minHeight: 80 }}
+              />
+            </div>
+
+            {/* Quality Rating */}
+            <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+              <label className="block text-sm font-medium text-(--color-fg)">
+                Lead Quality
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={rating ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? null : Math.min(10, Math.max(0, parseFloat(e.target.value)));
+                    setRating(v);
+                  }}
+                  onBlur={() => {
+                    startTransition(async () => {
+                      await updateLeadRating(current.lead_id, rating);
+                    });
+                  }}
+                  placeholder="—"
+                  className="h-10 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-lg font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                />
+                <span className="text-sm font-medium text-(--color-fg-muted)">/ 10</span>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Validation errors */}
+        {validationErrors.length > 0 && (
+          <div className="mt-4 rounded-xl bg-(--color-danger)/10 border border-(--color-danger)/20 p-4 space-y-1">
+            {validationErrors.map((err, i) => (
+              <p key={i} className="text-sm text-(--color-danger)">{err}</p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="px-6 py-5 border-t border-(--color-card-border) shrink-0 space-y-2">
+        <button
+          type="button"
+          onClick={handleComplete}
+          disabled={isPending || current.is_completed}
+          className="w-full bg-(--color-accent) text-(--color-accent-fg) py-3.5 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active) disabled:opacity-50"
+        >
+          {isPending ? "Saving…" : "Mark as Enriched"}
+        </button>
+        <div className="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-fg) transition-colors"
+          >
+            Skip for now
+          </button>
+          <button
+            type="button"
+            onClick={handleFlag}
+            className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-warn) transition-colors flex items-center gap-1.5"
+          >
+            <Flag className="h-3.5 w-3.5" /> Flag
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+
   return (
     <div className="flex h-full overflow-hidden bg-(--color-bg)">
       {/* ── Pane 1: Lead Queue List ── */}
@@ -282,7 +468,6 @@ export function EnrichmentQueue({
         <div className="flex-1 overflow-y-auto p-8 pt-4">
           <div className="rounded-2xl border-2 border-(--color-card-border) shadow-(--shadow-card-3d) bg-(--color-surface-1) p-6">
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-              {/* Top-level lead fields */}
               {lead.name && (
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Company Name</p>
@@ -297,7 +482,6 @@ export function EnrichmentQueue({
                   </a>
                 </div>
               )}
-              {/* Dynamic data fields */}
               {Object.entries(leadData).map(([key, val]) => {
                 if (!val || String(val).trim() === "") return null;
                 const displayKey = key
@@ -331,7 +515,6 @@ export function EnrichmentQueue({
                 </div>
               )}
             </div>
-            {/* Empty state */}
             {!lead.name && !lead.email && Object.keys(leadData).length === 0 && !lead.notes && (
               <p className="text-sm text-(--color-fg-subtle) py-8 text-center">No existing data for this lead.</p>
             )}
@@ -339,172 +522,44 @@ export function EnrichmentQueue({
         </div>
       </section>
 
-      {/* ── Pane 3: Enrichment Form ── */}
-      <section
-        className="shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]"
-        style={{ width: 420, minWidth: 320, maxWidth: 600, resize: "horizontal", overflow: "auto" }}
-      >
-        <header className="p-8 pb-4 shrink-0">
-          <h2 className="text-xl font-semibold text-(--color-fg) tracking-tight">Fill in what you find</h2>
-          {current.is_completed && (
-            <Badge tone="success" className="mt-2">Already enriched</Badge>
-          )}
-          {current.is_flagged && (
-            <Badge tone="warn" className="mt-2">Flagged: {current.flag_reason}</Badge>
-          )}
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-8 pt-4">
-          {enrichmentFields.length === 0 ? (
-            <div className="rounded-xl bg-(--color-surface-2) p-8 text-center text-sm text-(--color-fg-subtle)">
-              No enrichment fields defined. Configure fields from the folder settings.
+      {/* ── Pane 3: Enrichment Form (inline or popped-out) ── */}
+      {popout.isOpen && popout.pipWindow ? (
+        <>
+          {/* Placeholder when popped out */}
+          <section className="w-[200px] shrink-0 flex flex-col items-center justify-center bg-(--color-bg) border-l-2 border-(--color-card-border) border-dashed">
+            <div className="text-center px-6 space-y-3">
+              <ExternalLink className="h-8 w-8 text-(--color-fg-subtle) mx-auto" />
+              <p className="text-sm font-medium text-(--color-fg-muted)">
+                Form is popped out
+              </p>
+              <p className="text-xs text-(--color-fg-subtle)">
+                The enrichment form is floating as a widget. It stays on top of other windows.
+              </p>
+              <button
+                type="button"
+                onClick={popout.closePopout}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-all"
+              >
+                <Minimize2 className="h-3.5 w-3.5" /> Snap back
+              </button>
             </div>
-          ) : (
-            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-              {enrichmentFields.map((field) => {
-                const Icon = fieldIcon(field);
-                const val =
-                  (formData[field.key] as string) ??
-                  (leadData[field.key] as string) ??
-                  "";
-
-                return (
-                  <div key={field.id} className="space-y-1.5">
-                    <label className="block text-sm font-medium text-(--color-fg)">
-                      {field.label}
-                      {field.is_required && (
-                        <span className="text-(--color-danger)"> *</span>
-                      )}
-                    </label>
-                    {field.type === "dropdown" ? (
-                      <select
-                        value={String(val)}
-                        onChange={(e) => updateField(field.key, e.target.value)}
-                        className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
-                      >
-                        <option value="">Select…</option>
-                        {(field.options ?? []).map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : field.type === "checkbox" ? (
-                      <div className="flex items-center gap-3 bg-(--color-surface-3) rounded-lg py-3 px-4">
-                        <input
-                          type="checkbox"
-                          checked={!!val}
-                          onChange={(e) => updateField(field.key, e.target.checked)}
-                          className="accent-(--color-accent) h-4 w-4"
-                        />
-                        <span className="text-sm text-(--color-fg-muted)">Yes</span>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Icon className="h-4 w-4 text-(--color-fg-subtle)" />
-                        </div>
-                        <input
-                          type={
-                            field.type === "email" ? "email"
-                              : field.type === "url" ? "url"
-                              : field.type === "phone" ? "tel"
-                              : field.type === "date" ? "date"
-                              : field.type === "number" ? "number"
-                              : "text"
-                          }
-                          value={String(val)}
-                          onChange={(e) => updateField(field.key, e.target.value)}
-                          placeholder={field.description || field.label}
-                          className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Notes / Comments — resizable */}
-              <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
-                <label className="block text-sm font-medium text-(--color-fg)">
-                  Notes / Comments
-                </label>
-                <textarea
-                  value={(formData["__notes"] as string) ?? ""}
-                  onChange={(e) => updateField("__notes", e.target.value)}
-                  placeholder="Add any notes or comments about this lead…"
-                  rows={3}
-                  className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
-                  style={{ resize: "vertical", minHeight: 80 }}
-                />
-              </div>
-
-              {/* Quality Rating */}
-              <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
-                <label className="block text-sm font-medium text-(--color-fg)">
-                  Lead Quality
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={rating ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value === "" ? null : Math.min(10, Math.max(0, parseFloat(e.target.value)));
-                      setRating(v);
-                    }}
-                    onBlur={() => {
-                      startTransition(async () => {
-                        await updateLeadRating(current.lead_id, rating);
-                      });
-                    }}
-                    placeholder="—"
-                    className="h-10 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-lg font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
-                  />
-                  <span className="text-sm font-medium text-(--color-fg-muted)">/ 10</span>
-                </div>
-              </div>
-            </form>
+          </section>
+          {/* Portal form content into the PiP window */}
+          {createPortal(formContent, popout.pipWindow.document.body)}
+        </>
+      ) : (
+        <section
+          className={cn(
+            "shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]",
+            "transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+            popout.isAnimatingOut && "scale-90 opacity-0 translate-y-[-30px]",
+            popout.isAnimatingIn && "animate-[snapBack_350ms_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
           )}
-
-          {/* Validation errors */}
-          {validationErrors.length > 0 && (
-            <div className="mt-6 rounded-xl bg-(--color-danger)/10 border border-(--color-danger)/20 p-4 space-y-1">
-              {validationErrors.map((err, i) => (
-                <p key={i} className="text-sm text-(--color-danger)">{err}</p>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <footer className="p-8 pt-4 border-t border-(--color-card-border) shrink-0 space-y-2">
-          <button
-            type="button"
-            onClick={handleComplete}
-            disabled={isPending || current.is_completed}
-            className="w-full bg-(--color-accent) text-(--color-accent-fg) py-4 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,113,227,0.3)] disabled:opacity-50"
-          >
-            {isPending ? "Saving…" : "Mark as Enriched"}
-          </button>
-          <div className="flex items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="text-(--color-fg-muted) py-3 rounded-full font-medium text-sm hover:text-(--color-fg) transition-colors"
-            >
-              Skip for now
-            </button>
-            <button
-              type="button"
-              onClick={handleFlag}
-              className="text-(--color-fg-muted) py-3 rounded-full font-medium text-sm hover:text-(--color-warn) transition-colors flex items-center gap-1.5"
-            >
-              <Flag className="h-3.5 w-3.5" /> Flag
-            </button>
-          </div>
-        </footer>
-      </section>
+          style={{ width: 420, minWidth: 320, maxWidth: 600, resize: "horizontal", overflow: "auto" }}
+        >
+          {formContent}
+        </section>
+      )}
     </div>
   );
 }
