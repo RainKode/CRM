@@ -294,12 +294,12 @@ function NavLink({
         "flex items-center rounded-full text-[15px] transition-all",
         collapsed ? "justify-center p-3" : "gap-4 px-4 py-3",
         active
-          ? "bg-(--color-secondary)/15 text-(--color-secondary) font-bold border-2 border-(--color-secondary)/40"
+          ? "bg-(--color-accent) text-(--color-accent-fg) font-bold shadow-(--shadow-btn)"
           : "text-(--color-fg-subtle) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
       )}
     >
       <Icon
-        className={cn("h-5 w-5 shrink-0", active && "text-(--color-secondary)")}
+        className={cn("h-5 w-5 shrink-0", active && "text-(--color-accent-fg)")}
         strokeWidth={active ? 2.25 : 1.75}
       />
       {!collapsed && <span>{item.label}</span>}
