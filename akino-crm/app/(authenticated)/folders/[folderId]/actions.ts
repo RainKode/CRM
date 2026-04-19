@@ -212,7 +212,18 @@ export async function updateLead(
 
 export async function deleteLeads(leadIds: string[], folderId: string) {
   const sb = await createClient();
-  const { error } = await sb.from("leads").delete().in("id", leadIds);
+  // Batch in chunks of 200 to avoid URL length limits
+  for (let i = 0; i < leadIds.length; i += 200) {
+    const chunk = leadIds.slice(i, i + 200);
+    const { error } = await sb.from("leads").delete().in("id", chunk);
+    if (error) throw error;
+  }
+  revalidatePath(`/folders/${folderId}`);
+}
+
+export async function deleteAllLeadsInFolder(folderId: string) {
+  const sb = await createClient();
+  const { error } = await sb.from("leads").delete().eq("folder_id", folderId);
   if (error) throw error;
   revalidatePath(`/folders/${folderId}`);
 }

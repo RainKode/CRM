@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { FieldDefinition, Lead } from "@/lib/types";
-import { updateLead, deleteLeads, getLeads, getAllLeadIds } from "./actions";
+import { updateLead, deleteLeads, deleteAllLeadsInFolder, getLeads, getAllLeadIds } from "./actions";
 
 const COL = createColumnHelper<Lead>();
 const PAGE_SIZE = 50;
@@ -228,12 +228,18 @@ export function LeadTable({
     leads.length > 0 && leads.every((l) => rowSelection[l.id]);
 
   function handleBulkDelete() {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 && !selectAllMode) return;
     startTransition(async () => {
-      await deleteLeads(selectedIds, folderId);
-      setLeads((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+      if (selectAllMode) {
+        await deleteAllLeadsInFolder(folderId);
+        setLeads([]);
+      } else {
+        await deleteLeads(selectedIds, folderId);
+        setLeads((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+      }
       setRowSelection({});
       setSelectAllMode(false);
+      setAllLeadIds(null);
     });
   }
 
