@@ -70,21 +70,6 @@ export async function renameFolder(id: string, name: string) {
 
 export async function deleteFolder(id: string) {
   const sb = await createClient();
-
-  // Block if leads are active in pipeline
-  const { count } = await sb
-    .from("deals")
-    .select("id", { count: "exact", head: true })
-    .eq("source_folder_id", id)
-    .is("won_at", null)
-    .is("lost_at", null);
-
-  if (count && count > 0) {
-    throw new Error(
-      `Cannot delete folder: ${count} leads are active in the pipeline. Remove them first.`
-    );
-  }
-
   const { error } = await sb.from("folders").delete().eq("id", id);
   if (error) throw error;
   revalidatePath("/folders");
