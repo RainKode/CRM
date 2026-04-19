@@ -412,3 +412,40 @@ export async function importLeads(
   revalidatePath(`/folders/${folderId}`);
   return { imported, skipped, errors: errors.length };
 }
+
+// ─── Create single lead ───────────────────────────────────────────────
+
+export async function createLead(
+  folderId: string,
+  input: {
+    name?: string;
+    email?: string;
+    company?: string;
+    data: Record<string, unknown>;
+  }
+) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await sb
+    .from("leads")
+    .insert({
+      folder_id: folderId,
+      name: input.name?.trim() || null,
+      email: input.email?.trim() || null,
+      company: input.company?.trim() || null,
+      data: input.data,
+      status: "raw",
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  revalidatePath(`/folders/${folderId}`);
+  revalidatePath("/folders");
+  return data as Lead;
+}

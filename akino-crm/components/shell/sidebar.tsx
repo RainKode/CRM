@@ -36,6 +36,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { CreatePanel } from "./create-panel";
 
 const STATUS_ICON: Record<BatchStatus, React.ElementType> = {
   not_started: Circle,
@@ -310,6 +311,7 @@ function NavLink({
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [enrichmentGroups, setEnrichmentGroups] = useState<FolderBatchGroup[]>([]);
   const [enrichmentOpen, setEnrichmentOpen] = useState<Set<string>>(new Set());
   const [fieldsDialog, setFieldsDialog] = useState<{ folderId: string; folderName: string } | null>(null);
@@ -483,19 +485,23 @@ export function Sidebar() {
           )}
         </button>
 
-        {/* Create Lead List CTA */}
-        <Link
-          href="/folders"
-          title={collapsed ? "Create Lead List" : undefined}
+        {/* Create Lead / Customer CTA */}
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          title={collapsed ? "Create Lead / Customer" : undefined}
           className={cn(
-            "flex items-center justify-center rounded-full bg-(--color-accent) text-(--color-accent-fg) font-semibold hover:opacity-90 transition-opacity",
+            "flex items-center justify-center rounded-full bg-(--color-accent) text-(--color-accent-fg) font-semibold transition-all duration-200 shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active) cursor-pointer",
             collapsed ? "p-3" : "gap-2 py-4 px-6"
           )}
         >
           <Plus className="h-5 w-5" />
-          {!collapsed && "Create Lead List"}
-        </Link>
+          {!collapsed && "Create"}
+        </button>
       </aside>
+
+      {/* Create Panel (slide-in from right) */}
+      <CreatePanel open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Enrichment Fields Dialog (rendered at root to avoid overflow issues) */}
       {fieldsDialog && (

@@ -228,3 +228,94 @@ export async function updateDeal(
   if (error) throw error;
   revalidatePath("/pipeline");
 }
+
+// ─── Stage CRUD ────────────────────────────────────────────────────────
+
+export async function createStage(name: string) {
+  const sb = await createClient();
+  // Find the current max position among non-terminal stages
+  const { data: existing } = await sb
+    .from("pipeline_stages")
+    .select("position")
+    .eq("is_archived", false)
+    .eq("is_won", false)
+    .eq("is_lost", false)
+    .order("position", { ascending: false })
+    .limit(1);
+
+  const maxPos = existing?.[0]?.position ?? 0;
+
+  // Shift Won/Lost stages up by 1 to make room
+  try { await sb.rpc("shift_terminal_stages", { new_start: maxPos + 2 }); } catch { /* Fallback if RPC doesn't exist: manual shift */ }
+
+  // Also manually shift won/lost positions
+  const { data: terminals } = await sb
+    .from("pipeline_stages")
+    .select("id, position, is_won, is_lost")
+    .eq("is_archived", false)
+    .or("is_won.eq.true,is_lost.eq.true")
+    .order("position");
+
+  if (terminals && terminals.length > 0) {
+    for (const t of terminals) {
+      if (t.position <= maxPos + 1) {
+        await sb
+          .from("pipeline_stages")
+          .update({ position: t.position + 1 })
+          .eq("id", t.id);
+      }
+    }
+  }
+
+  const { data, error } = await sb
+    .from("pipeline_stages")
+    .insert({ name, position: maxPos + 1 })
+    .select()
+    .single();
+  if (error) throw error;
+  revalidatePath("/pipeline");
+  return data as PipelineStage;
+}
+
+export async function updateStage(
+  stageId: string,
+  updates: { name?: string }
+) {
+  const sb = await createClient();
+  const { error } = await sb
+    .from("pipeline_stages")
+    .update(updates)
+    .eq("id", stageId);
+  if (error) throw error;
+  revalidatePath("/pipeline");
+}
+
+export async function deleteStage(stageId: string) {
+  const sb = await createClient();
+
+  // Check if stage has deals
+  const { count } = await sb
+    .from("deals")
+    .select("id", { count: "exact", head: true })
+    .eq("stage_id", stageId);
+
+  if (count && count > 0) {
+    throw new Error("Cannot delete a stage that has deals. Move or delete deals first.");
+  }
+
+  const { error } = await sb
+    .from("pipeline_stages")
+    .update({ is_archived: true })
+    .eq("id", stageId);
+  if (error) throw error;
+  revalidatePath("/pipeline");
+}
+
+export async function reorderStages(orderedIds: string[]) {
+  const sb = await createClient();
+  const updates = orderedIds.map((id, i) =>
+    sb.from("pipeline_stages").update({ position: i }).eq("id", id)
+  );
+  await Promise.all(updates);
+  revalidatePath("/pipeline");
+}

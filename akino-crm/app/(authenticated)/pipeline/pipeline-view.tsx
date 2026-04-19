@@ -23,6 +23,10 @@ import {
   StickyNote,
   CalendarClock,
   ChevronRight,
+  Filter,
+  ChevronDown,
+  MoreHorizontal,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +44,25 @@ import type { Deal, PipelineStage, LossReason } from "@/lib/types";
 import { createDeal, moveDeal, logActivity, setFollowUp } from "./actions";
 
 type ViewMode = "kanban" | "list";
+
+function formatDealValue(value: number | null, currency: string): string {
+  if (value == null) return "";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency === "GBP" ? "GBP" : currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function activityDotColor(lastActivity: string | null): string {
+  if (!lastActivity) return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+  const diff = Date.now() - new Date(lastActivity).getTime();
+  const hours = diff / (1000 * 60 * 60);
+  if (hours < 24) return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+  if (hours < 72) return "bg-yellow-500";
+  return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+}
 
 // ─────────────────────────────────────────────
 // Deal card for kanban
@@ -73,30 +96,34 @@ function DealCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-(--color-surface-1) rounded-2xl cursor-pointer p-4 space-y-2 hover:-translate-y-0.5 transition-all duration-200 border border-(--color-card-border) hover:border-(--color-border) shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover)"
+      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border border-(--color-card-border)"
     >
-      <p className="text-sm font-medium">{deal.contact_name}</p>
-      {deal.company && (
-        <p className="text-xs text-(--color-fg-muted)">{deal.company}</p>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
+            {deal.company || deal.contact_name}
+          </h4>
+          <p className="text-xs text-(--color-fg-muted)">{deal.contact_name}</p>
+        </div>
+      </div>
+      {deal.deal_value != null && (
+        <div className="text-lg font-semibold text-(--color-fg) mb-4">
+          {formatDealValue(deal.deal_value, deal.currency)}
+        </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pt-3 border-t border-(--color-surface-4)">
+        <div className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+          <div className={cn("w-1.5 h-1.5 rounded-full", activityDotColor(deal.last_activity_at))} />
+          <span>{deal.last_activity_at ? relativeTime(deal.last_activity_at) : "No activity"}</span>
+        </div>
         {deal.follow_up_at && (
-          <Badge
-            tone={
-              new Date(deal.follow_up_at) < new Date() ? "danger" : "warn"
-            }
-          >
-            <CalendarClock className="h-3 w-3" />
+          <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
+            <Calendar className="h-3.5 w-3.5" />
             {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "short",
             })}
-          </Badge>
-        )}
-        {deal.last_activity_at && (
-          <span className="text-[10px] text-(--color-fg-subtle)">
-            {relativeTime(deal.last_activity_at)}
-          </span>
+          </div>
         )}
       </div>
     </div>
@@ -115,21 +142,53 @@ function KanbanColumn({
   deals: Deal[];
   onCardClick: (deal: Deal) => void;
 }) {
+  const isWon = stage.is_won;
+
   return (
-    <div className="flex w-80 shrink-0 flex-col rounded-2xl bg-(--color-surface-2)/50 border border-(--color-card-border)">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div
+      className={cn(
+        "w-[320px] flex flex-col h-full rounded-2xl p-4",
+        isWon
+          ? "bg-green-900/10 border border-green-500/10"
+          : "bg-(--color-bg)/50"
+      )}
+    >
+      <div className="flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-(--color-fg)">{stage.name}</span>
-          <span className="text-xs text-(--color-fg-subtle) bg-(--color-surface-4) rounded-full px-2 py-0.5">
+          <h3
+            className={cn(
+              "font-semibold tracking-wide",
+              isWon ? "text-green-400" : "text-(--color-fg)"
+            )}
+          >
+            {stage.name}
+          </h3>
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-bold",
+              isWon
+                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                : "bg-(--color-surface-3) text-(--color-fg-muted)"
+            )}
+          >
             {deals.length}
           </span>
         </div>
+        <button
+          type="button"
+          className={cn(
+            "cursor-pointer hover:text-(--color-fg)",
+            isWon ? "text-green-600/50 hover:text-green-400" : "text-(--color-fg-muted)"
+          )}
+        >
+          <MoreHorizontal className="h-5 w-5" />
+        </button>
       </div>
       <SortableContext
         items={deals.map((d) => d.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex-1 space-y-3 overflow-y-auto p-3 min-h-25">
+        <div className="flex flex-col gap-4 overflow-y-auto flex-1 pb-4 min-h-[60px]" style={{ scrollbarWidth: "none" }}>
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -465,53 +524,61 @@ export function PipelineView({
     : null;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 md:px-16 py-6">
-        <h1 className="text-3xl md:text-[40px] font-bold tracking-tight text-(--color-fg)">
-          Sales Pipeline
+      <header className="flex justify-between items-center px-8 md:px-12 h-24 shrink-0">
+        <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
+          Pipeline
         </h1>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
-            <input
-              type="checkbox"
-              checked={showClosed}
-              onChange={(e) => setShowClosed(e.target.checked)}
-              className="accent-(--color-accent)"
-            />
-            Show closed
-          </label>
-          <div className="flex rounded-full bg-(--color-surface-2) p-1">
-            <button
-              type="button"
-              onClick={() => setView("kanban")}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                view === "kanban"
-                  ? "bg-(--color-accent) text-(--color-accent-fg)"
-                  : "text-(--color-fg-subtle) hover:text-(--color-fg)"
-              )}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
+        <div className="flex items-center gap-4">
+          {/* View toggle */}
+          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border border-(--color-card-border)">
             <button
               type="button"
               onClick={() => setView("list")}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                 view === "list"
-                  ? "bg-(--color-accent) text-(--color-accent-fg)"
-                  : "text-(--color-fg-subtle) hover:text-(--color-fg)"
+                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  : "text-(--color-fg-muted) hover:text-(--color-fg)"
               )}
             >
-              <List className="h-4 w-4" />
+              List View
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("kanban")}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                view === "kanban"
+                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  : "text-(--color-fg-muted) hover:text-(--color-fg)"
+              )}
+            >
+              Board View
             </button>
           </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+
+          {/* Filter */}
+          <button
+            type="button"
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
+          >
+            <Filter className="h-4 w-4" />
+            Filter
+            <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
+          </button>
+
+          {/* Add Deal */}
+          <Button
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+            className="hidden md:flex"
+          >
             <Plus className="h-4 w-4" /> Add Deal
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
@@ -522,7 +589,7 @@ export function PipelineView({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-4 p-6 min-h-full">
+            <div className="flex gap-6 px-8 md:px-12 pb-8 h-full min-w-max">
               {stages.map((stage) => (
                 <KanbanColumn
                   key={stage.id}
@@ -534,14 +601,20 @@ export function PipelineView({
             </div>
             <DragOverlay>
               {draggedDeal && (
-                <div className="bg-(--color-surface-1) rounded-2xl p-4 w-80 opacity-90 shadow-(--shadow-card-3d-hover) border border-(--color-card-border)">
-                  <p className="text-sm font-medium">
-                    {draggedDeal.contact_name}
-                  </p>
-                  {draggedDeal.company && (
-                    <p className="text-xs text-(--color-fg-muted)">
-                      {draggedDeal.company}
-                    </p>
+                <div className="bg-(--color-surface-1) rounded-xl p-5 w-[320px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-(--color-accent)/50">
+                  <div className="absolute inset-0 rounded-xl shadow-[0_0_20px_rgba(0,113,227,0.15)] pointer-events-none" />
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
+                        {draggedDeal.company || draggedDeal.contact_name}
+                      </h4>
+                      <p className="text-xs text-(--color-fg-muted)">{draggedDeal.contact_name}</p>
+                    </div>
+                  </div>
+                  {draggedDeal.deal_value != null && (
+                    <div className="text-lg font-semibold text-(--color-fg)">
+                      {formatDealValue(draggedDeal.deal_value, draggedDeal.currency)}
+                    </div>
                   )}
                 </div>
               )}
@@ -618,6 +691,15 @@ export function PipelineView({
           onClose={() => setSelectedDeal(null)}
         />
       )}
+
+      {/* Mobile FAB */}
+      <button
+        type="button"
+        onClick={() => setCreateOpen(true)}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-(--color-accent) rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgba(0,113,227,0.4)] z-50"
+      >
+        <Plus className="h-7 w-7" />
+      </button>
     </div>
   );
 }
