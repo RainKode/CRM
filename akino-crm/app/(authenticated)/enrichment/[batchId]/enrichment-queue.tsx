@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,8 +16,11 @@ import {
   Hash,
   FileText,
   Globe,
+  PictureInPicture2,
+  X,
   type LucideIcon,
 } from "lucide-react";
+import { useEnrichmentPip } from "./use-enrichment-pip";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +68,8 @@ export function EnrichmentQueue({
     return batchLeads[idx >= 0 ? idx : 0]?.lead?.quality_rating ?? null;
   });
   const [isPending, startTransition] = useTransition();
+  const { pipWindow, isOpening, snapBack, isSupported, openPip, closePip } = useEnrichmentPip();
+  const [isPopping, setIsPopping] = useState(false);
 
   const current = batchLeads[currentIdx];
   const lead = current?.lead;
@@ -363,17 +369,62 @@ export function EnrichmentQueue({
       </section>
 
       {/* ── Pane 3: Enrichment Form ── */}
+      {/* When popped out → show placeholder; on snap-back → animate in */}
+      {pipWindow ? (
+        <section
+          className="shrink-0 flex flex-col items-center justify-center bg-(--color-bg) border-l-2 border-(--color-card-border)"
+          style={{ width: 420, minWidth: 320, maxWidth: 600 }}
+        >
+          <div className="flex flex-col items-center gap-4 text-center p-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-(--color-accent-muted) animate-pulse">
+              <PictureInPicture2 className="h-6 w-6 text-(--color-accent)" />
+            </div>
+            <p className="text-sm font-semibold text-(--color-fg)">Form is floating</p>
+            <p className="text-xs text-(--color-fg-muted) max-w-[200px] leading-relaxed">
+              Fill in the floating window. Close it or click below to snap back.
+            </p>
+            <button
+              type="button"
+              onClick={closePip}
+              className="mt-1 text-xs font-medium text-(--color-accent) hover:underline underline-offset-4 transition-colors"
+            >
+              ↩ Snap back
+            </button>
+          </div>
+        </section>
+      ) : (
       <section
-        className="shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]"
+        className={cn(
+          "shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]",
+          snapBack && "animate-snap-back",
+          isPopping && "animate-pip-fly-out"
+        )}
         style={{ width: 420, minWidth: 320, maxWidth: 600, resize: "horizontal", overflow: "auto" }}
       >
-        <header className="p-8 pb-4 shrink-0">
-          <h2 className="text-xl font-semibold text-(--color-fg) tracking-tight">Fill in what you find</h2>
-          {current.is_completed && (
-            <Badge tone="success" className="mt-2">Already enriched</Badge>
-          )}
-          {current.is_flagged && (
-            <Badge tone="warn" className="mt-2">Flagged: {current.flag_reason}</Badge>
+        <header className="p-8 pb-4 shrink-0 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-semibold text-(--color-fg) tracking-tight">Fill in what you find</h2>
+            {current.is_completed && (
+              <Badge tone="success" className="mt-2">Already enriched</Badge>
+            )}
+            {current.is_flagged && (
+              <Badge tone="warn" className="mt-2">Flagged: {current.flag_reason}</Badge>
+            )}
+          </div>
+          {isSupported && (
+            <button
+              type="button"
+              title="Pop out as floating window"
+              onClick={async () => {
+                setIsPopping(true);
+                await openPip();
+                setTimeout(() => setIsPopping(false), 320);
+              }}
+              disabled={isOpening}
+              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-surface-4) hover:text-(--color-accent) transition-all disabled:opacity-50"
+            >
+              <PictureInPicture2 className="h-4 w-4" />
+            </button>
           )}
         </header>
 
@@ -528,6 +579,174 @@ export function EnrichmentQueue({
           </div>
         </footer>
       </section>
+      )}
+
+      {/* ── PiP Portal: render form into the floating window ── */}
+      {pipWindow && createPortal(
+        <div className="flex flex-col h-screen bg-(--color-bg) animate-pip-enter" style={{ overflow: "hidden" }}>
+          {/* PiP header with snap-back */}
+          <header className="px-6 pt-5 pb-3 shrink-0 flex items-center gap-3 border-b border-(--color-card-border)">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-(--color-fg) tracking-tight">
+                {lead.name || lead.company || "Enrichment"}
+              </h2>
+              {current.is_completed && <Badge tone="success" className="mt-1 text-xs">Already enriched</Badge>}
+            </div>
+            <button
+              type="button"
+              onClick={closePip}
+              title="Snap back"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-surface-4) hover:text-(--color-fg) transition-all"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </header>
+
+          {/* Form content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {enrichmentFields.length === 0 ? (
+              <div className="rounded-xl bg-(--color-surface-2) p-8 text-center text-sm text-(--color-fg-subtle)">
+                No enrichment fields defined.
+              </div>
+            ) : (
+              <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+                {enrichmentFields.map((field) => {
+                  const Icon = fieldIcon(field);
+                  const val =
+                    (formData[field.key] as string) ??
+                    ((lead?.data as Record<string, unknown>)[field.key] as string) ??
+                    "";
+                  return (
+                    <div key={field.id} className="space-y-1.5">
+                      <label className="block text-sm font-medium text-(--color-fg)">
+                        {field.label}
+                        {field.is_required && <span className="text-(--color-danger)"> *</span>}
+                      </label>
+                      {field.type === "dropdown" ? (
+                        <select
+                          value={String(val)}
+                          onChange={(e) => updateField(field.key, e.target.value)}
+                          className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm"
+                        >
+                          <option value="">Select…</option>
+                          {(field.options ?? []).map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : field.type === "checkbox" ? (
+                        <div className="flex items-center gap-3 bg-(--color-surface-3) rounded-lg py-2.5 px-4">
+                          <input
+                            type="checkbox"
+                            checked={!!val}
+                            onChange={(e) => updateField(field.key, e.target.checked)}
+                            className="accent-(--color-accent) h-4 w-4"
+                          />
+                          <span className="text-sm text-(--color-fg-muted)">Yes</span>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Icon className="h-4 w-4 text-(--color-fg-subtle)" />
+                          </div>
+                          <input
+                            type={
+                              field.type === "email" ? "email"
+                                : field.type === "url" ? "url"
+                                : field.type === "phone" ? "tel"
+                                : field.type === "date" ? "date"
+                                : field.type === "number" ? "number"
+                                : "text"
+                            }
+                            value={String(val)}
+                            onChange={(e) => updateField(field.key, e.target.value)}
+                            placeholder={field.description || field.label}
+                            className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Notes */}
+                <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+                  <label className="block text-sm font-medium text-(--color-fg)">Notes / Comments</label>
+                  <textarea
+                    value={(formData["__notes"] as string) ?? ""}
+                    onChange={(e) => updateField("__notes", e.target.value)}
+                    placeholder="Add any notes…"
+                    rows={3}
+                    className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
+                    style={{ resize: "vertical", minHeight: 72 }}
+                  />
+                </div>
+
+                {/* Quality rating */}
+                <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+                  <label className="block text-sm font-medium text-(--color-fg)">Lead Quality</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={0} max={10} step={0.1}
+                      value={rating ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value === "" ? null : Math.min(10, Math.max(0, parseFloat(e.target.value)));
+                        setRating(v);
+                      }}
+                      onBlur={() => {
+                        startTransition(async () => {
+                          await updateLeadRating(current.lead_id, rating);
+                        });
+                      }}
+                      placeholder="—"
+                      className="h-9 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-base font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    />
+                    <span className="text-sm font-medium text-(--color-fg-muted)">/ 10</span>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* Validation errors */}
+            {validationErrors.length > 0 && (
+              <div className="mt-5 rounded-xl bg-(--color-danger)/10 border border-(--color-danger)/20 p-4 space-y-1">
+                {validationErrors.map((err, i) => (
+                  <p key={i} className="text-sm text-(--color-danger)">{err}</p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <footer className="px-6 py-5 border-t border-(--color-card-border) shrink-0 space-y-2">
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={isPending || current.is_completed}
+              className="w-full bg-(--color-accent) text-(--color-accent-fg) py-3.5 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,194,204,0.3)] disabled:opacity-50"
+            >
+              {isPending ? "Saving…" : "Mark as Enriched"}
+            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-fg) transition-colors"
+              >
+                Skip for now
+              </button>
+              <button
+                type="button"
+                onClick={handleFlag}
+                className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-warn) transition-colors flex items-center gap-1.5"
+              >
+                <Flag className="h-3.5 w-3.5" /> Flag
+              </button>
+            </div>
+          </footer>
+        </div>,
+        pipWindow.document.body
+      )}
     </div>
   );
 }
