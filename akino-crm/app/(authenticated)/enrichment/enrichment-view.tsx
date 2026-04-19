@@ -166,7 +166,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                           className={cn(
                             "h-full rounded-full transition-all",
                             folderPct === 100
-                              ? "bg-emerald-500"
+                              ? "bg-(--color-success)"
                               : "bg-(--color-accent)"
                           )}
                           style={{ width: `${folderPct}%` }}
@@ -237,7 +237,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                                   className={cn(
                                     "h-full rounded-full transition-all duration-500",
                                     pct === 100
-                                      ? "bg-emerald-500"
+                                      ? "bg-(--color-success)"
                                       : "bg-(--color-accent)"
                                   )}
                                   style={{ width: `${pct}%` }}
@@ -311,7 +311,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                                         className={cn(
                                           "h-full rounded-full",
                                           pct === 100
-                                            ? "bg-emerald-500"
+                                            ? "bg-(--color-success)"
                                             : "bg-(--color-accent)"
                                         )}
                                         style={{ width: `${pct}%` }}

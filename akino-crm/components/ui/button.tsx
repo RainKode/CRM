@@ -10,7 +10,7 @@ const buttonVariants = cva(
         primary:
           "bg-(--color-accent) text-(--color-accent-fg) shadow-(--shadow-btn) hover:bg-(--color-accent-hover) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
         secondary:
-          "bg-(--color-surface-2) text-(--color-fg) border border-(--color-border) shadow-(--shadow-btn) hover:bg-(--color-surface-3) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
+          "bg-(--color-secondary) text-(--color-secondary-fg) shadow-(--shadow-btn) hover:bg-(--color-secondary-hover) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
         tertiary:
           "bg-(--color-tertiary) text-(--color-tertiary-fg) shadow-(--shadow-btn) hover:bg-(--color-tertiary-hover) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
         ghost:
@@ -18,7 +18,7 @@ const buttonVariants = cva(
         outline:
           "border border-(--color-border) text-(--color-fg) shadow-(--shadow-btn) hover:bg-(--color-surface-2) hover:border-(--color-border-strong) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
         danger:
-          "bg-red-600 text-(--color-accent-fg) shadow-(--shadow-btn) hover:bg-red-700 hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
+          "bg-(--color-danger) text-white shadow-(--shadow-btn) hover:opacity-90 hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
         link:
           "text-(--color-accent-text) hover:underline underline-offset-4 p-0 h-auto",
       },

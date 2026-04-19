@@ -139,7 +139,7 @@ function StageManager({
                   type="button"
                   onClick={() => handleDelete(s.id)}
                   disabled={isPending}
-                  className="text-[11px] text-(--color-fg-muted) hover:text-red-400 transition-colors"
+                  className="text-[11px] text-(--color-fg-muted) hover:text-(--color-danger) transition-colors"
                 >
                   Delete
                 </button>
@@ -185,7 +185,7 @@ function StageManager({
       </div>
 
       {error && (
-        <p className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+        <p className="text-xs text-(--color-danger) bg-(--color-danger)/10 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
@@ -460,7 +460,7 @@ function CreateLeadForm({ onSuccess }: { onSuccess: () => void }) {
       )}
 
       {error && (
-        <p className="text-xs text-red-400 bg-red-500/10 rounded-xl px-4 py-3">
+        <p className="text-xs text-(--color-danger) bg-(--color-danger)/10 rounded-xl px-4 py-3">
           {error}
         </p>
       )}
@@ -638,7 +638,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-500/10 rounded-xl px-4 py-3">
+          <p className="text-xs text-(--color-danger) bg-(--color-danger)/10 rounded-xl px-4 py-3">
             {error}
           </p>
         )}

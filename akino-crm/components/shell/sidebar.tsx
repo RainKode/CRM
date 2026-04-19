@@ -184,21 +184,21 @@ function EnrichmentFieldsDialog({
           ) : (
             <div className="space-y-6">
               {!hasComments && (
-                <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
-                  <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-xl bg-(--color-warn)/10 border border-(--color-warn)/20 p-4">
+                  <AlertCircle className="h-4 w-4 text-(--color-warn) shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-300">Comments field is mandatory</p>
-                    <p className="text-xs text-amber-400/70 mt-1">Every enrichment form must include a Comments field.</p>
+                    <p className="text-sm font-medium text-(--color-warn)">Comments field is mandatory</p>
+                    <p className="text-xs text-(--color-warn)/70 mt-1">Every enrichment form must include a Comments field.</p>
                   </div>
                   <Button size="sm" variant="secondary" onClick={handleEnsureComments} disabled={isPending}>Add Comments</Button>
                 </div>
               )}
               {!hasContactMethod && enrichmentFields.length > 0 && (
-                <div className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/20 p-4">
-                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-xl bg-(--color-danger)/10 border border-(--color-danger)/20 p-4">
+                  <AlertCircle className="h-4 w-4 text-(--color-danger) shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-300">Contact method required</p>
-                    <p className="text-xs text-red-400/70 mt-1">Add at least an Email or Phone field so every lead remains actionable.</p>
+                    <p className="text-sm font-medium text-(--color-danger)">Contact method required</p>
+                    <p className="text-xs text-(--color-danger)/70 mt-1">Add at least an Email or Phone field so every lead remains actionable.</p>
                   </div>
                 </div>
               )}
@@ -236,7 +236,7 @@ function EnrichmentFieldsDialog({
                     Required field
                   </label>
                   {error && (
-                    <div className="flex items-start gap-2 text-sm text-red-400 bg-red-500/10 rounded-xl px-4 py-3">
+                    <div className="flex items-start gap-2 text-sm text-(--color-danger) bg-(--color-danger)/10 rounded-xl px-4 py-3">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />{error}
                     </div>
                   )}

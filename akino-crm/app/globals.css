@@ -16,76 +16,69 @@
   --radius-2xl: 32px;
   --radius-pill: 9999px;
 
-  /* Accent — Blue (shared) */
-  --color-accent: #0071e3;
-  --color-accent-hover: #2d8cf0;
-  --color-accent-pressed: #005cbb;
+  /* ---- All color/shadow tokens set per-mode below ---- */
+  --color-accent: initial;
+  --color-accent-hover: initial;
+  --color-accent-pressed: initial;
   --color-accent-fg: #ffffff;
+  --color-accent-muted: initial;
+  --color-accent-text: initial;
 
-  /* Tertiary — Soft blue for hover states */
-  --color-tertiary: #5ac8fa;
-  --color-tertiary-hover: #40b4e5;
-  --color-tertiary-fg: #003e6b;
-
-  /* Complementary palette */
-  --color-secondary: #5856d6;
-  --color-secondary-hover: #7674e0;
+  --color-secondary: initial;
+  --color-secondary-hover: initial;
+  --color-secondary-active: initial;
   --color-secondary-fg: #ffffff;
-  --color-highlight: #34c759;
-  --color-highlight-hover: #2aad4a;
+
+  --color-tertiary: initial;
+  --color-tertiary-hover: initial;
+  --color-tertiary-fg: initial;
+
+  --color-highlight: initial;
+  --color-highlight-hover: initial;
   --color-highlight-fg: #ffffff;
 
-  /* 3D button shadows */
-  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.12);
-  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.14), inset 0 1px 2px rgba(0,0,0,0.1);
-  --shadow-card-3d: 0 2px 0 0 rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
-  --shadow-card-3d-hover: 0 4px 0 0 rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 8px 28px rgba(0,0,0,0.1);
-
-  /* ---- Color tokens come from .dark / .light below ---- */
   --color-bg: initial;
   --color-surface-1: initial;
   --color-surface-2: initial;
   --color-surface-3: initial;
   --color-surface-4: initial;
+
   --color-fg: initial;
   --color-fg-muted: initial;
   --color-fg-subtle: initial;
   --color-fg-disabled: initial;
+
   --color-border: initial;
   --color-border-strong: initial;
-  --color-accent-muted: initial;
-  --color-accent-text: initial;
+
   --color-danger: initial;
   --color-warn: initial;
   --color-success: initial;
   --color-info: initial;
+
   --color-grid-line: initial;
   --color-grid-line-strong: initial;
   --color-grid-header: initial;
   --color-grid-row-hover: initial;
   --color-grid-row-selected: initial;
   --color-grid-cell-focus: initial;
+
+  --color-card-border: initial;
+
+  /* Chart palette */
+  --color-chart-1: initial;
+  --color-chart-2: initial;
+  --color-chart-3: initial;
+  --color-chart-4: initial;
+  --color-chart-5: initial;
+
+  /* Shadows */
   --shadow-card: initial;
   --shadow-card-hover: initial;
   --shadow-popover: initial;
   --shadow-focus: initial;
   --shadow-glow: initial;
-  --color-card-border: initial;
   --shadow-sidebar: initial;
-
-  /* Tertiary / Secondary / Highlight tokens */
-  --color-tertiary: initial;
-  --color-tertiary-hover: initial;
-  --color-tertiary-fg: initial;
-  --color-secondary: initial;
-  --color-secondary-hover: initial;
-  --color-secondary-fg: initial;
-  --color-highlight: initial;
-  --color-highlight-hover: initial;
-  --color-highlight-fg: initial;
-
-  /* 3D shadow tokens */
   --shadow-btn: initial;
   --shadow-btn-hover: initial;
   --shadow-btn-active: initial;
@@ -99,41 +92,72 @@
 .dark {
   color-scheme: dark;
 
-  --color-bg: #131315;
-  --color-surface-1: #1b1b1d;
-  --color-surface-2: #1f1f21;
-  --color-surface-3: #2a2a2c;
-  --color-surface-4: #353437;
+  /* Surfaces */
+  --color-bg: #0b0f14;
+  --color-surface-1: #111827;
+  --color-surface-2: #161d2b;
+  --color-surface-3: #1f2937;
+  --color-surface-4: #374151;
 
-  --color-fg: #e4e2e4;
-  --color-fg-muted: #c1c6d6;
-  --color-fg-subtle: #8b919f;
-  --color-fg-disabled: #414753;
+  /* Text */
+  --color-fg: #e5e7eb;
+  --color-fg-muted: #9ca3af;
+  --color-fg-subtle: #6b7280;
+  --color-fg-disabled: #374151;
 
-  --color-border: #52576a;
-  --color-border-strong: #9ea3b0;
+  /* Borders */
+  --color-border: #1f2937;
+  --color-border-strong: #374151;
 
-  --color-accent-muted: rgba(0, 113, 227, 0.12);
-  --color-accent-text: #abc7ff;
+  /* Primary — Teal */
+  --color-accent: #00c2cc;
+  --color-accent-hover: #00aab3;
+  --color-accent-pressed: #008c93;
+  --color-accent-muted: rgba(0, 194, 204, 0.12);
+  --color-accent-text: #00c2cc;
 
-  --color-danger: #ffb4ab;
-  --color-warn: #ffb693;
-  --color-success: #a8d5ba;
-  --color-info: #abc7ff;
+  /* Secondary — Coral-red */
+  --color-secondary: #ff6b75;
+  --color-secondary-hover: #e65a64;
+  --color-secondary-active: #cc4e57;
 
+  /* Tertiary — Subtle teal surface */
+  --color-tertiary: #1f3a3d;
+  --color-tertiary-hover: #2a4d51;
+  --color-tertiary-fg: #00c2cc;
+
+  /* Highlight */
+  --color-highlight: #22c55e;
+  --color-highlight-hover: #16a34a;
+
+  /* Semantic states */
+  --color-danger: #f87171;
+  --color-warn: #fbbf24;
+  --color-success: #22c55e;
+  --color-info: #38bdf8;
+
+  /* Chart palette */
+  --color-chart-1: #00c2cc;
+  --color-chart-2: #ff6b75;
+  --color-chart-3: #fbbf24;
+  --color-chart-4: #22c55e;
+  --color-chart-5: #38bdf8;
+
+  /* Grid / Data tables */
   --color-grid-line: rgba(255, 255, 255, 0.06);
   --color-grid-line-strong: rgba(255, 255, 255, 0.12);
-  --color-grid-header: #1b1b1d;
-  --color-grid-row-hover: rgba(0, 113, 227, 0.05);
-  --color-grid-row-selected: rgba(0, 113, 227, 0.12);
-  --color-grid-cell-focus: #0071e3;
+  --color-grid-header: #111827;
+  --color-grid-row-hover: rgba(0, 194, 204, 0.05);
+  --color-grid-row-selected: rgba(0, 194, 204, 0.12);
+  --color-grid-cell-focus: #00c2cc;
 
+  /* Shadows */
   --shadow-card: 0 3px 30px 0 rgba(0, 0, 0, 0.4);
   --shadow-card-hover: 0 8px 40px 0 rgba(0, 0, 0, 0.5);
   --shadow-popover: 0 10px 40px 0 rgba(0, 0, 0, 0.55);
   --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 10px rgba(0, 113, 227, 0.5);
-  --color-card-border: rgba(255,255,255,0.08);
+  --shadow-glow: 0 0 10px rgba(0, 194, 204, 0.5);
+  --color-card-border: rgba(255, 255, 255, 0.08);
   --shadow-sidebar: none;
 
   --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
@@ -149,42 +173,79 @@
 .light {
   color-scheme: light;
 
-  --color-bg: #f5f5f7;
+  /* Surfaces */
+  --color-bg: #f8fafc;
   --color-surface-1: #ffffff;
-  --color-surface-2: #f0f0f2;
-  --color-surface-3: #e5e5ea;
-  --color-surface-4: #d1d1d6;
+  --color-surface-2: #f1f5f9;
+  --color-surface-3: #e2e8f0;
+  --color-surface-4: #cbd5e1;
 
-  --color-fg: #1d1d1f;
-  --color-fg-muted: #3a3a3c;
-  --color-fg-subtle: #6e6e73;
-  --color-fg-disabled: #aeaeb2;
+  /* Text */
+  --color-fg: #0f172a;
+  --color-fg-muted: #5b6475;
+  --color-fg-subtle: #64748b;
+  --color-fg-disabled: #94a3b8;
 
-  --color-border: #b0b0b5;
-  --color-border-strong: #6e6e73;
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #9ca3af;
 
-  --color-accent-muted: rgba(0, 113, 227, 0.08);
-  --color-accent-text: #0058b0;
+  /* Primary — Teal */
+  --color-accent: #00969e;
+  --color-accent-hover: #007e85;
+  --color-accent-pressed: #00666b;
+  --color-accent-muted: rgba(0, 150, 158, 0.08);
+  --color-accent-text: #00767d;
 
-  --color-danger: #d32f2f;
-  --color-warn: #e65100;
-  --color-success: #2e7d32;
-  --color-info: #0058b0;
+  /* Secondary — Coral-red */
+  --color-secondary: #ef525d;
+  --color-secondary-hover: #d64550;
+  --color-secondary-active: #b83a43;
 
+  /* Tertiary — Subtle teal surface */
+  --color-tertiary: #e6f4f5;
+  --color-tertiary-hover: #cde9eb;
+  --color-tertiary-fg: #00969e;
+
+  /* Highlight */
+  --color-highlight: #16a34a;
+  --color-highlight-hover: #15803d;
+
+  /* Semantic states */
+  --color-danger: #dc2626;
+  --color-warn: #f59e0b;
+  --color-success: #16a34a;
+  --color-info: #0284c7;
+
+  /* Chart palette */
+  --color-chart-1: #00969e;
+  --color-chart-2: #ef525d;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #16a34a;
+  --color-chart-5: #0284c7;
+
+  /* Grid / Data tables */
   --color-grid-line: rgba(0, 0, 0, 0.06);
   --color-grid-line-strong: rgba(0, 0, 0, 0.12);
-  --color-grid-header: #f0f0f2;
-  --color-grid-row-hover: rgba(0, 113, 227, 0.04);
-  --color-grid-row-selected: rgba(0, 113, 227, 0.08);
-  --color-grid-cell-focus: #0071e3;
+  --color-grid-header: #f1f5f9;
+  --color-grid-row-hover: rgba(0, 150, 158, 0.04);
+  --color-grid-row-selected: rgba(0, 150, 158, 0.08);
+  --color-grid-cell-focus: #00969e;
 
+  /* Shadows */
   --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.08);
   --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.14), 0 8px 28px rgba(0, 0, 0, 0.12);
   --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.14), 0 12px 40px rgba(0, 0, 0, 0.1);
   --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 8px rgba(0, 113, 227, 0.25);
+  --shadow-glow: 0 0 8px rgba(0, 150, 158, 0.25);
   --color-card-border: rgba(0, 0, 0, 0.14);
   --shadow-sidebar: 1px 0 4px rgba(0, 0, 0, 0.1);
+
+  --shadow-btn: 0 2px 0 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-btn-hover: 0 3px 0 0 rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.12);
+  --shadow-btn-active: 0 0px 0 0 rgba(0,0,0,0.14), inset 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-card-3d: 0 2px 0 0 rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-card-3d-hover: 0 4px 0 0 rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.12), 0 8px 28px rgba(0,0,0,0.1);
 }
 
 :root {

@@ -183,8 +183,8 @@ export function EnrichmentQueue({
 
       {!current ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-success)/10">
+            <CheckCircle2 className="h-8 w-8 text-(--color-success)" />
           </div>
           <p className="text-lg font-bold text-(--color-fg)">All leads processed!</p>
           <Link href="/enrichment">

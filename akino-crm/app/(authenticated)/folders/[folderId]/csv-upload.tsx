@@ -324,12 +324,12 @@ export function CsvUpload({
   // ─── Step: Result ───
   return (
     <div className="flex flex-col items-center gap-5 p-8 md:p-16">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-        <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-success)/10">
+        <CheckCircle2 className="h-8 w-8 text-(--color-success)" />
       </div>
       <h2 className="text-xl font-bold text-(--color-fg)">Import Complete</h2>
       <div className="flex gap-5 text-sm">
-        <span className="text-emerald-400 font-medium">
+        <span className="text-(--color-success) font-medium">
           {result?.imported ?? 0} imported
         </span>
         <span className="text-(--color-fg-muted)">

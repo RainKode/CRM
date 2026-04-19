@@ -74,12 +74,12 @@ function formatDealValue(value: number | null, currency: string): string {
 }
 
 function activityDotColor(lastActivity: string | null): string {
-  if (!lastActivity) return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+  if (!lastActivity) return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
   const diff = Date.now() - new Date(lastActivity).getTime();
   const hours = diff / (1000 * 60 * 60);
-  if (hours < 24) return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
-  if (hours < 72) return "bg-yellow-500";
-  return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+  if (hours < 24) return "bg-(--color-success) shadow-[0_0_8px_rgba(22,163,74,0.6)]";
+  if (hours < 72) return "bg-(--color-warn)";
+  return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
 }
 
 // ─────────────────────────────────────────────
@@ -170,7 +170,7 @@ function KanbanColumn({
       className={cn(
         "w-[320px] flex flex-col h-full rounded-2xl p-4 border",
         isWon
-          ? "bg-green-900/10 border-green-500/10"
+          ? "bg-(--color-success)/10 border-(--color-success)/10"
           : "bg-(--color-surface-2)/30 border-(--color-border)/15"
       )}
     >
@@ -179,7 +179,7 @@ function KanbanColumn({
           <h3
             className={cn(
               "font-semibold tracking-wide",
-              isWon ? "text-green-400" : "text-(--color-fg)"
+              isWon ? "text-(--color-success)" : "text-(--color-fg)"
             )}
           >
             {stage.name}
@@ -188,7 +188,7 @@ function KanbanColumn({
             className={cn(
               "px-2 py-0.5 rounded-full text-xs font-bold",
               isWon
-                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                ? "bg-(--color-success)/20 text-(--color-success) border border-(--color-success)/30"
                 : "bg-(--color-surface-3) text-(--color-fg-muted)"
             )}
           >
@@ -201,7 +201,7 @@ function KanbanColumn({
             onClick={() => menu.setOpen(!menu.open)}
             className={cn(
               "cursor-pointer hover:text-(--color-fg) p-1 rounded-md hover:bg-(--color-surface-3) transition-colors",
-              isWon ? "text-green-600/50 hover:text-green-400" : "text-(--color-fg-muted)"
+              isWon ? "text-(--color-success)/50 hover:text-(--color-success)" : "text-(--color-fg-muted)"
             )}
           >
             <MoreHorizontal className="h-5 w-5" />

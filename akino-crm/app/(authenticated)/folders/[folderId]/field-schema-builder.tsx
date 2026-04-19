@@ -377,7 +377,7 @@ function BulkAddDialog({
                     <button
                       type="button"
                       onClick={() => removeEntry(i)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-(--color-fg-subtle) hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-(--color-fg-subtle) hover:bg-(--color-danger)/10 hover:text-(--color-danger) transition-colors"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -565,7 +565,7 @@ export function FieldSchemaBuilder({
               <button
                 type="button"
                 onClick={() => handleDelete(field)}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-(--color-fg-subtle) hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-(--color-fg-subtle) hover:bg-(--color-danger)/10 hover:text-(--color-danger) transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

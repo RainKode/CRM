@@ -94,10 +94,10 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-(--color-danger)">{error}</p>
           )}
           {message && (
-            <p className="text-sm text-emerald-400">{message}</p>
+            <p className="text-sm text-(--color-success)">{message}</p>
           )}
 
           <button

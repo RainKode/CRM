@@ -433,7 +433,7 @@ export function FolderList({
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
                         isComplete
-                          ? "bg-emerald-500"
+                          ? "bg-(--color-success)"
                           : "bg-(--color-accent)"
                       )}
                       style={{ width: `${pct}%` }}
