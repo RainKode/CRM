@@ -40,6 +40,85 @@ import {
 
 type BLWithLead = BatchLead & { lead: Lead };
 
+// Inline-editable field for Pane 2
+function EditableField({
+  label,
+  fieldKey,
+  value,
+  editingField,
+  editValue,
+  startEdit,
+  commitEdit,
+  setEditValue,
+  isEmail = false,
+  isUrl = false,
+  multiline = false,
+}: {
+  label: string;
+  fieldKey: string;
+  value: string;
+  editingField: string | null;
+  editValue: string;
+  startEdit: (key: string, value: string) => void;
+  commitEdit: (key: string) => void;
+  setEditValue: (v: string) => void;
+  isEmail?: boolean;
+  isUrl?: boolean;
+  multiline?: boolean;
+}) {
+  const isEditing = editingField === fieldKey;
+  return (
+    <div className="min-w-0 group">
+      <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">{label}</p>
+      {isEditing ? (
+        <div className="flex items-start gap-1.5">
+          {multiline ? (
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => commitEdit(fieldKey)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit(fieldKey); } if (e.key === "Escape") { setEditValue(value); commitEdit(fieldKey); } }}
+              rows={3}
+              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1.5 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-accent) outline-none resize-none"
+            />
+          ) : (
+            <input
+              autoFocus
+              type={isEmail ? "email" : isUrl ? "url" : "text"}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => commitEdit(fieldKey)}
+              onKeyDown={(e) => { if (e.key === "Enter") commitEdit(fieldKey); if (e.key === "Escape") { setEditValue(value); commitEdit(fieldKey); } }}
+              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-accent) outline-none"
+            />
+          )}
+          <button type="button" onClick={() => commitEdit(fieldKey)} className="mt-1 shrink-0 text-(--color-success) hover:opacity-75 transition-opacity">
+            <Check className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => startEdit(fieldKey, value)}
+          className="w-full text-left group/val flex items-start gap-1.5"
+        >
+          {isUrl ? (
+            <span className="text-sm text-(--color-accent) break-all underline underline-offset-4 decoration-(--color-accent)/30">
+              {value}
+            </span>
+          ) : isEmail ? (
+            <span className="text-sm text-(--color-accent) break-all">{value}</span>
+          ) : (
+            <span className="text-sm text-(--color-fg) break-words">{value || <span className="text-(--color-fg-subtle) italic">empty</span>}</span>
+          )}
+          <Pencil className="h-3 w-3 text-(--color-fg-subtle) shrink-0 mt-0.5 opacity-0 group-hover/val:opacity-100 transition-opacity" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Map field types/labels to icons
 function fieldIcon(field: FieldDefinition): LucideIcon {
   const label = field.label.toLowerCase();
@@ -289,7 +368,9 @@ export function EnrichmentQueue({
                     isActive ? "text-(--color-fg-muted)" : "text-(--color-fg-subtle)"
                   )}
                 >
-                  {bl.is_completed ? (
+                  {bl.is_disqualified ? (
+                    <BanIcon className="h-4 w-4 text-(--color-danger)" />
+                  ) : bl.is_completed ? (
                     <CheckCircle2 className="h-4 w-4 text-(--color-success)" />
                   ) : bl.is_skipped ? (
                     <SkipForward className="h-4 w-4 text-(--color-fg-subtle)" />
@@ -321,31 +402,20 @@ export function EnrichmentQueue({
           <h2 className="text-2xl font-bold text-(--color-fg) tracking-tight">
             {lead.name || lead.company || "Unnamed Lead"}
           </h2>
-          <p className="text-sm text-(--color-fg-muted) mt-2">Existing Data</p>
+          <p className="text-sm text-(--color-fg-muted) mt-2">Existing Data — click any field to edit</p>
         </header>
         <div className="flex-1 overflow-y-auto p-8 pt-4">
           <div className="rounded-2xl border-2 border-(--color-card-border) shadow-(--shadow-card-3d) bg-(--color-surface-1) p-6">
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-              {/* Top-level lead fields */}
+              {/* Top-level lead fields — editable */}
               {(lead.company || lead.name) && (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Company Name</p>
-                  <p className="text-sm text-(--color-fg) break-words">{lead.company || lead.name}</p>
-                </div>
+                <EditableField label="Company Name" fieldKey="company" value={String(lead.company || lead.name || "")} editingField={editingField} editValue={editValue} startEdit={startEdit} commitEdit={commitEdit} setEditValue={setEditValue} />
               )}
               {lead.email && (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Email</p>
-                  <a href={`mailto:${lead.email}`} className="text-sm text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4 break-all">
-                    {lead.email}
-                  </a>
-                </div>
+                <EditableField label="Email" fieldKey="email" value={lead.email} editingField={editingField} editValue={editValue} startEdit={startEdit} commitEdit={commitEdit} setEditValue={setEditValue} isEmail />
               )}
               {lead.name && lead.company && (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Contact Name</p>
-                  <p className="text-sm text-(--color-fg) break-words">{lead.name}</p>
-                </div>
+                <EditableField label="Contact Name" fieldKey="name" value={lead.name} editingField={editingField} editValue={editValue} startEdit={startEdit} commitEdit={commitEdit} setEditValue={setEditValue} />
               )}
               {lead.status && (
                 <div className="min-w-0">
@@ -359,7 +429,7 @@ export function EnrichmentQueue({
                   <p className="text-sm text-(--color-fg) break-words">{lead.tags.join(", ")}</p>
                 </div>
               )}
-              {/* Dynamic data fields */}
+              {/* Dynamic data fields — editable */}
               {Object.entries(leadData).map(([key, val]) => {
                 if (val === null || val === undefined || val === "") return null;
                 const strVal = Array.isArray(val)
@@ -371,30 +441,17 @@ export function EnrichmentQueue({
                 const displayKey = key
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c) => c.toUpperCase());
-                const isUrl = strVal.startsWith("http://") || strVal.startsWith("https://");
                 const isLong = strVal.length > 80;
+                const isUrl = strVal.startsWith("http://") || strVal.startsWith("https://");
                 return (
                   <div key={key} className={cn("min-w-0", isLong && "col-span-2")}>
-                    <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">{displayKey}</p>
-                    {isUrl ? (
-                      <a
-                        href={strVal.startsWith("http") ? strVal : `https://${strVal}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-(--color-accent) hover:underline decoration-(--color-accent)/30 underline-offset-4 break-all"
-                      >
-                        {strVal}
-                      </a>
-                    ) : (
-                      <p className="text-sm text-(--color-fg) break-words">{strVal}</p>
-                    )}
+                    <EditableField label={displayKey} fieldKey={key} value={strVal} editingField={editingField} editValue={editValue} startEdit={startEdit} commitEdit={commitEdit} setEditValue={setEditValue} isUrl={isUrl} />
                   </div>
                 );
               })}
-              {lead.notes && (
+              {lead.notes !== null && lead.notes !== undefined && (
                 <div className="col-span-2 min-w-0">
-                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Notes</p>
-                  <p className="text-sm text-(--color-fg-muted) leading-relaxed break-words">{lead.notes}</p>
+                  <EditableField label="Notes" fieldKey="notes" value={lead.notes || ""} editingField={editingField} editValue={editValue} startEdit={startEdit} commitEdit={commitEdit} setEditValue={setEditValue} multiline />
                 </div>
               )}
             </div>
@@ -447,6 +504,9 @@ export function EnrichmentQueue({
             )}
             {current.is_flagged && (
               <Badge tone="warn" className="mt-2">Flagged: {current.flag_reason}</Badge>
+            )}
+            {current.is_disqualified && (
+              <Badge tone="danger" className="mt-2">Disqualified</Badge>
             )}
           </div>
           {isSupported && (
@@ -590,29 +650,105 @@ export function EnrichmentQueue({
         </div>
 
         {/* Footer */}
-        <footer className="p-8 pt-4 border-t border-(--color-card-border) shrink-0 space-y-2">
+        <footer className="p-8 pt-4 border-t border-(--color-card-border) shrink-0 space-y-3">
           <button
             type="button"
             onClick={handleComplete}
-            disabled={isPending || current.is_completed}
+            disabled={isPending || current.is_completed || current.is_disqualified}
             className="w-full bg-(--color-accent) text-(--color-accent-fg) py-4 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,113,227,0.3)] disabled:opacity-50"
           >
             {isPending ? "Saving…" : "Mark as Enriched"}
           </button>
-          <div className="flex items-center justify-center gap-4">
+
+          {/* Secondary actions row */}
+          <div className="flex items-center justify-center gap-2">
             <button
               type="button"
               onClick={handleSkip}
-              className="text-(--color-fg-muted) py-3 rounded-full font-medium text-sm hover:text-(--color-fg) transition-colors"
+              disabled={isPending}
+              className="flex-1 text-(--color-fg-muted) py-2.5 rounded-full font-medium text-sm hover:text-(--color-fg) hover:bg-(--color-surface-2) transition-colors"
             >
-              Skip for now
+              Skip
             </button>
+
+            {/* Flag button with inline popover */}
+            <div className="relative flex-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (current.is_flagged) { handleUnflag(); return; }
+                  setShowFlagMenu((v) => !v);
+                }}
+                disabled={isPending}
+                className={cn(
+                  "w-full py-2.5 rounded-full font-medium text-sm transition-colors flex items-center justify-center gap-1.5",
+                  current.is_flagged
+                    ? "bg-(--color-warn)/15 text-(--color-warn) hover:bg-(--color-warn)/25"
+                    : "text-(--color-fg-muted) hover:text-(--color-warn) hover:bg-(--color-surface-2)"
+                )}
+              >
+                <Flag className="h-3.5 w-3.5" />
+                {current.is_flagged ? "Unflag" : "Flag"}
+              </button>
+              {showFlagMenu && (
+                <div
+                  ref={flagMenuRef}
+                  className="absolute bottom-full mb-2 left-0 right-0 z-50 rounded-xl bg-(--color-surface-3) border border-(--color-card-border) shadow-(--shadow-popover) p-3 space-y-2"
+                >
+                  <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-2">Flag reason</p>
+                  {["Dead website", "Dead email", "Wrong contact", "Not suitable for campaign", "Duplicate"].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => handleFlag(r)}
+                      className="w-full text-left text-sm text-(--color-fg) px-3 py-2 rounded-lg hover:bg-(--color-surface-4) transition-colors"
+                    >
+                      {r}
+                    </button>
+                  ))}
+                  <div className="pt-1 border-t border-(--color-card-border) flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Custom reason…"
+                      value={customFlagReason}
+                      onChange={(e) => setCustomFlagReason(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && customFlagReason.trim()) handleFlag(customFlagReason.trim()); }}
+                      className="flex-1 bg-(--color-surface-4) rounded-lg px-3 py-1.5 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) border-none focus:ring-1 focus:ring-(--color-accent) outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (customFlagReason.trim()) handleFlag(customFlagReason.trim()); }}
+                      className="px-3 py-1.5 rounded-lg bg-(--color-accent) text-(--color-accent-fg) text-sm font-medium"
+                    >
+                      OK
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFlagMenu(false)}
+                    className="w-full text-center text-xs text-(--color-fg-subtle) py-1 hover:text-(--color-fg) transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Disqualify button */}
             <button
               type="button"
-              onClick={handleFlag}
-              className="text-(--color-fg-muted) py-3 rounded-full font-medium text-sm hover:text-(--color-warn) transition-colors flex items-center gap-1.5"
+              onClick={handleDisqualify}
+              disabled={isPending || current.is_disqualified}
+              title="Disqualify this lead from the campaign"
+              className={cn(
+                "flex-1 py-2.5 rounded-full font-medium text-sm transition-colors flex items-center justify-center gap-1.5",
+                current.is_disqualified
+                  ? "bg-(--color-danger)/15 text-(--color-danger) opacity-60 cursor-not-allowed"
+                  : "text-(--color-fg-muted) hover:text-(--color-danger) hover:bg-(--color-danger)/10"
+              )}
             >
-              <Flag className="h-3.5 w-3.5" /> Flag
+              <BanIcon className="h-3.5 w-3.5" />
+              {current.is_disqualified ? "DQ'd" : "Disqualify"}
             </button>
           </div>
         </footer>
@@ -629,6 +765,7 @@ export function EnrichmentQueue({
                 {lead.name || lead.company || "Enrichment"}
               </h2>
               {current.is_completed && <Badge tone="success" className="mt-1 text-xs">Already enriched</Badge>}
+              {current.is_disqualified && <Badge tone="danger" className="mt-1 text-xs">Disqualified</Badge>}
             </div>
             <button
               type="button"
@@ -760,25 +897,41 @@ export function EnrichmentQueue({
             <button
               type="button"
               onClick={handleComplete}
-              disabled={isPending || current.is_completed}
+              disabled={isPending || current.is_completed || current.is_disqualified}
               className="w-full bg-(--color-accent) text-(--color-accent-fg) py-3.5 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,194,204,0.3)] disabled:opacity-50"
             >
               {isPending ? "Saving…" : "Mark as Enriched"}
             </button>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={handleSkip}
+                disabled={isPending}
                 className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-fg) transition-colors"
               >
-                Skip for now
+                Skip
               </button>
               <button
                 type="button"
-                onClick={handleFlag}
-                className="text-(--color-fg-muted) py-2 rounded-full font-medium text-sm hover:text-(--color-warn) transition-colors flex items-center gap-1.5"
+                onClick={() => setShowFlagMenu((v) => !v)}
+                disabled={isPending}
+                className={cn(
+                  "py-2 rounded-full font-medium text-sm transition-colors flex items-center gap-1.5",
+                  current.is_flagged ? "text-(--color-warn)" : "text-(--color-fg-muted) hover:text-(--color-warn)"
+                )}
               >
-                <Flag className="h-3.5 w-3.5" /> Flag
+                <Flag className="h-3.5 w-3.5" /> {current.is_flagged ? "Unflag" : "Flag"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDisqualify}
+                disabled={isPending || current.is_disqualified}
+                className={cn(
+                  "py-2 rounded-full font-medium text-sm transition-colors flex items-center gap-1.5",
+                  current.is_disqualified ? "text-(--color-danger) opacity-50 cursor-not-allowed" : "text-(--color-fg-muted) hover:text-(--color-danger)"
+                )}
+              >
+                <BanIcon className="h-3.5 w-3.5" /> {current.is_disqualified ? "DQ'd" : "Disqualify"}
               </button>
             </div>
           </footer>
