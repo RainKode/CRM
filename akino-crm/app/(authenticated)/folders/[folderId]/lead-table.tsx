@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, useCallback, useTransition } from "react";
 import {
@@ -11,11 +11,22 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import {
+  ArrowUpDown,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Eye,
+  EyeOff,
+  Columns3,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { FieldDefinition, Lead } from "@/lib/types";
-import { updateLead, deleteLeads, getLeads } from "./actions";
+import { updateLead, deleteLeads, getLeads, getAllLeadIds } from "./actions";
 
 const COL = createColumnHelper<Lead>();
 const PAGE_SIZE = 50;
@@ -23,7 +34,8 @@ const PAGE_SIZE = 50;
 function getPageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
-  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  if (current >= total - 3)
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
   return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
@@ -44,19 +56,38 @@ export function LeadTable({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [selectAllMode, setSelectAllMode] = useState(false);
+  const [allLeadIds, setAllLeadIds] = useState<string[] | null>(null);
+  const [hiddenFieldIds, setHiddenFieldIds] = useState<Set<string>>(
+    () => new Set(fields.filter((f) => f.is_hidden).map((f) => f.id))
+  );
+  const [showFieldPanel, setShowFieldPanel] = useState(false);
   const [, startTransition] = useTransition();
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const visibleFields = useMemo(
-    () => fields.filter((f) => !f.is_hidden),
-    [fields]
+    () => fields.filter((f) => !hiddenFieldIds.has(f.id)),
+    [fields, hiddenFieldIds]
   );
+
+  function toggleFieldVisibility(fieldId: string) {
+    setHiddenFieldIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(fieldId)) {
+        next.delete(fieldId);
+      } else {
+        next.add(fieldId);
+      }
+      return next;
+    });
+  }
 
   async function goToPage(p: number) {
     if (p < 1 || p > totalPages || p === page) return;
     setIsPageLoading(true);
     setRowSelection({});
+    setSelectAllMode(false);
     try {
       const offset = (p - 1) * PAGE_SIZE;
       const newLeads = await getLeads(folderId, { limit: PAGE_SIZE, offset });
@@ -67,9 +98,28 @@ export function LeadTable({
     }
   }
 
+  async function handleSelectAll() {
+    if (!allLeadIds) {
+      const ids = await getAllLeadIds(folderId);
+      setAllLeadIds(ids);
+      const sel: Record<string, boolean> = {};
+      for (const id of ids) sel[id] = true;
+      setRowSelection(sel);
+    } else {
+      const sel: Record<string, boolean> = {};
+      for (const id of allLeadIds) sel[id] = true;
+      setRowSelection(sel);
+    }
+    setSelectAllMode(true);
+  }
+
+  function handleClearSelection() {
+    setRowSelection({});
+    setSelectAllMode(false);
+  }
+
   const columns = useMemo(
     () => [
-      // Checkbox
       COL.display({
         id: "select",
         header: ({ table }) => (
@@ -84,13 +134,15 @@ export function LeadTable({
           <input
             type="checkbox"
             checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
+            onChange={(e) => {
+              row.getToggleSelectedHandler()(e);
+              if (!e.target.checked) setSelectAllMode(false);
+            }}
             className="accent-(--color-accent)"
           />
         ),
         size: 32,
       }),
-      // SL (Serial Number)
       COL.display({
         id: "sl",
         header: "SL.",
@@ -101,21 +153,22 @@ export function LeadTable({
         ),
         size: 50,
       }),
-      // Dynamic columns from field schema
       ...visibleFields.map((field) =>
-        COL.accessor((row) => (row.data as Record<string, unknown>)[field.key], {
-          id: `field_${field.key}`,
-          header: field.label,
-          size: 150,
-          cell: (info) => {
-            const val = info.getValue();
-            if (val === undefined || val === null) return "—";
-            if (field.type === "checkbox")
-              return val ? "✓" : "—";
-            if (Array.isArray(val)) return val.join(", ");
-            return String(val);
-          },
-        })
+        COL.accessor(
+          (row) => (row.data as Record<string, unknown>)[field.key],
+          {
+            id: `field_${field.key}`,
+            header: field.label,
+            size: 150,
+            cell: (info) => {
+              const val = info.getValue();
+              if (val === undefined || val === null) return "\u2014";
+              if (field.type === "checkbox") return val ? "\u2713" : "\u2014";
+              if (Array.isArray(val)) return val.join(", ");
+              return String(val);
+            },
+          }
+        )
       ),
     ],
     [visibleFields, page]
@@ -137,14 +190,12 @@ export function LeadTable({
 
   const { rows } = table.getRowModel();
 
-  // Inline edit handler
   const handleCellEdit = useCallback(
     (leadId: string, fieldKey: string, value: unknown) => {
       setLeads((prev) =>
         prev.map((l) => {
           if (l.id !== leadId) return l;
           const newData = { ...l.data, [fieldKey]: value };
-          // Also update top-level columns if the key matches
           const updates: Partial<Lead> = { data: newData };
           if (fieldKey === "email") updates.email = value as string;
           if (fieldKey === "name") updates.name = value as string;
@@ -157,7 +208,9 @@ export function LeadTable({
         const lead = leads.find((l) => l.id === leadId);
         if (!lead) return;
         const newData = { ...lead.data, [fieldKey]: value };
-        const updates: Partial<Pick<Lead, "data" | "email" | "name" | "company">> = { data: newData };
+        const updates: Partial<
+          Pick<Lead, "data" | "email" | "name" | "company">
+        > = { data: newData };
         if (fieldKey === "email") updates.email = value as string;
         if (fieldKey === "name") updates.name = value as string;
         if (fieldKey === "company") updates.company = value as string;
@@ -167,10 +220,12 @@ export function LeadTable({
     [folderId, leads]
   );
 
-  // Bulk delete
   const selectedIds = Object.keys(rowSelection).filter(
     (k) => rowSelection[k]
   );
+  const selectedCount = selectAllMode ? totalCount : selectedIds.length;
+  const allOnPageSelected =
+    leads.length > 0 && leads.every((l) => rowSelection[l.id]);
 
   function handleBulkDelete() {
     if (selectedIds.length === 0) return;
@@ -178,16 +233,135 @@ export function LeadTable({
       await deleteLeads(selectedIds, folderId);
       setLeads((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
       setRowSelection({});
+      setSelectAllMode(false);
     });
   }
 
-  // Virtual scroll container
-  const parentRef = { current: null as HTMLDivElement | null };
-
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card)">
+    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card) relative">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-card-border)">
+        <div className="text-xs text-(--color-fg-muted)">
+          {visibleFields.length} of {fields.length} columns shown
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowFieldPanel(!showFieldPanel)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              showFieldPanel
+                ? "bg-(--color-accent) text-(--color-accent-fg)"
+                : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+            )}
+          >
+            <Columns3 className="h-3.5 w-3.5" />
+            Fields
+          </button>
+
+          {showFieldPanel && (
+            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-card-border) shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+                <span className="text-sm font-bold text-(--color-fg)">
+                  Toggle Columns
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowFieldPanel(false)}
+                  className="text-(--color-fg-subtle) hover:text-(--color-fg)"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto py-1">
+                {fields.map((field) => {
+                  const isVisible = !hiddenFieldIds.has(field.id);
+                  return (
+                    <button
+                      key={field.id}
+                      type="button"
+                      onClick={() => toggleFieldVisibility(field.id)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-(--color-surface-2) transition-colors"
+                    >
+                      {isVisible ? (
+                        <Eye className="h-4 w-4 text-(--color-accent) shrink-0" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
+                      )}
+                      <span
+                        className={cn(
+                          "truncate",
+                          isVisible
+                            ? "text-(--color-fg)"
+                            : "text-(--color-fg-subtle)"
+                        )}
+                      >
+                        {field.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 px-4 py-3 border-t border-(--color-card-border)">
+                <button
+                  type="button"
+                  onClick={() => setHiddenFieldIds(new Set())}
+                  className="flex-1 rounded-lg bg-(--color-surface-2) py-1.5 text-xs font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+                >
+                  Show All
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHiddenFieldIds(new Set(fields.map((f) => f.id)))
+                  }
+                  className="flex-1 rounded-lg bg-(--color-surface-2) py-1.5 text-xs font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+                >
+                  Hide All
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Select all banner */}
+      {allOnPageSelected && !selectAllMode && totalCount > leads.length && (
+        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
+          <span className="text-(--color-fg-muted)">
+            All {leads.length} leads on this page are selected.
+          </span>
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="font-bold text-(--color-accent) hover:underline"
+          >
+            Select all {totalCount} leads
+          </button>
+        </div>
+      )}
+      {selectAllMode && (
+        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
+          <span className="font-bold text-(--color-accent)">
+            All {totalCount} leads are selected.
+          </span>
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="text-(--color-fg-muted) hover:underline"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       {/* Table */}
-      <div className={cn("flex-1 overflow-auto", isPageLoading && "opacity-50 pointer-events-none")} ref={(el) => { parentRef.current = el; }}>
+      <div
+        className={cn(
+          "flex-1 overflow-auto",
+          isPageLoading && "opacity-50 pointer-events-none"
+        )}
+      >
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-(--color-surface-2)">
             {table.getHeaderGroups().map((hg) => (
@@ -258,14 +432,13 @@ export function LeadTable({
         </table>
       </div>
 
-      {/* Bottom bar: bulk actions + pagination */}
+      {/* Bottom bar */}
       <div className="flex items-center justify-between bg-(--color-surface-2) px-6 py-3 border-t border-(--color-card-border)">
-        {/* Bulk actions (left) */}
         <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
+          {selectedCount > 0 && (
             <>
               <span className="rounded-full bg-(--color-accent)/15 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
-                {selectedIds.length} selected
+                {selectedCount} selected
               </span>
               <Button variant="ghost" size="sm" onClick={handleBulkDelete}>
                 <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -274,11 +447,11 @@ export function LeadTable({
           )}
         </div>
 
-        {/* Pagination (right) */}
         {totalPages > 1 && (
           <div className="flex items-center gap-3">
             <span className="text-sm text-(--color-fg-muted)">
-              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
+              {(page - 1) * PAGE_SIZE + 1}&ndash;
+              {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -299,7 +472,12 @@ export function LeadTable({
               </button>
               {getPageNumbers(page, totalPages).map((p, i) =>
                 p === "..." ? (
-                  <span key={`ellipsis-${i}`} className="px-1 text-(--color-fg-subtle)">…</span>
+                  <span
+                    key={`ellipsis-${i}`}
+                    className="px-1 text-(--color-fg-subtle)"
+                  >
+                    &hellip;
+                  </span>
                 ) : (
                   <button
                     key={p}

@@ -170,6 +170,16 @@ export async function getLeadCount(folderId: string): Promise<number> {
   return count ?? 0;
 }
 
+export async function getAllLeadIds(folderId: string): Promise<string[]> {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from("leads")
+    .select("id")
+    .eq("folder_id", folderId);
+  if (error) throw error;
+  return (data ?? []).map((d) => d.id);
+}
+
 export async function getLeads(
   folderId: string,
   options?: { limit?: number; offset?: number }
@@ -223,12 +233,22 @@ export async function importLeads(
   let skipped = 0;
   const errors: { row: number; reason: string }[] = [];
 
+  // Deduplicate mapping: if multiple CSV columns target the same field,
+  // keep only the first CSV column for that target
+  const deduped: Record<string, string> = {};
+  const seenTargets = new Set<string>();
+  for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
+    if (!fieldKey) continue;
+    if (seenTargets.has(fieldKey)) continue;
+    seenTargets.add(fieldKey);
+    deduped[csvKey] = fieldKey;
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const mapped: Record<string, unknown> = {};
 
-    for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
-      if (!fieldKey) continue;
+    for (const [csvKey, fieldKey] of Object.entries(deduped)) {
       mapped[fieldKey] = row[csvKey];
     }
 

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { FieldDefinition } from "@/lib/types";
 import { importLeads } from "./actions";
 
@@ -222,7 +223,15 @@ export function CsvUpload({
                 onChange={(e) =>
                   setMapping((m) => ({ ...m, [header]: e.target.value }))
                 }
-                className="h-10 flex-1 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className={cn(
+                  "h-10 flex-1 rounded-xl border-0 px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none",
+                  mapping[header] &&
+                    Object.entries(mapping).some(
+                      ([k, v]) => k !== header && v === mapping[header]
+                    )
+                    ? "bg-red-500/10 ring-1 ring-red-400/50"
+                    : "bg-(--color-surface-2)"
+                )}
               >
                 {targetOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -230,9 +239,14 @@ export function CsvUpload({
                   </option>
                 ))}
               </select>
-              {mapping[header] && (
+              {mapping[header] &&
+                Object.entries(mapping).some(
+                  ([k, v]) => k !== header && v === mapping[header]
+                ) ? (
+                <Badge tone="neutral">Duplicate</Badge>
+              ) : mapping[header] ? (
                 <Badge tone="accent">Mapped</Badge>
-              )}
+              ) : null}
             </div>
           ))}
         </div>
