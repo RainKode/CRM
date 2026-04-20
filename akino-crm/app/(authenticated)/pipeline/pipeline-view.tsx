@@ -1712,7 +1712,7 @@ export function PipelineView({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setDeletingPipelineId(p.id); setDeleteConfirmName(""); }}
-                          className="opacity-0 group-hover:opacity-100 px-2 py-2 text-(--color-danger) hover:bg-(--color-danger)/10 rounded-lg transition-all mr-1"
+                          className="shrink-0 px-2 py-2 text-(--color-fg-subtle) hover:text-(--color-danger) hover:bg-(--color-danger)/10 rounded-lg transition-colors mr-1"
                           title="Delete pipeline"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
