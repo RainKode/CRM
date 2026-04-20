@@ -364,15 +364,15 @@ export function Sidebar() {
           )}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--color-accent) text-(--color-accent-fg) font-bold text-lg shrink-0">
-            A
+            R
           </div>
           {!collapsed && (
             <div>
               <h1 className="text-lg font-bold text-(--color-fg) tracking-tight">
-                Akino CRM
+                Rainhub
               </h1>
               <p className="text-xs text-(--color-fg-subtle) font-medium tracking-wide">
-                Outbound Sales
+                CRM
               </p>
             </div>
           )}

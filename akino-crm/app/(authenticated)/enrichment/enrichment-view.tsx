@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +17,7 @@ import {
   Minus,
   X,
   ChevronDown,
+  ChevronRight,
   Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -315,6 +316,24 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
   const [filter, setFilter] = useState<"all" | BatchStatus>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [enrichTarget, setEnrichTarget] = useState<{ folderId: string } | null>(null);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+
+  function toggleFolder(folderId: string) {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  }
+
+  function collapseAll() {
+    setCollapsedFolders(new Set(groups.map((g) => g.folder_id)));
+  }
+
+  function expandAll() {
+    setCollapsedFolders(new Set());
+  }
 
   // Filter batches
   const filteredGroups = groups
@@ -348,6 +367,14 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Collapse / Expand all */}
+            <button
+              type="button"
+              onClick={collapsedFolders.size === groups.length ? expandAll : collapseAll}
+              className="rounded-xl bg-(--color-surface-2) px-4 py-2 text-sm font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors cursor-pointer"
+            >
+              {collapsedFolders.size === groups.length ? "Expand All" : "Collapse All"}
+            </button>
             {/* View toggle */}
             <div className="flex rounded-xl bg-(--color-surface-2) p-1">
               <button
@@ -432,11 +459,20 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
               return (
                 <div key={group.folder_id}>
                   {/* Folder section header */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-8 w-8 rounded-lg bg-(--color-surface-4) flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolder(group.folder_id)}
+                    className="w-full flex items-center gap-3 mb-4 cursor-pointer group/header rounded-xl px-3 py-2 -mx-3 hover:bg-(--color-surface-2)/50 transition-colors"
+                  >
+                    {collapsedFolders.has(group.folder_id) ? (
+                      <ChevronRight className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
+                    )}
+                    <div className="h-8 w-8 rounded-lg bg-(--color-surface-4) flex items-center justify-center shrink-0">
                       <FolderOpen className="h-4 w-4 text-(--color-accent)" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 text-left">
                       <h3 className="text-base font-bold text-(--color-fg)">
                         {group.folder_name}
                       </h3>
@@ -446,14 +482,16 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                         {folderCompleted}/{folderTotal} enriched ({folderPct}%)
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setEnrichTarget({ folderId: group.folder_id })}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEnrichTarget({ folderId: group.folder_id });
+                      }}
                       className="flex items-center gap-1.5 text-(--color-accent) text-sm font-medium hover:text-(--color-accent-hover) transition-colors px-3 py-1.5 rounded-full hover:bg-(--color-accent)/10"
                     >
                       <Settings2 className="h-4 w-4" />
                       Enrichment Fields
-                    </button>
+                    </div>
                     <div className="w-24">
                       <div className="h-1.5 w-full bg-(--color-surface-4) rounded-full overflow-hidden">
                         <div
@@ -467,10 +505,10 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                         />
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Grid view */}
-                  {viewMode === "grid" ? (
+                  {!collapsedFolders.has(group.folder_id) && (viewMode === "grid" ? (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {group.batches.map((batch) => {
                         const meta = STATUS_META[batch.status];
@@ -543,7 +581,6 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                       })}
                     </div>
                   ) : (
-                    /* List view (compact) */
                     <div className="rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d)">
                       <table className="w-full text-sm">
                         <thead>
@@ -625,7 +662,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                         </tbody>
                       </table>
                     </div>
-                  )}
+                  ))}
                 </div>
               );
             })}
