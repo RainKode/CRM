@@ -133,6 +133,8 @@ export interface Pipeline {
   description: string | null;
   is_default: boolean;
   is_archived: boolean;
+  folder_id: string | null;
+  batch_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -51,6 +51,16 @@ export async function getLossReasons(): Promise<LossReason[]> {
   return data as LossReason[];
 }
 
+export async function getFolderName(folderId: string): Promise<string> {
+  const sb = await createClient();
+  const { data } = await sb
+    .from("folders")
+    .select("name")
+    .eq("id", folderId)
+    .single();
+  return data?.name ?? "Folder";
+}
+
 export async function getDealActivities(dealId: string): Promise<Activity[]> {
   const sb = await createClient();
   const { data, error } = await sb
@@ -427,4 +437,182 @@ export async function deletePipeline(pipelineId: string) {
     .eq("id", pipelineId);
   if (error) throw error;
   revalidatePath("/pipeline");
+}
+
+// ─── Folder-grouped pipeline queries ───────────────────────────────────
+
+export type FolderPipelineGroup = {
+  folder_id: string;
+  folder_name: string;
+  pipelines: (Pipeline & { deal_count: number })[];
+};
+
+export async function getPipelinesGroupedByFolder(): Promise<FolderPipelineGroup[]> {
+  const sb = await createClient();
+
+  const { data: pipelinesRaw, error } = await sb
+    .from("pipelines")
+    .select("*")
+    .eq("is_archived", false)
+    .not("folder_id", "is", null)
+    .order("created_at");
+  if (error) throw error;
+
+  const pipelines = pipelinesRaw as Pipeline[];
+  if (pipelines.length === 0) return [];
+
+  // Get unique folder IDs
+  const folderIds = [...new Set(pipelines.map((p) => p.folder_id!))];
+  const { data: folders } = await sb
+    .from("folders")
+    .select("id, name")
+    .in("id", folderIds);
+  const folderMap = new Map((folders ?? []).map((f) => [f.id, f.name]));
+
+  // Get deal counts per pipeline via stages
+  const pipelinesWithCounts: (Pipeline & { deal_count: number })[] = [];
+  for (const p of pipelines) {
+    const { data: stageIds } = await sb
+      .from("pipeline_stages")
+      .select("id")
+      .eq("pipeline_id", p.id)
+      .eq("is_archived", false);
+    const sIds = (stageIds ?? []).map((s) => s.id);
+    let dealCount = 0;
+    if (sIds.length > 0) {
+      const { count } = await sb
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .in("stage_id", sIds);
+      dealCount = count ?? 0;
+    }
+    pipelinesWithCounts.push({ ...p, deal_count: dealCount });
+  }
+
+  // Group by folder
+  const groups: FolderPipelineGroup[] = [];
+  for (const folderId of folderIds) {
+    groups.push({
+      folder_id: folderId,
+      folder_name: folderMap.get(folderId) ?? "Unknown Folder",
+      pipelines: pipelinesWithCounts.filter((p) => p.folder_id === folderId),
+    });
+  }
+
+  return groups;
+}
+
+export async function getDealsForFolder(folderId: string): Promise<Deal[]> {
+  const sb = await createClient();
+  // Get all pipelines under this folder
+  const { data: pipelinesRaw } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("folder_id", folderId)
+    .eq("is_archived", false);
+  const pipelineIds = (pipelinesRaw ?? []).map((p) => p.id);
+  if (pipelineIds.length === 0) return [];
+
+  // Get all stages for these pipelines
+  const { data: stagesRaw } = await sb
+    .from("pipeline_stages")
+    .select("id")
+    .in("pipeline_id", pipelineIds)
+    .eq("is_archived", false);
+  const stageIds = (stagesRaw ?? []).map((s) => s.id);
+  if (stageIds.length === 0) return [];
+
+  const { data, error } = await sb
+    .from("deals")
+    .select("*")
+    .in("stage_id", stageIds)
+    .order("stage_entered_at", { ascending: false });
+  if (error) throw error;
+  return data as Deal[];
+}
+
+export async function getStagesForFolder(folderId: string): Promise<PipelineStage[]> {
+  const sb = await createClient();
+  // Get any pipeline under this folder and use its stages as the shared template
+  const { data: pipelinesRaw } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("folder_id", folderId)
+    .eq("is_archived", false)
+    .limit(1);
+  if (!pipelinesRaw || pipelinesRaw.length === 0) return [];
+
+  const { data, error } = await sb
+    .from("pipeline_stages")
+    .select("*")
+    .eq("pipeline_id", pipelinesRaw[0].id)
+    .eq("is_archived", false)
+    .order("position");
+  if (error) throw error;
+  return data as PipelineStage[];
+}
+
+export async function createPipelineForBatch(
+  folderId: string,
+  batchId: string,
+  batchName: string
+): Promise<Pipeline> {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Check if folder already has a pipeline (to copy stages from)
+  const { data: existingPipelines } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("folder_id", folderId)
+    .eq("is_archived", false)
+    .limit(1);
+
+  const { data: pipeline, error } = await sb
+    .from("pipelines")
+    .insert({
+      name: batchName,
+      folder_id: folderId,
+      batch_id: batchId,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (existingPipelines && existingPipelines.length > 0) {
+    // Copy stages from existing folder pipeline
+    const { data: templateStages } = await sb
+      .from("pipeline_stages")
+      .select("name, position, is_won, is_lost")
+      .eq("pipeline_id", existingPipelines[0].id)
+      .eq("is_archived", false)
+      .order("position");
+
+    if (templateStages && templateStages.length > 0) {
+      await sb.from("pipeline_stages").insert(
+        templateStages.map((s) => ({
+          ...s,
+          pipeline_id: pipeline.id,
+        }))
+      );
+    }
+  } else {
+    // First pipeline for this folder — create default stages
+    const defaultStages = [
+      { name: "Lead", position: 0, pipeline_id: pipeline.id },
+      { name: "Contacted", position: 1, pipeline_id: pipeline.id },
+      { name: "Qualified", position: 2, pipeline_id: pipeline.id },
+      { name: "Proposal", position: 3, pipeline_id: pipeline.id },
+      { name: "Won", position: 4, pipeline_id: pipeline.id, is_won: true },
+      { name: "Lost", position: 5, pipeline_id: pipeline.id, is_lost: true },
+    ];
+    await sb.from("pipeline_stages").insert(defaultStages);
+  }
+
+  revalidatePath("/pipeline");
+  return pipeline as Pipeline;
 }

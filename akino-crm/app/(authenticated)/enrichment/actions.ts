@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Batch, BatchLead, Lead, FieldDefinition } from "@/lib/types";
+import { createPipelineForBatch } from "@/app/(authenticated)/pipeline/actions";
 
 export async function getBatches(folderId?: string): Promise<(Batch & { total: number; completed: number })[]> {
   const sb = await createClient();
@@ -137,6 +138,14 @@ export async function createMultipleBatches(input: {
     }
 
     created.push(batch as Batch);
+
+    // Auto-create a pipeline for this batch
+    try {
+      await createPipelineForBatch(folder_id, batch.id, batchName);
+    } catch {
+      // Non-fatal: pipeline creation failure shouldn't block batch creation
+      console.error(`Failed to auto-create pipeline for batch ${batch.id}`);
+    }
   }
 
   revalidatePath("/enrichment");

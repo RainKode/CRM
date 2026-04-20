@@ -26,7 +26,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { BatchStatus, FieldDefinition, FieldType } from "@/lib/types";
 import type { FolderBatchGroup } from "@/app/(authenticated)/enrichment/actions";
+import type { FolderPipelineGroup } from "@/app/(authenticated)/pipeline/actions";
 import { getBatchesGroupedByFolder, getEnrichmentFields } from "@/app/(authenticated)/enrichment/actions";
+import { getPipelinesGroupedByFolder } from "@/app/(authenticated)/pipeline/actions";
 import { createField, getFieldDefinitions } from "@/app/(authenticated)/folders/[folderId]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,9 +330,12 @@ export function Sidebar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [enrichmentGroups, setEnrichmentGroups] = useState<FolderBatchGroup[]>([]);
   const [enrichmentOpen, setEnrichmentOpen] = useState<Set<string>>(new Set());
+  const [pipelineGroups, setPipelineGroups] = useState<FolderPipelineGroup[]>([]);
+  const [pipelineOpen, setPipelineOpen] = useState<Set<string>>(new Set());
   const [fieldsDialog, setFieldsDialog] = useState<{ folderId: string; folderName: string } | null>(null);
 
   const isOnEnrichment = pathname === "/enrichment" || pathname.startsWith("/enrichment/");
+  const isOnPipeline = pathname === "/pipeline" || pathname.startsWith("/pipeline/");
 
   // Fetch enrichment data when on enrichment pages
   useEffect(() => {
@@ -338,6 +343,13 @@ export function Sidebar() {
       getBatchesGroupedByFolder().then(setEnrichmentGroups);
     }
   }, [isOnEnrichment, pathname]);
+
+  // Fetch pipeline groups when on pipeline pages
+  useEffect(() => {
+    if (isOnPipeline) {
+      getPipelinesGroupedByFolder().then(setPipelineGroups);
+    }
+  }, [isOnPipeline, pathname]);
 
   const isActive = (item: NavItem) =>
     item.matchPrefix
@@ -347,6 +359,15 @@ export function Sidebar() {
 
   function toggleEnrichmentFolder(folderId: string) {
     setEnrichmentOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  }
+
+  function togglePipelineFolder(folderId: string) {
+    setPipelineOpen((prev) => {
       const next = new Set(prev);
       if (next.has(folderId)) next.delete(folderId);
       else next.add(folderId);
@@ -469,6 +490,86 @@ export function Sidebar() {
                                 <Settings2 className="h-3 w-3 shrink-0" />
                                 <span>Enrichment Fields</span>
                               </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+              {/* Pipeline sub-navigation */}
+              {item.matchPrefix === "/pipeline" &&
+                isOnPipeline &&
+                !collapsed &&
+                pipelineGroups.length > 0 && (
+                  <div className="ml-5 pl-4 border-l border-(--color-border) mt-1 mb-2 space-y-1">
+                    {pipelineGroups.map((group) => {
+                      const isOpen = pipelineOpen.has(group.folder_id);
+                      const totalDeals = group.pipelines.reduce((s, p) => s + p.deal_count, 0);
+
+                      return (
+                        <div key={group.folder_id}>
+                          {/* Folder row */}
+                          <button
+                            type="button"
+                            onClick={() => togglePipelineFolder(group.folder_id)}
+                            className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-[13px] text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors"
+                          >
+                            {isOpen ? (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            )}
+                            <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-(--color-accent)" />
+                            <span className="flex-1 text-left leading-snug break-words">
+                              {group.folder_name}
+                            </span>
+                            <span className="text-[10px] text-(--color-fg-subtle) shrink-0 mt-0.5">
+                              {totalDeals}
+                            </span>
+                          </button>
+
+                          {/* Expanded batch pipelines + master view */}
+                          {isOpen && (
+                            <div className="ml-4 pl-3 border-l border-(--color-border) space-y-0.5 mt-0.5 mb-1">
+                              {/* Master folder view link */}
+                              <Link
+                                href={`/pipeline/folder/${group.folder_id}`}
+                                className={cn(
+                                  "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors font-medium",
+                                  pathname === `/pipeline/folder/${group.folder_id}`
+                                    ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
+                                    : "text-(--color-accent) hover:bg-(--color-accent)/10"
+                                )}
+                              >
+                                <Workflow className="h-3 w-3 shrink-0 mt-0.5" />
+                                <span className="flex-1 leading-snug">All Deals</span>
+                                <span className="text-[10px] shrink-0">{totalDeals}</span>
+                              </Link>
+                              {/* Individual batch pipelines */}
+                              {group.pipelines.map((pipeline) => (
+                                <Link
+                                  key={pipeline.id}
+                                  href={`/pipeline?pid=${pipeline.id}`}
+                                  className={cn(
+                                    "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors",
+                                    pathname === "/pipeline" &&
+                                      typeof window !== "undefined" &&
+                                      new URLSearchParams(window.location.search).get("pid") === pipeline.id
+                                      ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
+                                      : "text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
+                                  )}
+                                >
+                                  <Circle className="h-3 w-3 shrink-0 mt-0.5" />
+                                  <span className="flex-1 leading-snug break-words">
+                                    {pipeline.name}
+                                  </span>
+                                  <span className="text-[10px] text-(--color-fg-subtle) shrink-0">
+                                    {pipeline.deal_count}
+                                  </span>
+                                </Link>
+                              ))}
                             </div>
                           )}
                         </div>
