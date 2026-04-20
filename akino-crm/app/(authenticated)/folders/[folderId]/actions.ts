@@ -59,6 +59,68 @@ export async function createField(
   return data as FieldDefinition;
 }
 
+export async function bulkCreateFields(
+  folderId: string,
+  fields: {
+    key: string;
+    label: string;
+    type: FieldDefinition["type"];
+    options?: string[];
+    is_required?: boolean;
+    is_enrichment?: boolean;
+    description?: string;
+  }[]
+) {
+  if (fields.length === 0) return [];
+
+  const sb = await createClient();
+
+  // Deduplicate input keys (keep first occurrence)
+  const seen = new Set<string>();
+  const uniqueFields = fields.filter((f) => {
+    if (seen.has(f.key)) return false;
+    seen.add(f.key);
+    return true;
+  });
+
+  // Fetch existing keys to avoid conflict entirely
+  const { data: existing } = await sb
+    .from("field_definitions")
+    .select("key")
+    .eq("folder_id", folderId);
+
+  const existingKeys = new Set((existing ?? []).map((e) => e.key));
+  const newFields = uniqueFields.filter((f) => !existingKeys.has(f.key));
+
+  if (newFields.length === 0) {
+    revalidatePath(`/folders/${folderId}`);
+    return [];
+  }
+
+  const startPos = (existing ?? []).length;
+
+  const rows = newFields.map((field, i) => ({
+    folder_id: folderId,
+    key: field.key,
+    label: field.label,
+    type: field.type,
+    options: field.options ?? null,
+    is_required: field.is_required ?? false,
+    is_enrichment: field.is_enrichment ?? false,
+    description: field.description ?? null,
+    position: startPos + i,
+  }));
+
+  const { data, error } = await sb
+    .from("field_definitions")
+    .insert(rows)
+    .select();
+
+  if (error) throw error;
+  revalidatePath(`/folders/${folderId}`);
+  return data as FieldDefinition[];
+}
+
 export async function updateField(
   fieldId: string,
   folderId: string,
@@ -98,6 +160,26 @@ export async function reorderFields(
 
 // ─── Leads ────────────────────────────────────────────────────────────
 
+export async function getLeadCount(folderId: string): Promise<number> {
+  const sb = await createClient();
+  const { count, error } = await sb
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("folder_id", folderId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function getAllLeadIds(folderId: string): Promise<string[]> {
+  const sb = await createClient();
+  const { data, error } = await sb
+    .from("leads")
+    .select("id")
+    .eq("folder_id", folderId);
+  if (error) throw error;
+  return (data ?? []).map((d) => d.id);
+}
+
 export async function getLeads(
   folderId: string,
   options?: { limit?: number; offset?: number }
@@ -120,7 +202,7 @@ export async function getLeads(
 export async function updateLead(
   leadId: string,
   folderId: string,
-  updates: Partial<Pick<Lead, "name" | "email" | "company" | "data" | "tags" | "notes" | "status">>
+  updates: Partial<Pick<Lead, "name" | "email" | "company" | "data" | "tags" | "notes" | "status" | "quality_rating">>
 ) {
   const sb = await createClient();
   const { error } = await sb.from("leads").update(updates).eq("id", leadId);
@@ -130,9 +212,104 @@ export async function updateLead(
 
 export async function deleteLeads(leadIds: string[], folderId: string) {
   const sb = await createClient();
-  const { error } = await sb.from("leads").delete().in("id", leadIds);
+  // Batch in chunks of 200 to avoid URL length limits
+  for (let i = 0; i < leadIds.length; i += 200) {
+    const chunk = leadIds.slice(i, i + 200);
+    const { error } = await sb.from("leads").delete().in("id", chunk);
+    if (error) throw error;
+  }
+  revalidatePath(`/folders/${folderId}`);
+}
+
+export async function deleteAllLeadsInFolder(folderId: string) {
+  const sb = await createClient();
+  const { error } = await sb.from("leads").delete().eq("folder_id", folderId);
   if (error) throw error;
   revalidatePath(`/folders/${folderId}`);
+}
+
+// ─── Filtered lead queries for batch creation ─────────────────────────
+
+export async function getFilteredLeadIds(
+  folderId: string,
+  options: {
+    sortField?: string;
+    sortDir?: "asc" | "desc";
+    filterField?: string;
+    filterValue?: string;
+  }
+): Promise<string[]> {
+  const sb = await createClient();
+
+  // Server-side sort by top-level column or jsonb field
+  const sortField = options.sortField;
+  const sortDir = options.sortDir ?? "asc";
+
+  // Build a query page helper (Supabase defaults to 1000 rows max)
+  function buildQuery() {
+    let q = sb.from("leads").select("id, data").eq("folder_id", folderId);
+    if (sortField === "name" || sortField === "email" || sortField === "company" || sortField === "created_at") {
+      q = q.order(sortField, { ascending: sortDir === "asc" });
+    } else {
+      q = q.order("created_at", { ascending: false });
+    }
+    return q;
+  }
+
+  // Paginate to fetch ALL leads (Supabase caps at 1000 per request)
+  const PAGE = 1000;
+  let allData: { id: string; data: Record<string, unknown> }[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + PAGE - 1);
+    if (error) throw error;
+    allData = allData.concat(data as { id: string; data: Record<string, unknown> }[]);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  let leads = allData;
+
+  // Client-side filter by jsonb field value
+  if (options.filterField && options.filterValue !== undefined && options.filterValue !== "") {
+    const fk = options.filterField;
+    const fv = options.filterValue.toLowerCase();
+
+    leads = leads.filter((l) => {
+      // Check top-level columns first
+      if (fk === "name" || fk === "email" || fk === "company") {
+        const val = (l as unknown as Record<string, unknown>)[fk];
+        return val != null && String(val).toLowerCase().includes(fv);
+      }
+      // Check jsonb data
+      const val = l.data?.[fk];
+      if (val == null) return fv === "" || fv === "empty";
+      return String(val).toLowerCase().includes(fv);
+    });
+  }
+
+  // Client-side sort by jsonb data field
+  if (sortField && !["name", "email", "company", "created_at"].includes(sortField)) {
+    leads.sort((a, b) => {
+      const av = String(a.data?.[sortField] ?? "");
+      const bv = String(b.data?.[sortField] ?? "");
+      const cmp = av.localeCompare(bv, undefined, { numeric: true });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  return leads.map((l) => l.id);
+}
+
+export async function getFilteredLeadCount(
+  folderId: string,
+  options: {
+    filterField?: string;
+    filterValue?: string;
+  }
+): Promise<number> {
+  const ids = await getFilteredLeadIds(folderId, options);
+  return ids.length;
 }
 
 export async function importLeads(
@@ -151,20 +328,29 @@ export async function importLeads(
   let skipped = 0;
   const errors: { row: number; reason: string }[] = [];
 
+  // Deduplicate mapping: if multiple CSV columns target the same field,
+  // keep only the first CSV column for that target
+  const deduped: Record<string, string> = {};
+  const seenTargets = new Set<string>();
+  for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
+    if (!fieldKey) continue;
+    if (seenTargets.has(fieldKey)) continue;
+    seenTargets.add(fieldKey);
+    deduped[csvKey] = fieldKey;
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const mapped: Record<string, unknown> = {};
-    let email: string | null = null;
-    let name: string | null = null;
-    let company: string | null = null;
 
-    for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
-      const val = row[csvKey];
-      if (fieldKey === "email") email = val as string;
-      else if (fieldKey === "name") name = val as string;
-      else if (fieldKey === "company") company = val as string;
-      else mapped[fieldKey] = val;
+    for (const [csvKey, fieldKey] of Object.entries(deduped)) {
+      mapped[fieldKey] = row[csvKey];
     }
+
+    // Extract top-level columns if matching keys exist in the mapped data
+    const email = (mapped["email"] as string) ?? null;
+    const name = (mapped["name"] as string) ?? null;
+    const company = (mapped["company"] as string) ?? null;
 
     // Duplicate check by email
     if (email) {
@@ -225,4 +411,41 @@ export async function importLeads(
 
   revalidatePath(`/folders/${folderId}`);
   return { imported, skipped, errors: errors.length };
+}
+
+// ─── Create single lead ───────────────────────────────────────────────
+
+export async function createLead(
+  folderId: string,
+  input: {
+    name?: string;
+    email?: string;
+    company?: string;
+    data: Record<string, unknown>;
+  }
+) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await sb
+    .from("leads")
+    .insert({
+      folder_id: folderId,
+      name: input.name?.trim() || null,
+      email: input.email?.trim() || null,
+      company: input.company?.trim() || null,
+      data: input.data,
+      status: "raw",
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  revalidatePath(`/folders/${folderId}`);
+  revalidatePath("/folders");
+  return data as Lead;
 }

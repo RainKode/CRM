@@ -78,7 +78,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
         {/* Featured Follow-up Card */}
         {topFollowUp && (
-          <div className="rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card) border border-(--color-card-border) transition-transform hover:scale-[1.005] duration-300">
+          <div className="rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <div className="flex items-stretch justify-between gap-6">
               <div className="flex flex-col gap-6 justify-between flex-[2]">
                 <div className="flex flex-col gap-2">
@@ -116,7 +116,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {/* Pipeline Summary Stats */}
         <div className="flex flex-wrap gap-4">
           {/* New */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-colors shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               New
             </p>
@@ -125,7 +125,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             </p>
           </div>
           {/* In Progress */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-colors shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               In Progress
             </p>
@@ -134,7 +134,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             </p>
           </div>
           {/* Won */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-colors relative overflow-hidden shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 relative overflow-hidden shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <div className="absolute inset-0 bg-(--color-accent)/5 pointer-events-none" />
             <p className="text-(--color-accent) text-xs font-bold uppercase tracking-wider relative z-10">
               Won
@@ -144,7 +144,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             </p>
           </div>
           {/* Lost */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-colors opacity-70 shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 opacity-70 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               Lost
             </p>
@@ -157,7 +157,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {/* Two Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           {/* Folder Summary */}
-          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
                 Folder Summary
@@ -211,7 +211,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
           </div>
 
           {/* Recent Activity */}
-          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card) border border-(--color-card-border)">
+          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
                 Recent Activity

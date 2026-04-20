@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +23,17 @@ import {
   StickyNote,
   CalendarClock,
   ChevronRight,
+  Filter,
+  ChevronDown,
+  MoreHorizontal,
+  Calendar,
+  X,
+  Trash2,
+  Search,
+  UserPlus,
+  Star,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,10 +47,46 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn, relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, LossReason } from "@/lib/types";
-import { createDeal, moveDeal, logActivity, setFollowUp } from "./actions";
+import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType } from "@/lib/types";
+import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, type LeadSearchResult } from "./actions";
+
+// ─────────────────────────────────────────────
+// Generic dropdown hook (click-outside to close)
+// ─────────────────────────────────────────────
+function useDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+  return { open, setOpen, ref };
+}
 
 type ViewMode = "kanban" | "list";
+
+function formatDealValue(value: number | null, currency: string): string {
+  if (value == null) return "";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency === "GBP" ? "GBP" : currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function activityDotColor(lastActivity: string | null): string {
+  if (!lastActivity) return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+  const diff = Date.now() - new Date(lastActivity).getTime();
+  const hours = diff / (1000 * 60 * 60);
+  if (hours < 24) return "bg-(--color-success) shadow-[0_0_8px_rgba(22,163,74,0.6)]";
+  if (hours < 72) return "bg-(--color-warn)";
+  return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+}
 
 // ─────────────────────────────────────────────
 // Deal card for kanban
@@ -73,30 +120,34 @@ function DealCard({
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-(--color-surface-1) rounded-2xl cursor-pointer p-4 space-y-2 hover:-translate-y-0.5 transition-all duration-200 border border-(--color-card-border) hover:border-(--color-border) shadow-(--shadow-card) hover:shadow-(--shadow-card-hover)"
+      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 border-(--color-card-border)"
     >
-      <p className="text-sm font-medium">{deal.contact_name}</p>
-      {deal.company && (
-        <p className="text-xs text-(--color-fg-muted)">{deal.company}</p>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
+            {deal.company || deal.contact_name}
+          </h4>
+          <p className="text-xs text-(--color-fg-muted)">{deal.contact_name}</p>
+        </div>
+      </div>
+      {deal.deal_value != null && (
+        <div className="text-lg font-semibold text-(--color-fg) mb-4">
+          {formatDealValue(deal.deal_value, deal.currency)}
+        </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pt-3 border-t border-(--color-surface-4)">
+        <div className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+          <div className={cn("w-1.5 h-1.5 rounded-full", activityDotColor(deal.last_activity_at))} />
+          <span>{deal.last_activity_at ? relativeTime(deal.last_activity_at) : "No activity"}</span>
+        </div>
         {deal.follow_up_at && (
-          <Badge
-            tone={
-              new Date(deal.follow_up_at) < new Date() ? "danger" : "warn"
-            }
-          >
-            <CalendarClock className="h-3 w-3" />
+          <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
+            <Calendar className="h-3.5 w-3.5" />
             {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "short",
             })}
-          </Badge>
-        )}
-        {deal.last_activity_at && (
-          <span className="text-[10px] text-(--color-fg-subtle)">
-            {relativeTime(deal.last_activity_at)}
-          </span>
+          </div>
         )}
       </div>
     </div>
@@ -110,26 +161,75 @@ function KanbanColumn({
   stage,
   deals,
   onCardClick,
+  onCreateInStage,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   onCardClick: (deal: Deal) => void;
+  onCreateInStage: (stageId: string) => void;
 }) {
+  const isWon = stage.is_won;
+  const menu = useDropdown();
+
   return (
-    <div className="flex w-80 shrink-0 flex-col rounded-2xl bg-(--color-surface-2)/50 border border-(--color-card-border)">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div
+      className={cn(
+        "w-[320px] flex flex-col h-full rounded-2xl p-4 border-2",
+        isWon
+          ? "bg-(--color-success)/10 border-(--color-success)/40"
+          : "bg-(--color-surface-2)/30 border-(--color-card-border)"
+      )}
+    >
+      <div className="flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-(--color-fg)">{stage.name}</span>
-          <span className="text-xs text-(--color-fg-subtle) bg-(--color-surface-4) rounded-full px-2 py-0.5">
+          <h3
+            className={cn(
+              "font-semibold tracking-wide",
+              isWon ? "text-(--color-success)" : "text-(--color-fg)"
+            )}
+          >
+            {stage.name}
+          </h3>
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-bold",
+              isWon
+                ? "bg-(--color-success)/20 text-(--color-success) border border-(--color-success)/30"
+                : "bg-(--color-surface-3) text-(--color-fg-muted)"
+            )}
+          >
             {deals.length}
           </span>
+        </div>
+        <div className="relative" ref={menu.ref}>
+          <button
+            type="button"
+            onClick={() => menu.setOpen(!menu.open)}
+            className={cn(
+              "cursor-pointer hover:text-(--color-fg) p-1 rounded-md hover:bg-(--color-surface-3) transition-colors",
+              isWon ? "text-(--color-success)/50 hover:text-(--color-success)" : "text-(--color-fg-muted)"
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          {menu.open && (
+            <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1 z-50">
+              <button
+                type="button"
+                onClick={() => { onCreateInStage(stage.id); menu.setOpen(false); }}
+                className="w-full text-left px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add deal here
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <SortableContext
         items={deals.map((d) => d.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex-1 space-y-3 overflow-y-auto p-3 min-h-25">
+        <div className="flex flex-col gap-4 overflow-y-auto flex-1 pb-4 min-h-[60px]" style={{ scrollbarWidth: "none" }}>
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -146,20 +246,86 @@ function KanbanColumn({
 // ─────────────────────────────────────────────
 // Create deal dialog
 // ─────────────────────────────────────────────
+type DealMode = "new" | "from_leads";
+
 function CreateDealDialog({
   open,
   onOpenChange,
   stages,
+  defaultStageId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   stages: PipelineStage[];
+  defaultStageId?: string | null;
 }) {
+  const [mode, setMode] = useState<DealMode>("new");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
-  const [stageId, setStageId] = useState(stages[0]?.id ?? "");
+  const resolvedDefault = defaultStageId ?? stages[0]?.id ?? "";
+  const [stageId, setStageId] = useState(resolvedDefault);
+
+  // Lead search state
+  const [leadQuery, setLeadQuery] = useState("");
+  const [enrichedOnly, setEnrichedOnly] = useState(false);
+  const [leadResults, setLeadResults] = useState<LeadSearchResult[]>([]);
+  const [selectedLead, setSelectedLead] = useState<LeadSearchResult | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    if (open && defaultStageId) setStageId(defaultStageId);
+  }, [open, defaultStageId]);
+
+  // Reset when dialog closes or mode changes
+  useEffect(() => {
+    if (!open) {
+      setMode("new");
+      setName("");
+      setCompany("");
+      setEmail("");
+      setLeadQuery("");
+      setLeadResults([]);
+      setSelectedLead(null);
+      setEnrichedOnly(false);
+    }
+  }, [open]);
+
   const [isPending, startTransition] = useTransition();
+
+  function handleSearch(query: string) {
+    setLeadQuery(query);
+    setSelectedLead(null);
+    if (query.trim().length < 2) {
+      setLeadResults([]);
+      return;
+    }
+    setIsSearching(true);
+    startTransition(async () => {
+      const results = await searchLeads({ query: query.trim(), enrichedOnly });
+      setLeadResults(results);
+      setIsSearching(false);
+    });
+  }
+
+  function handleEnrichedToggle(checked: boolean) {
+    setEnrichedOnly(checked);
+    if (leadQuery.trim().length >= 2) {
+      setIsSearching(true);
+      startTransition(async () => {
+        const results = await searchLeads({ query: leadQuery.trim(), enrichedOnly: checked });
+        setLeadResults(results);
+        setIsSearching(false);
+      });
+    }
+  }
+
+  function selectLead(lead: LeadSearchResult) {
+    setSelectedLead(lead);
+    setName(lead.name || "");
+    setCompany(lead.company || "");
+    setEmail(lead.email || "");
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,27 +336,130 @@ function CreateDealDialog({
         company: company.trim() || undefined,
         email: email.trim() || undefined,
         stage_id: stageId,
+        lead_id: selectedLead?.id || undefined,
+        source_folder_id: selectedLead?.folder_id || undefined,
       });
-      setName("");
-      setCompany("");
-      setEmail("");
       onOpenChange(false);
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Deal</DialogTitle>
         </DialogHeader>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 px-6 pb-2">
+          {([
+            { val: "new" as DealMode, label: "New Client", Icon: UserPlus },
+            { val: "from_leads" as DealMode, label: "From Lead Database", Icon: Search },
+          ] as const).map(({ val, label, Icon }) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => { setMode(val); setSelectedLead(null); setName(""); setCompany(""); setEmail(""); }}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
+                mode === val
+                  ? "bg-(--color-accent) text-(--color-accent-fg)"
+                  : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+              )}
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-3">
+            {mode === "from_leads" && (
+              <>
+                {/* Lead search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-(--color-fg-subtle)" />
+                  <input
+                    type="text"
+                    placeholder="Search leads by name, email, or company…"
+                    value={leadQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    autoFocus
+                    className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                  />
+                </div>
+
+                {/* Enriched filter */}
+                <label className="flex items-center gap-2 text-sm text-(--color-fg-muted) cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enrichedOnly}
+                    onChange={(e) => handleEnrichedToggle(e.target.checked)}
+                    className="accent-(--color-accent) rounded"
+                  />
+                  Show enriched leads only
+                </label>
+
+                {/* Search results */}
+                {leadQuery.trim().length >= 2 && (
+                  <div className="max-h-48 overflow-y-auto rounded-xl border border-(--color-card-border) bg-(--color-surface-1)">
+                    {isSearching ? (
+                      <p className="text-sm text-(--color-fg-muted) text-center py-4">Searching…</p>
+                    ) : leadResults.length === 0 ? (
+                      <p className="text-sm text-(--color-fg-muted) text-center py-4">No leads found</p>
+                    ) : (
+                      leadResults.map((lead) => (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          onClick={() => selectLead(lead)}
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-(--color-card-border) last:border-b-0 transition-colors flex items-center justify-between gap-3",
+                            selectedLead?.id === lead.id
+                              ? "bg-(--color-accent)/10"
+                              : "hover:bg-(--color-surface-2)"
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-(--color-fg) truncate">
+                              {lead.name || "No name"}
+                            </p>
+                            <p className="text-xs text-(--color-fg-muted) truncate">
+                              {[lead.company, lead.email].filter(Boolean).join(" · ") || "—"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {lead.status === "enriched" && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-(--color-success) bg-(--color-success)/10 px-2 py-0.5 rounded-full">
+                                Enriched
+                              </span>
+                            )}
+                            {lead.quality_rating != null && (
+                              <span className="flex items-center gap-0.5 text-xs text-(--color-accent)">
+                                <Star className="h-3 w-3" /> {lead.quality_rating}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {selectedLead && (
+                  <p className="text-xs text-(--color-fg-muted)">
+                    Selected: <span className="font-medium text-(--color-fg)">{selectedLead.name || selectedLead.email}</span>
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Manual fields (always shown so user can edit after selecting a lead) */}
             <Input
               placeholder="Contact name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
+              autoFocus={mode === "new"}
             />
             <Input
               placeholder="Company (optional)"
@@ -241,155 +510,796 @@ function CreateDealDialog({
 }
 
 // ─────────────────────────────────────────────
-// Deal detail panel
+// Timeline helpers
+// ─────────────────────────────────────────────
+type TimelineEventType = ActivityType | "created";
+
+function getTimelineIcon(type: TimelineEventType) {
+  switch (type) {
+    case "created": return <Plus className="h-3.5 w-3.5" />;
+    case "call": return <Phone className="h-3.5 w-3.5" />;
+    case "email": return <Mail className="h-3.5 w-3.5" />;
+    case "note": return <StickyNote className="h-3.5 w-3.5" />;
+    case "stage_change": return <ChevronRight className="h-3.5 w-3.5" />;
+    case "follow_up_set": return <CalendarClock className="h-3.5 w-3.5" />;
+    case "won": return <CheckCircle2 className="h-3.5 w-3.5" />;
+    case "lost": return <XCircle className="h-3.5 w-3.5" />;
+  }
+}
+
+function getTimelineTitle(type: TimelineEventType): string {
+  switch (type) {
+    case "created": return "Deal Created";
+    case "call": return "Call Logged";
+    case "email": return "Email Logged";
+    case "note": return "Note Added";
+    case "stage_change": return "Stage Changed";
+    case "follow_up_set": return "Follow-up Set";
+    case "won": return "Deal Won";
+    case "lost": return "Deal Lost";
+  }
+}
+
+function getTimelineColor(type: TimelineEventType): string {
+  switch (type) {
+    case "created": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "won": return "bg-(--color-success)/15 text-(--color-success)";
+    case "lost": return "bg-(--color-danger)/15 text-(--color-danger)";
+    case "email": return "bg-(--color-info)/15 text-(--color-info)";
+    case "call": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
+    case "follow_up_set": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
+  }
+}
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// ─────────────────────────────────────────────
+// Deal detail panel (full-width with timeline)
 // ─────────────────────────────────────────────
 function DealDetail({
   deal,
   stages,
+  lossReasons,
   onClose,
 }: {
   deal: Deal;
   stages: PipelineStage[];
+  lossReasons: LossReason[];
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"details" | "activity">(
-    "details"
-  );
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
   const [, startTransition] = useTransition();
+
+  // Activity logging
   const [summary, setSummary] = useState("");
   const [actType, setActType] = useState<"call" | "email" | "note">("call");
+
+  // Loss reason menu
+  const lossMenu = useDropdown();
+
+  // Follow-up
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [followUpNote, setFollowUpNote] = useState("");
+
+  // Delete
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Inline editing
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  const currentStage = stages.find((s) => s.id === deal.stage_id);
+  const activeStages = stages.filter((s) => !s.is_won && !s.is_lost);
+  const wonStage = stages.find((s) => s.is_won);
+  const isWon = !!deal.won_at;
+  const isLost = !!deal.lost_at;
+  const isClosed = isWon || isLost;
+
+  // Load activities
+  useEffect(() => {
+    setLoadingActivities(true);
+    getDealActivities(deal.id)
+      .then(setActivities)
+      .finally(() => setLoadingActivities(false));
+  }, [deal.id]);
+
+  // Auto-scroll timeline to bottom
+  useEffect(() => {
+    if (timelineRef.current && !loadingActivities) {
+      timelineRef.current.scrollTop = timelineRef.current.scrollHeight;
+    }
+  }, [loadingActivities, activities.length]);
+
+  // Build timeline events (chronological, oldest first)
+  const timelineEvents = useMemo(() => {
+    const created = {
+      id: "created",
+      type: "created" as TimelineEventType,
+      summary: `Deal created for ${deal.contact_name}`,
+      notes: deal.company ? `Company: ${deal.company}` : null,
+      occurred_at: deal.created_at,
+      stage_from: null as string | null,
+      stage_to: null as string | null,
+      email_subject: null as string | null,
+      call_direction: null as string | null,
+      call_duration_seconds: null as number | null,
+    };
+    const mapped = activities.map((a) => ({
+      id: a.id,
+      type: a.type as TimelineEventType,
+      summary: a.summary,
+      notes: a.notes,
+      occurred_at: a.occurred_at,
+      stage_from: a.stage_from,
+      stage_to: a.stage_to,
+      email_subject: a.email_subject,
+      call_direction: a.call_direction as string | null,
+      call_duration_seconds: a.call_duration_seconds,
+    }));
+    const events = [created, ...mapped];
+    events.sort(
+      (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+    );
+    return events;
+  }, [activities, deal]);
+
+  function handleStageChange(stageId: string) {
+    if (stageId === deal.stage_id || isClosed) return;
+    startTransition(() => moveDeal(deal.id, stageId));
+  }
+
+  function handleMarkWon() {
+    if (!wonStage) return;
+    startTransition(() => moveDeal(deal.id, wonStage.id));
+  }
+
+  function handleMarkLost(reasonId: string) {
+    startTransition(async () => {
+      await markDealLost(deal.id, reasonId);
+      lossMenu.setOpen(false);
+    });
+  }
 
   function handleLogActivity(e: React.FormEvent) {
     e.preventDefault();
     if (!summary.trim()) return;
     startTransition(async () => {
-      await logActivity({
-        deal_id: deal.id,
-        type: actType,
-        summary: summary.trim(),
-      });
+      await logActivity({ deal_id: deal.id, type: actType, summary: summary.trim() });
       setSummary("");
+      const updated = await getDealActivities(deal.id);
+      setActivities(updated);
     });
   }
 
-  const currentStage = stages.find((s) => s.id === deal.stage_id);
+  function handleSetFollowUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!followUpDate) return;
+    startTransition(async () => {
+      await setFollowUp(deal.id, followUpDate, followUpNote || undefined);
+      setShowFollowUp(false);
+      setFollowUpDate("");
+      setFollowUpNote("");
+      const updated = await getDealActivities(deal.id);
+      setActivities(updated);
+    });
+  }
+
+  function startEditing(field: string, currentValue: string) {
+    setEditingField(field);
+    setEditValue(currentValue);
+  }
+
+  function saveEdit(field: string) {
+    if (editingField !== field) return;
+    startTransition(async () => {
+      if (field === "deal_value") {
+        const num = parseFloat(editValue.replace(/[^0-9.-]/g, ""));
+        await updateDeal(deal.id, { deal_value: isNaN(num) ? null : num });
+      } else {
+        await updateDeal(deal.id, { [field]: editValue.trim() || null } as Record<string, string | null>);
+      }
+      setEditingField(null);
+    });
+  }
+
+  function cancelEdit() {
+    setEditingField(null);
+    setEditValue("");
+  }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col bg-(--color-bg) shadow-(--shadow-popover)">
-      <div className="flex items-center justify-between px-6 py-5">
-        <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">{deal.contact_name}</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full h-8 w-8 flex items-center justify-center text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
-        >
-          ✕
-        </button>
-      </div>
+    <div className="fixed inset-0 z-40 flex">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Tabs */}
-      <div className="flex gap-2 px-6 pb-4">
-        {(["details", "activity"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setActiveTab(t)}
-            className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium capitalize transition-colors",
-              activeTab === t
-                ? "bg-(--color-accent) text-(--color-accent-fg)"
-                : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5">
-        {activeTab === "details" && (
-          <div className="space-y-4 text-sm">
-            <div>
-              <span className="text-(--color-fg-subtle)">Company</span>
-              <p>{deal.company || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Email</span>
-              <p>{deal.email || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Phone</span>
-              <p>{deal.phone || "—"}</p>
-            </div>
-            <div>
-              <span className="text-(--color-fg-subtle)">Stage</span>
-              <p>
-                <Badge tone="accent">{currentStage?.name ?? "—"}</Badge>
-              </p>
-            </div>
-            {deal.follow_up_at && (
-              <div>
-                <span className="text-(--color-fg-subtle)">
-                  Follow-up
-                </span>
-                <p>
-                  {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </p>
-              </div>
-            )}
-            {deal.notes && (
-              <div>
-                <span className="text-(--color-fg-subtle)">Notes</span>
-                <p className="whitespace-pre-wrap text-(--color-fg-muted)">
-                  {deal.notes}
-                </p>
-              </div>
-            )}
+      {/* Panel container */}
+      <div className="relative ml-auto flex h-full w-full max-w-5xl">
+        {/* ── Left: Client Timeline ── */}
+        <div className="hidden lg:flex w-[380px] shrink-0 bg-(--color-surface-1) border-r border-(--color-border)/15 flex-col overflow-hidden">
+          <div className="px-6 py-6 border-b border-(--color-border)/15 shrink-0">
+            <h2 className="font-semibold text-lg text-(--color-fg) tracking-tight">Client Timeline</h2>
+            <p className="text-sm text-(--color-fg-muted) mt-0.5">Full activity history</p>
           </div>
-        )}
-
-        {activeTab === "activity" && (
-          <div className="space-y-4">
-            {/* Log form */}
-            <form onSubmit={handleLogActivity} className="space-y-2">
-              <div className="flex gap-2">
-                {(
-                  [
-                    { val: "call", Icon: Phone },
-                    { val: "email", Icon: Mail },
-                    { val: "note", Icon: StickyNote },
-                  ] as const
-                ).map(({ val, Icon }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setActType(val)}
-                    className={cn(
-                      "flex items-center gap-1 rounded-md px-2 py-1 text-xs",
-                      actType === val
-                        ? "bg-(--color-accent-muted) text-(--color-accent)"
-                        : "text-(--color-fg-muted) hover:bg-(--color-surface-2)"
+          <div ref={timelineRef} className="flex-1 overflow-y-auto px-6 py-6" style={{ scrollbarWidth: "thin" }}>
+            {loadingActivities ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+              </div>
+            ) : timelineEvents.length === 0 ? (
+              <p className="text-sm text-(--color-fg-subtle) text-center py-12">No activity yet</p>
+            ) : (
+              <div className="relative">
+                {timelineEvents.map((event, i) => (
+                  <div key={event.id} className="relative flex gap-4 pb-8 last:pb-0">
+                    {/* Vertical connector line */}
+                    {i < timelineEvents.length - 1 && (
+                      <div className="absolute left-[15px] top-9 bottom-0 w-px bg-(--color-border)/30" />
                     )}
-                  >
-                    <Icon className="h-3 w-3" /> {val}
-                  </button>
+                    {/* Icon bubble */}
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-(--color-surface-1)",
+                        getTimelineColor(event.type)
+                      )}
+                    >
+                      {getTimelineIcon(event.type)}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-(--color-fg)">{getTimelineTitle(event.type)}</p>
+                        {event.type === "won" && (
+                          <span className="text-[10px] bg-(--color-success)/15 text-(--color-success) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Won</span>
+                        )}
+                        {event.type === "lost" && (
+                          <span className="text-[10px] bg-(--color-danger)/15 text-(--color-danger) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Lost</span>
+                        )}
+                      </div>
+                      {event.summary && (
+                        <p className="text-sm text-(--color-fg-muted) mt-0.5 leading-relaxed">{event.summary}</p>
+                      )}
+                      {event.email_subject && (
+                        <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
+                      )}
+                      {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
+                        <p className="text-xs text-(--color-fg-subtle) mt-1">
+                          Duration: {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
+                          {event.call_direction && ` · ${event.call_direction}`}
+                        </p>
+                      )}
+                      {event.notes && (
+                        <div className="mt-2 p-3 rounded-lg bg-(--color-surface-2)/50 border border-(--color-border)/10">
+                          <p className="text-xs text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-(--color-fg-subtle) mt-1.5">
+                        {formatTimestamp(event.occurred_at)}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <Input
-                placeholder={`Log a ${actType}…`}
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-              />
-              <Button type="submit" size="sm" disabled={!summary.trim()}>
-                Log
-              </Button>
-            </form>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* ── Right: Detail panel ── */}
+        <div className="flex-1 bg-(--color-bg) flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-8 pt-8 pb-6 shrink-0">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-[28px] font-semibold tracking-tight text-(--color-fg) leading-tight">
+                  {deal.contact_name}
+                </h1>
+                <p className="text-(--color-fg-muted) text-[15px] mt-1 font-medium">
+                  {[deal.company, currentStage?.name].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Pipeline stage indicator */}
+            {!isClosed && (
+              <>
+                <div className="mb-6">
+                  <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-3">
+                    Pipeline Stage
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {activeStages.map((stage) => (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => handleStageChange(stage.id)}
+                        className={cn(
+                          "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                          stage.id === deal.stage_id
+                            ? "bg-(--color-accent) text-(--color-accent-fg) shadow-[0_4px_12px_rgba(0,194,204,0.25)]"
+                            : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
+                        )}
+                      >
+                        {stage.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick actions: Mark Won / Mark Lost */}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleMarkWon}
+                    className="flex-1 bg-(--color-success) text-white font-medium py-3 rounded-full hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="h-5 w-5" />
+                    Mark as Won
+                  </button>
+                  <div className="relative flex-1" ref={lossMenu.ref}>
+                    <button
+                      type="button"
+                      onClick={() => lossMenu.setOpen(!lossMenu.open)}
+                      className="w-full border border-(--color-border)/30 text-(--color-fg-muted) font-medium py-3 rounded-full hover:bg-(--color-danger)/10 hover:text-(--color-danger) hover:border-(--color-danger)/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="h-5 w-5" />
+                      Mark as Lost
+                    </button>
+                    {lossMenu.open && (
+                      <div className="absolute left-0 right-0 top-full mt-2 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                        <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">
+                          Select Reason
+                        </p>
+                        {lossReasons.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => handleMarkLost(r.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+                          >
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Won/Lost status badge */}
+            {isClosed && (
+              <div
+                className={cn(
+                  "rounded-xl p-4 flex items-center gap-3",
+                  isWon
+                    ? "bg-(--color-success)/10 border border-(--color-success)/30"
+                    : "bg-(--color-danger)/10 border border-(--color-danger)/30"
+                )}
+              >
+                {isWon ? (
+                  <CheckCircle2 className="h-6 w-6 text-(--color-success)" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-(--color-danger)" />
+                )}
+                <div>
+                  <p className={cn("font-semibold", isWon ? "text-(--color-success)" : "text-(--color-danger)")}>
+                    {isWon ? "Deal Won" : "Deal Lost"}
+                  </p>
+                  <p className="text-xs text-(--color-fg-muted)">
+                    {new Date((isWon ? deal.won_at : deal.lost_at)!).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="px-8 border-b border-(--color-border)/15 flex gap-8 shrink-0">
+            {(["details", "activity"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setActiveTab(t)}
+                className={cn(
+                  "pb-4 text-[15px] font-medium capitalize border-b-2 transition-colors",
+                  activeTab === t
+                    ? "text-(--color-fg) border-(--color-accent)"
+                    : "text-(--color-fg-muted) border-transparent hover:text-(--color-fg)"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-10">
+            {activeTab === "details" && (
+              <>
+                {/* Deal value & follow-up */}
+                <div className="grid grid-cols-2 gap-8">
+                  <div
+                    className="group cursor-pointer"
+                    onClick={() => !editingField && startEditing("deal_value", deal.deal_value?.toString() || "")}
+                  >
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                      Deal Value
+                    </p>
+                    {editingField === "deal_value" ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit("deal_value");
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="w-full h-9 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                          placeholder="e.g. 125000"
+                        />
+                        <button type="button" onClick={() => saveEdit("deal_value")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xl font-semibold text-(--color-fg)">
+                        {deal.deal_value != null ? formatDealValue(deal.deal_value, deal.currency) : "—"}
+                      </p>
+                    )}
+                  </div>
+                  {deal.follow_up_at && (
+                    <div>
+                      <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">
+                        Next Follow-up
+                      </p>
+                      <p className="text-[17px] text-(--color-fg)">
+                        {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                      {deal.follow_up_note && (
+                        <p className="text-xs text-(--color-fg-muted) mt-1">{deal.follow_up_note}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact information */}
+                <div>
+                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Contact Information</h3>
+                  <div className="space-y-4">
+                    {/* Email */}
+                    <div
+                      className="group flex items-start gap-4 cursor-pointer"
+                      onClick={() => !editingField && startEditing("email", deal.email || "")}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                          Email Address
+                        </p>
+                        {editingField === "email" ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="email"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit("email");
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              autoFocus
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                            />
+                            <button type="button" onClick={() => saveEdit("email")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[15px] text-(--color-fg)">{deal.email || "—"}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div
+                      className="group flex items-start gap-4 cursor-pointer"
+                      onClick={() => !editingField && startEditing("phone", deal.phone || "")}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                          Phone Number
+                        </p>
+                        {editingField === "phone" ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="tel"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit("phone");
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              autoFocus
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                            />
+                            <button type="button" onClick={() => saveEdit("phone")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[15px] text-(--color-fg)">{deal.phone || "—"}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* LinkedIn */}
+                    {deal.linkedin_url && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                          <Star className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">LinkedIn</p>
+                          <a
+                            href={deal.linkedin_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[15px] text-(--color-accent) hover:underline"
+                          >
+                            View Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deal Context / Notes */}
+                <div>
+                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Deal Context</h3>
+                  <div
+                    className="group cursor-pointer"
+                    onClick={() => !editingField && startEditing("notes", deal.notes || "")}
+                  >
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-2 group-hover:text-(--color-accent) transition-colors">
+                      Notes
+                    </p>
+                    {editingField === "notes" ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          rows={4}
+                          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-accent)/50 p-4 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent) resize-none"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button type="button" onClick={cancelEdit} className="text-xs text-(--color-fg-muted) hover:underline">
+                            Cancel
+                          </button>
+                          <button type="button" onClick={() => saveEdit("notes")} className="text-(--color-accent) text-xs font-medium hover:underline">
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-(--color-surface-1) border border-(--color-border)/10 group-hover:border-(--color-border)/30 transition-colors">
+                        <p className="text-[15px] leading-relaxed text-(--color-fg-muted) whitespace-pre-wrap">
+                          {deal.notes || "No notes yet. Click to add."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delete deal */}
+                <div className="pt-4 border-t border-(--color-border)/15">
+                  {!confirmDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex items-center gap-2 text-sm text-(--color-danger) hover:underline"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete deal
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-(--color-danger)">Delete this deal?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          startTransition(async () => {
+                            await deleteDeal(deal.id);
+                            onClose();
+                          });
+                        }}
+                        className="rounded-lg bg-(--color-danger) px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                      >
+                        Yes, delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="text-xs text-(--color-fg-muted) hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Spacer for bottom bar */}
+                <div className="h-16" />
+              </>
+            )}
+
+            {activeTab === "activity" && (
+              <div className="space-y-6">
+                {/* Log activity form */}
+                <form onSubmit={handleLogActivity} className="space-y-3">
+                  <div className="flex gap-2">
+                    {([
+                      { val: "call" as const, Icon: Phone, label: "Call" },
+                      { val: "email" as const, Icon: Mail, label: "Email" },
+                      { val: "note" as const, Icon: StickyNote, label: "Note" },
+                    ]).map(({ val, Icon, label }) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setActType(val)}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                          actType === val
+                            ? "bg-(--color-accent)/15 text-(--color-accent)"
+                            : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={`Log a ${actType}…`}
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button type="submit" size="sm" disabled={!summary.trim()}>
+                      Log
+                    </Button>
+                  </div>
+                </form>
+
+                {/* Activity list */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle) mb-3">
+                    Recent Activity
+                  </h4>
+                  {loadingActivities ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-5 h-5 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <p className="text-sm text-(--color-fg-subtle) text-center py-8">No activity logged yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {activities.map((a) => (
+                        <div key={a.id} className="flex items-start gap-3 py-3 border-b border-(--color-border)/10 last:border-b-0">
+                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", getTimelineColor(a.type))}>
+                            {getTimelineIcon(a.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-(--color-fg)">{getTimelineTitle(a.type)}</p>
+                              <span className="text-[11px] text-(--color-fg-subtle) shrink-0">{relativeTime(a.occurred_at)}</span>
+                            </div>
+                            {a.summary && <p className="text-sm text-(--color-fg-muted) mt-0.5">{a.summary}</p>}
+                            {a.notes && <p className="text-xs text-(--color-fg-subtle) mt-1">{a.notes}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Spacer for bottom bar */}
+                <div className="h-16" />
+              </div>
+            )}
+          </div>
+
+          {/* Fixed bottom bar */}
+          <div className="shrink-0 border-t border-(--color-border)/15 bg-(--color-bg)/80 backdrop-blur-xl px-8 py-4 flex items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setActType("call"); setActiveTab("activity"); }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors flex items-center gap-2"
+              >
+                <Phone className="h-4 w-4" /> Log Call
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActType("email"); setActiveTab("activity"); }}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" /> Log Email
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActType("note"); setActiveTab("activity"); }}
+                className="w-10 h-10 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors"
+                title="Add Note"
+              >
+                <StickyNote className="h-4 w-4" />
+              </button>
+            </div>
+            {showFollowUp ? (
+              <form onSubmit={handleSetFollowUp} className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-xs text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                  autoFocus
+                />
+                <button type="submit" disabled={!followUpDate} className="text-(--color-accent) text-xs font-medium hover:underline disabled:opacity-40">
+                  Set
+                </button>
+                <button type="button" onClick={() => setShowFollowUp(false)} className="text-xs text-(--color-fg-muted) hover:underline">
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowFollowUp(true)}
+                className="text-(--color-accent) font-medium text-sm hover:underline flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-(--color-accent)/10 transition-colors"
+              >
+                <Calendar className="h-4 w-4" /> Set Follow-up
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -399,38 +1309,61 @@ function DealDetail({
 // Main pipeline view
 // ─────────────────────────────────────────────
 export function PipelineView({
+  pipelines,
   stages,
   initialDeals,
   lossReasons,
 }: {
+  pipelines: Pipeline[];
   stages: PipelineStage[];
   initialDeals: Deal[];
   lossReasons: LossReason[];
 }) {
   const [view, setView] = useState<ViewMode>("kanban");
   const [createOpen, setCreateOpen] = useState(false);
+  const [createStageId, setCreateStageId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showClosed, setShowClosed] = useState(false);
+  const [filterStageId, setFilterStageId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const filterMenu = useDropdown();
+  const pipelineMenu = useDropdown();
+
+  // Pipeline state
+  const defaultPipeline = pipelines.find((p) => p.is_default) ?? pipelines[0];
+  const [activePipelineId, setActivePipelineId] = useState(defaultPipeline?.id ?? "");
+  const [newPipelineName, setNewPipelineName] = useState("");
+  const [showNewPipeline, setShowNewPipeline] = useState(false);
+
+  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
+  const pipelineStages = useMemo(
+    () => stages.filter((s) => s.pipeline_id === activePipelineId),
+    [stages, activePipelineId]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   const deals = useMemo(() => {
-    if (showClosed) return initialDeals;
-    return initialDeals.filter((d) => !d.won_at && !d.lost_at);
-  }, [initialDeals, showClosed]);
+    let result = initialDeals;
+    // Filter to current pipeline's stages
+    const stageIds = new Set(pipelineStages.map((s) => s.id));
+    result = result.filter((d) => stageIds.has(d.stage_id));
+    if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
+    if (filterStageId) result = result.filter((d) => d.stage_id === filterStageId);
+    return result;
+  }, [initialDeals, showClosed, filterStageId, pipelineStages]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
-    for (const s of stages) map[s.id] = [];
+    for (const s of pipelineStages) map[s.id] = [];
     for (const d of deals) {
       if (map[d.stage_id]) map[d.stage_id].push(d);
     }
     return map;
-  }, [stages, deals]);
+  }, [pipelineStages, deals]);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -446,7 +1379,7 @@ export function PipelineView({
     let targetStageId: string | null = null;
 
     // Check if dropped on a stage directly
-    const isStage = stages.some((s) => s.id === over.id);
+    const isStage = pipelineStages.some((s) => s.id === over.id);
     if (isStage) {
       targetStageId = over.id as string;
     } else {
@@ -465,53 +1398,212 @@ export function PipelineView({
     : null;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 md:px-16 py-6">
-        <h1 className="text-3xl md:text-[40px] font-bold tracking-tight text-(--color-fg)">
-          Sales Pipeline
-        </h1>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
-            <input
-              type="checkbox"
-              checked={showClosed}
-              onChange={(e) => setShowClosed(e.target.checked)}
-              className="accent-(--color-accent)"
-            />
-            Show closed
-          </label>
-          <div className="flex rounded-full bg-(--color-surface-2) p-1">
-            <button
-              type="button"
-              onClick={() => setView("kanban")}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                view === "kanban"
-                  ? "bg-(--color-accent) text-(--color-accent-fg)"
-                  : "text-(--color-fg-subtle) hover:text-(--color-fg)"
+      <header className="flex justify-between items-center px-8 md:px-12 h-24 shrink-0">
+        <div className="flex items-center gap-4">
+          <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
+            Pipeline
+          </h1>
+
+          {/* Pipeline selector */}
+          {pipelines.length > 0 && (
+            <div className="relative" ref={pipelineMenu.ref}>
+              <button
+                type="button"
+                onClick={() => pipelineMenu.setOpen(!pipelineMenu.open)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
+              >
+                {activePipeline?.name ?? "Select Pipeline"}
+                <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
+              </button>
+              {pipelineMenu.open && (
+                <div className="absolute left-0 top-full mt-2 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                  <div className="px-4 py-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Pipelines</span>
+                  </div>
+                  {pipelines.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
+                        p.id === activePipelineId
+                          ? "text-(--color-accent) bg-(--color-accent-muted)"
+                          : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                      )}
+                    >
+                      <span>{p.name}</span>
+                      {p.is_default && (
+                        <span className="text-[10px] text-(--color-fg-subtle) uppercase tracking-wider">Default</span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-(--color-border)/15 my-1" />
+                  {showNewPipeline ? (
+                    <div className="px-4 py-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Pipeline name"
+                        value={newPipelineName}
+                        onChange={(e) => setNewPipelineName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newPipelineName.trim()) {
+                            startTransition(async () => {
+                              await createPipeline(newPipelineName.trim());
+                              setNewPipelineName("");
+                              setShowNewPipeline(false);
+                              pipelineMenu.setOpen(false);
+                            });
+                          }
+                          if (e.key === "Escape") setShowNewPipeline(false);
+                        }}
+                        autoFocus
+                        className="flex-1 h-8 rounded-lg bg-(--color-surface-2) border-none px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newPipelineName.trim()) {
+                            startTransition(async () => {
+                              await createPipeline(newPipelineName.trim());
+                              setNewPipelineName("");
+                              setShowNewPipeline(false);
+                              pipelineMenu.setOpen(false);
+                            });
+                          }
+                        }}
+                        className="text-sm text-(--color-accent) font-medium hover:underline"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPipeline(true)}
+                      className="w-full text-left px-4 py-2 text-sm text-(--color-accent) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> New Pipeline
+                    </button>
+                  )}
+                </div>
               )}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          {/* View toggle */}
+          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
             <button
               type="button"
               onClick={() => setView("list")}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                 view === "list"
-                  ? "bg-(--color-accent) text-(--color-accent-fg)"
-                  : "text-(--color-fg-subtle) hover:text-(--color-fg)"
+                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  : "text-(--color-fg-muted) hover:text-(--color-fg)"
               )}
             >
-              <List className="h-4 w-4" />
+              List View
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("kanban")}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                view === "kanban"
+                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  : "text-(--color-fg-muted) hover:text-(--color-fg)"
+              )}
+            >
+              Board View
             </button>
           </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+
+          {/* Filter */}
+          <div className="relative" ref={filterMenu.ref}>
+            <button
+              type="button"
+              onClick={() => filterMenu.setOpen(!filterMenu.open)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full border bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)",
+                (showClosed || filterStageId)
+                  ? "border-(--color-accent)/50"
+                  : "border-(--color-card-border)"
+              )}
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+              {(showClosed || filterStageId) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-(--color-accent)" />
+              )}
+              <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
+            </button>
+            {filterMenu.open && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Filters</span>
+                  {(showClosed || filterStageId) && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowClosed(false); setFilterStageId(null); }}
+                      className="text-xs text-(--color-accent) hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="border-t border-(--color-border)/15 my-1" />
+                <label className="flex items-center gap-2 px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showClosed}
+                    onChange={(e) => setShowClosed(e.target.checked)}
+                    className="accent-(--color-accent) rounded"
+                  />
+                  Show closed deals
+                </label>
+                <div className="border-t border-(--color-border)/15 my-1" />
+                <p className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-(--color-fg-subtle)">By stage</p>
+                <button
+                  type="button"
+                  onClick={() => setFilterStageId(null)}
+                  className={cn(
+                    "w-full text-left px-4 py-1.5 text-sm transition-colors",
+                    !filterStageId ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                  )}
+                >
+                  All stages
+                </button>
+                {pipelineStages.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setFilterStageId(s.id)}
+                    className={cn(
+                      "w-full text-left px-4 py-1.5 text-sm transition-colors",
+                      filterStageId === s.id ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                    )}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add Deal */}
+          <Button
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+            className="hidden md:flex"
+          >
             <Plus className="h-4 w-4" /> Add Deal
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
@@ -522,26 +1614,36 @@ export function PipelineView({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-4 p-6 min-h-full">
-              {stages.map((stage) => (
+            <div className="flex gap-6 px-8 md:px-12 pb-8 h-full min-w-max">
+              {pipelineStages.map((stage) => (
                 <KanbanColumn
                   key={stage.id}
                   stage={stage}
                   deals={dealsByStage[stage.id] ?? []}
                   onCardClick={setSelectedDeal}
+                  onCreateInStage={(stageId) => {
+                    setCreateStageId(stageId);
+                    setCreateOpen(true);
+                  }}
                 />
               ))}
             </div>
             <DragOverlay>
               {draggedDeal && (
-                <div className="bg-(--color-surface-1) rounded-2xl p-4 w-80 opacity-90 shadow-(--shadow-card-hover) border border-(--color-card-border)">
-                  <p className="text-sm font-medium">
-                    {draggedDeal.contact_name}
-                  </p>
-                  {draggedDeal.company && (
-                    <p className="text-xs text-(--color-fg-muted)">
-                      {draggedDeal.company}
-                    </p>
+                <div className="bg-(--color-surface-1) rounded-xl p-5 w-[320px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-(--color-accent)/50">
+                  <div className="absolute inset-0 rounded-xl shadow-[0_0_20px_rgba(0,113,227,0.15)] pointer-events-none" />
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
+                        {draggedDeal.company || draggedDeal.contact_name}
+                      </h4>
+                      <p className="text-xs text-(--color-fg-muted)">{draggedDeal.contact_name}</p>
+                    </div>
+                  </div>
+                  {draggedDeal.deal_value != null && (
+                    <div className="text-lg font-semibold text-(--color-fg)">
+                      {formatDealValue(draggedDeal.deal_value, draggedDeal.currency)}
+                    </div>
                   )}
                 </div>
               )}
@@ -566,7 +1668,7 @@ export function PipelineView({
             </thead>
             <tbody>
               {deals.map((deal) => {
-                const stage = stages.find((s) => s.id === deal.stage_id);
+                const stage = pipelineStages.find((s) => s.id === deal.stage_id);
                 return (
                   <tr
                     key={deal.id}
@@ -606,18 +1708,32 @@ export function PipelineView({
       {/* Create deal dialog */}
       <CreateDealDialog
         open={createOpen}
-        onOpenChange={setCreateOpen}
-        stages={stages}
+        onOpenChange={(v) => {
+          setCreateOpen(v);
+          if (!v) setCreateStageId(null);
+        }}
+        stages={pipelineStages}
+        defaultStageId={createStageId}
       />
 
       {/* Deal detail panel */}
       {selectedDeal && (
         <DealDetail
           deal={selectedDeal}
-          stages={stages}
+          stages={pipelineStages}
+          lossReasons={lossReasons}
           onClose={() => setSelectedDeal(null)}
         />
       )}
+
+      {/* Mobile FAB */}
+      <button
+        type="button"
+        onClick={() => setCreateOpen(true)}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-(--color-accent) rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgba(0,113,227,0.4)] z-50"
+      >
+        <Plus className="h-7 w-7" />
+      </button>
     </div>
   );
 }

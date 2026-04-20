@@ -8,9 +8,11 @@ import {
   ArrowRight,
   CheckCircle2,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { FieldDefinition } from "@/lib/types";
 import { importLeads } from "./actions";
 
@@ -39,22 +41,38 @@ export function CsvUpload({
   const autoMap = useCallback(
     (headers: string[]) => {
       const map: Record<string, string> = {};
-      const builtins = ["name", "email", "company"];
-      const allTargets = [
-        ...builtins,
-        ...fields.map((f) => f.key),
-      ];
+      const allTargets = fields.map((f) => f.key);
+      const claimedTargets = new Set<string>();
 
+      // Pass 1: exact normalized matches
       for (const h of headers) {
         const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
         for (const t of allTargets) {
+          if (claimedTargets.has(t)) continue;
           const normT = t.toLowerCase().replace(/[^a-z0-9]/g, "");
-          if (norm === normT || norm.includes(normT) || normT.includes(norm)) {
+          if (norm === normT) {
             map[h] = t;
+            claimedTargets.add(t);
             break;
           }
         }
       }
+
+      // Pass 2: prefix matches for remaining unmapped headers
+      for (const h of headers) {
+        if (map[h]) continue;
+        const norm = h.toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (const t of allTargets) {
+          if (claimedTargets.has(t)) continue;
+          const normT = t.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (normT.length >= 3 && norm.startsWith(normT)) {
+            map[h] = t;
+            claimedTargets.add(t);
+            break;
+          }
+        }
+      }
+
       return map;
     },
     [fields]
@@ -89,14 +107,24 @@ export function CsvUpload({
     });
   }
 
-  // Targets for mapping
+  // Targets for mapping — only user-defined columns
   const targetOptions = [
     { value: "", label: "— Skip —" },
-    { value: "name", label: "Name (built-in)" },
-    { value: "email", label: "Email (built-in)" },
-    { value: "company", label: "Company (built-in)" },
     ...fields.map((f) => ({ value: f.key, label: f.label })),
   ];
+
+  // Download CSV template based on defined columns
+  function handleDownloadTemplate() {
+    if (fields.length === 0) return;
+    const headers = fields.map((f) => f.label).join(",");
+    const blob = new Blob([headers + "\n"], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lead-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ─── Step: Upload ───
   if (step === "upload") {
@@ -105,7 +133,7 @@ export function CsvUpload({
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2) shadow-(--shadow-card) border border-(--color-card-border)"
+          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)"
           onClick={() => {
             const input = document.createElement("input");
             input.type = "file";
@@ -126,6 +154,26 @@ export function CsvUpload({
             Supports up to 50,000 rows · Comma or semicolon separated
           </p>
         </div>
+
+        {fields.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadTemplate();
+            }}
+            className="flex items-center gap-2 rounded-full bg-(--color-surface-2) px-5 py-2.5 text-sm font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg) transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download CSV Template
+          </button>
+        )}
+
+        {fields.length === 0 && (
+          <p className="text-sm text-(--color-fg-subtle)">
+            Define your columns in the <span className="font-medium text-(--color-fg-muted)">Columns</span> tab first, then download a CSV template here.
+          </p>
+        )}
       </div>
     );
   }
@@ -163,7 +211,7 @@ export function CsvUpload({
           {csvHeaders.map((header) => (
             <div
               key={header}
-              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3 shadow-sm border border-(--color-card-border)"
+              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3 shadow-sm border-2 border-(--color-card-border)"
             >
               <div className="flex w-48 items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-(--color-fg-subtle)" />
@@ -175,7 +223,15 @@ export function CsvUpload({
                 onChange={(e) =>
                   setMapping((m) => ({ ...m, [header]: e.target.value }))
                 }
-                className="h-10 flex-1 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className={cn(
+                  "h-10 flex-1 rounded-xl border-0 px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none",
+                  mapping[header] &&
+                    Object.entries(mapping).some(
+                      ([k, v]) => k !== header && v === mapping[header]
+                    )
+                    ? "bg-red-500/10 ring-1 ring-red-400/50"
+                    : "bg-(--color-surface-2)"
+                )}
               >
                 {targetOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -183,9 +239,14 @@ export function CsvUpload({
                   </option>
                 ))}
               </select>
-              {mapping[header] && (
+              {mapping[header] &&
+                Object.entries(mapping).some(
+                  ([k, v]) => k !== header && v === mapping[header]
+                ) ? (
+                <Badge tone="neutral">Duplicate</Badge>
+              ) : mapping[header] ? (
                 <Badge tone="accent">Mapped</Badge>
-              )}
+              ) : null}
             </div>
           ))}
         </div>
@@ -223,7 +284,7 @@ export function CsvUpload({
           </div>
         </div>
 
-        <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card) border border-(--color-card-border)">
+        <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
           <table className="w-full text-sm">
             <thead className="bg-(--color-surface-2)">
               <tr>
@@ -263,12 +324,12 @@ export function CsvUpload({
   // ─── Step: Result ───
   return (
     <div className="flex flex-col items-center gap-5 p-8 md:p-16">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-        <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-success)/10">
+        <CheckCircle2 className="h-8 w-8 text-(--color-success)" />
       </div>
       <h2 className="text-xl font-bold text-(--color-fg)">Import Complete</h2>
       <div className="flex gap-5 text-sm">
-        <span className="text-emerald-400 font-medium">
+        <span className="text-(--color-success) font-medium">
           {result?.imported ?? 0} imported
         </span>
         <span className="text-(--color-fg-muted)">

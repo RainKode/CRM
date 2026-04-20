@@ -1,7 +1,7 @@
-import { getBatches } from "./actions";
+import { getBatchesGroupedByFolder } from "./actions";
 import { EnrichmentView } from "./enrichment-view";
 
 export default async function EnrichmentPage() {
-  const batches = await getBatches();
-  return <EnrichmentView initialBatches={batches} />;
+  const groups = await getBatchesGroupedByFolder();
+  return <EnrichmentView groups={groups} />;
 }

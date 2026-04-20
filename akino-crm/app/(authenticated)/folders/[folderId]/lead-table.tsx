@@ -11,47 +11,116 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowUpDown, Trash2 } from "lucide-react";
+import {
+  ArrowUpDown,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Eye,
+  EyeOff,
+  Columns3,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import type { FieldDefinition, Lead } from "@/lib/types";
-import { updateLead, deleteLeads } from "./actions";
+import { updateLead, deleteLeads, deleteAllLeadsInFolder, getLeads, getAllLeadIds } from "./actions";
 
 const COL = createColumnHelper<Lead>();
+const PAGE_SIZE = 50;
 
-// Status badge tone map
-const STATUS_TONE: Record<string, "neutral" | "accent" | "success" | "info"> = {
-  raw: "neutral",
-  enriched: "accent",
-  in_pipeline: "success",
-  archived: "info",
-};
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total];
+  if (current >= total - 3)
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
 
 export function LeadTable({
   folderId,
   fields,
   initialLeads,
+  totalCount,
 }: {
   folderId: string;
   fields: FieldDefinition[];
   initialLeads: Lead[];
+  totalCount: number;
 }) {
   const [leads, setLeads] = useState(initialLeads);
+  const [page, setPage] = useState(1);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [selectAllMode, setSelectAllMode] = useState(false);
+  const [allLeadIds, setAllLeadIds] = useState<string[] | null>(null);
+  const [hiddenFieldIds, setHiddenFieldIds] = useState<Set<string>>(
+    () => new Set(fields.filter((f) => f.is_hidden).map((f) => f.id))
+  );
+  const [showFieldPanel, setShowFieldPanel] = useState(false);
   const [, startTransition] = useTransition();
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
   const visibleFields = useMemo(
-    () => fields.filter((f) => !f.is_hidden),
-    [fields]
+    () => fields.filter((f) => !hiddenFieldIds.has(f.id) && !f.is_enrichment),
+    [fields, hiddenFieldIds]
   );
+
+  function toggleFieldVisibility(fieldId: string) {
+    setHiddenFieldIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(fieldId)) {
+        next.delete(fieldId);
+      } else {
+        next.add(fieldId);
+      }
+      return next;
+    });
+  }
+
+  async function goToPage(p: number) {
+    if (p < 1 || p > totalPages || p === page) return;
+    setIsPageLoading(true);
+    setRowSelection({});
+    setSelectAllMode(false);
+    try {
+      const offset = (p - 1) * PAGE_SIZE;
+      const newLeads = await getLeads(folderId, { limit: PAGE_SIZE, offset });
+      setLeads(newLeads);
+      setPage(p);
+    } finally {
+      setIsPageLoading(false);
+    }
+  }
+
+  async function handleSelectAll() {
+    if (!allLeadIds) {
+      const ids = await getAllLeadIds(folderId);
+      setAllLeadIds(ids);
+      const sel: Record<string, boolean> = {};
+      for (const id of ids) sel[id] = true;
+      setRowSelection(sel);
+    } else {
+      const sel: Record<string, boolean> = {};
+      for (const id of allLeadIds) sel[id] = true;
+      setRowSelection(sel);
+    }
+    setSelectAllMode(true);
+  }
+
+  function handleClearSelection() {
+    setRowSelection({});
+    setSelectAllMode(false);
+  }
 
   const columns = useMemo(
     () => [
-      // Checkbox
       COL.display({
         id: "select",
         header: ({ table }) => (
@@ -66,63 +135,70 @@ export function LeadTable({
           <input
             type="checkbox"
             checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
+            onChange={(e) => {
+              row.getToggleSelectedHandler()(e);
+              if (!e.target.checked) setSelectAllMode(false);
+            }}
             className="accent-(--color-accent)"
           />
         ),
         size: 32,
       }),
-      // Fixed cols
-      COL.accessor("name", {
-        header: "Name",
-        size: 180,
-        cell: (info) => (
-          <span className="font-medium">{info.getValue() ?? "—"}</span>
-        ),
-      }),
-      COL.accessor("email", {
-        header: "Email",
-        size: 220,
-        cell: (info) => (
-          <span className="text-(--color-fg-muted)">
-            {info.getValue() ?? "—"}
+      COL.display({
+        id: "sl",
+        header: "SL.",
+        cell: ({ row }) => (
+          <span className="text-(--color-fg-subtle) font-medium">
+            {(page - 1) * PAGE_SIZE + row.index + 1}
           </span>
         ),
+        size: 50,
       }),
-      COL.accessor("company", {
-        header: "Company",
-        size: 160,
-      }),
-      COL.accessor("status", {
-        header: "Status",
-        size: 100,
-        cell: (info) => {
-          const s = info.getValue();
+      COL.display({
+        id: "rating",
+        header: "Rating",
+        cell: ({ row }) => {
+          const r = row.original.quality_rating;
+          if (r == null) return <span className="text-(--color-fg-subtle)">�</span>;
           return (
-            <Badge tone={STATUS_TONE[s] ?? "neutral"}>
-              {s.replace("_", " ")}
-            </Badge>
+            <span className="font-bold text-(--color-fg)">
+              {r}<span className="text-xs font-normal text-(--color-fg-muted)">/10</span>
+            </span>
           );
         },
+        size: 70,
       }),
-      // Dynamic columns from field schema
       ...visibleFields.map((field) =>
-        COL.accessor((row) => (row.data as Record<string, unknown>)[field.key], {
-          id: `field_${field.key}`,
-          header: field.label,
-          size: 150,
-          cell: (info) => {
-            const val = info.getValue();
-            if (val === undefined || val === null) return "—";
-            if (field.type === "checkbox")
-              return val ? "✓" : "—";
-            if (Array.isArray(val)) return val.join(", ");
-            return String(val);
-          },
-        })
+        COL.accessor(
+          (row) => (row.data as Record<string, unknown>)[field.key],
+          {
+            id: `field_${field.key}`,
+            header: field.label,
+            size: 150,
+            cell: (info) => {
+              const val = info.getValue();
+              const lead = info.row.original;
+              // Make name column clickable
+              if (field.key === "name") {
+                return (
+                  <Link
+                    href={`/folders/${folderId}/leads/${lead.id}`}
+                    className="text-(--color-accent) hover:underline font-medium"
+                  >
+                    {val != null && val !== "" ? String(val) : lead.name || "�"}
+                  </Link>
+                );
+              }
+              if (val === undefined || val === null) return "\u2014";
+              if (field.type === "checkbox") return val ? "\u2713" : "\u2014";
+              if (Array.isArray(val)) return val.join(", ");
+              return String(val);
+            },
+          }
+        )
       ),
     ],
-    [visibleFields]
+    [visibleFields, page]
   );
 
   const table = useReactTable({
@@ -141,55 +217,184 @@ export function LeadTable({
 
   const { rows } = table.getRowModel();
 
-  // Inline edit handler
   const handleCellEdit = useCallback(
     (leadId: string, fieldKey: string, value: unknown) => {
       setLeads((prev) =>
         prev.map((l) => {
           if (l.id !== leadId) return l;
-          if (["name", "email", "company"].includes(fieldKey)) {
-            return { ...l, [fieldKey]: value };
-          }
-          return { ...l, data: { ...l.data, [fieldKey]: value } };
+          const newData = { ...l.data, [fieldKey]: value };
+          const updates: Partial<Lead> = { data: newData };
+          if (fieldKey === "email") updates.email = value as string;
+          if (fieldKey === "name") updates.name = value as string;
+          if (fieldKey === "company") updates.company = value as string;
+          return { ...l, ...updates };
         })
       );
 
       startTransition(async () => {
-        if (["name", "email", "company"].includes(fieldKey)) {
-          await updateLead(leadId, folderId, { [fieldKey]: value } as Record<string, unknown> as Partial<Lead>);
-        } else {
-          const lead = leads.find((l) => l.id === leadId);
-          if (!lead) return;
-          await updateLead(leadId, folderId, {
-            data: { ...lead.data, [fieldKey]: value },
-          });
-        }
+        const lead = leads.find((l) => l.id === leadId);
+        if (!lead) return;
+        const newData = { ...lead.data, [fieldKey]: value };
+        const updates: Partial<
+          Pick<Lead, "data" | "email" | "name" | "company">
+        > = { data: newData };
+        if (fieldKey === "email") updates.email = value as string;
+        if (fieldKey === "name") updates.name = value as string;
+        if (fieldKey === "company") updates.company = value as string;
+        await updateLead(leadId, folderId, updates);
       });
     },
     [folderId, leads]
   );
 
-  // Bulk delete
   const selectedIds = Object.keys(rowSelection).filter(
     (k) => rowSelection[k]
   );
+  const selectedCount = selectAllMode ? totalCount : selectedIds.length;
+  const allOnPageSelected =
+    leads.length > 0 && leads.every((l) => rowSelection[l.id]);
 
   function handleBulkDelete() {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 && !selectAllMode) return;
     startTransition(async () => {
-      await deleteLeads(selectedIds, folderId);
-      setLeads((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+      if (selectAllMode) {
+        await deleteAllLeadsInFolder(folderId);
+        setLeads([]);
+      } else {
+        await deleteLeads(selectedIds, folderId);
+        setLeads((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+      }
       setRowSelection({});
+      setSelectAllMode(false);
+      setAllLeadIds(null);
     });
   }
 
-  // Virtual scroll container
-  const parentRef = { current: null as HTMLDivElement | null };
-
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-(--color-card-border) overflow-hidden shadow-(--shadow-card)">
+    <div className="flex h-full flex-col rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d) relative">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-card-border)">
+        <div className="text-xs text-(--color-fg-muted)">
+          {visibleFields.length} of {fields.length} columns shown
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowFieldPanel(!showFieldPanel)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              showFieldPanel
+                ? "bg-(--color-accent) text-(--color-accent-fg)"
+                : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+            )}
+          >
+            <Columns3 className="h-3.5 w-3.5" />
+            Fields
+          </button>
+
+          {showFieldPanel && (
+            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+                <span className="text-sm font-bold text-(--color-fg)">
+                  Toggle Columns
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowFieldPanel(false)}
+                  className="text-(--color-fg-subtle) hover:text-(--color-fg)"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto py-1">
+                {fields.filter((f) => !f.is_enrichment).map((field) => {
+                  const isVisible = !hiddenFieldIds.has(field.id);
+                  return (
+                    <button
+                      key={field.id}
+                      type="button"
+                      onClick={() => toggleFieldVisibility(field.id)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-(--color-surface-2) transition-colors"
+                    >
+                      {isVisible ? (
+                        <Eye className="h-4 w-4 text-(--color-accent) shrink-0" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
+                      )}
+                      <span
+                        className={cn(
+                          "truncate",
+                          isVisible
+                            ? "text-(--color-fg)"
+                            : "text-(--color-fg-subtle)"
+                        )}
+                      >
+                        {field.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 px-4 py-3 border-t border-(--color-card-border)">
+                <button
+                  type="button"
+                  onClick={() => setHiddenFieldIds(new Set())}
+                  className="flex-1 rounded-lg bg-(--color-surface-2) py-1.5 text-xs font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+                >
+                  Show All
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHiddenFieldIds(new Set(fields.map((f) => f.id)))
+                  }
+                  className="flex-1 rounded-lg bg-(--color-surface-2) py-1.5 text-xs font-medium text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+                >
+                  Hide All
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Select all banner */}
+      {allOnPageSelected && !selectAllMode && totalCount > leads.length && (
+        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
+          <span className="text-(--color-fg-muted)">
+            All {leads.length} leads on this page are selected.
+          </span>
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="font-bold text-(--color-accent) hover:underline"
+          >
+            Select all {totalCount} leads
+          </button>
+        </div>
+      )}
+      {selectAllMode && (
+        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
+          <span className="font-bold text-(--color-accent)">
+            All {totalCount} leads are selected.
+          </span>
+          <button
+            type="button"
+            onClick={handleClearSelection}
+            className="text-(--color-fg-muted) hover:underline"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="flex-1 overflow-auto" ref={(el) => { parentRef.current = el; }}>
+      <div
+        className={cn(
+          "flex-1 overflow-auto",
+          isPageLoading && "opacity-50 pointer-events-none"
+        )}
+      >
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-(--color-surface-2)">
             {table.getHeaderGroups().map((hg) => (
@@ -260,17 +465,88 @@ export function LeadTable({
         </table>
       </div>
 
-      {/* Bottom bulk action bar */}
-      {selectedIds.length > 0 && (
-        <div className="flex items-center justify-center gap-4 bg-(--color-surface-2) px-6 py-3 rounded-t-2xl">
-          <span className="rounded-full bg-(--color-accent)/15 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
-            {selectedIds.length} leads selected
-          </span>
-          <Button variant="ghost" size="sm" onClick={handleBulkDelete}>
-            <Trash2 className="h-3.5 w-3.5" /> Delete
-          </Button>
+      {/* Bottom bar */}
+      <div className="flex items-center justify-between bg-(--color-surface-2) px-6 py-3 border-t border-(--color-card-border)">
+        <div className="flex items-center gap-3">
+          {selectedCount > 0 && (
+            <>
+              <span className="rounded-full bg-(--color-accent)/15 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
+                {selectedCount} selected
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleBulkDelete}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+            </>
+          )}
         </div>
-      )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-(--color-fg-muted)">
+              {(page - 1) * PAGE_SIZE + 1}&ndash;
+              {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => goToPage(1)}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-(--color-fg-muted) hover:bg-(--color-surface-3) disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => goToPage(page - 1)}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-(--color-fg-muted) hover:bg-(--color-surface-3) disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {getPageNumbers(page, totalPages).map((p, i) =>
+                p === "..." ? (
+                  <span
+                    key={`ellipsis-${i}`}
+                    className="px-1 text-(--color-fg-subtle)"
+                  >
+                    &hellip;
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => goToPage(p)}
+                    className={cn(
+                      "h-8 min-w-8 px-2 flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                      p === page
+                        ? "bg-(--color-accent) text-(--color-accent-fg)"
+                        : "text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+                    )}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                disabled={page === totalPages}
+                onClick={() => goToPage(page + 1)}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-(--color-fg-muted) hover:bg-(--color-surface-3) disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled={page === totalPages}
+                onClick={() => goToPage(totalPages)}
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-(--color-fg-muted) hover:bg-(--color-surface-3) disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

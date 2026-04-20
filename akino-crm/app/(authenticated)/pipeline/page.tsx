@@ -1,8 +1,9 @@
-import { getStages, getDeals, getLossReasons } from "./actions";
+import { getStages, getDeals, getLossReasons, getPipelines } from "./actions";
 import { PipelineView } from "./pipeline-view";
 
 export default async function PipelinePage() {
-  const [stages, deals, lossReasons] = await Promise.all([
+  const [pipelines, stages, deals, lossReasons] = await Promise.all([
+    getPipelines(),
     getStages(),
     getDeals(),
     getLossReasons(),
@@ -10,6 +11,7 @@ export default async function PipelinePage() {
 
   return (
     <PipelineView
+      pipelines={pipelines}
       stages={stages}
       initialDeals={deals}
       lossReasons={lossReasons}

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Table2, Settings2, Upload } from "lucide-react";
+import { ArrowLeft, Table2, Settings2, Upload, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { Folder, FieldDefinition, Lead } from "@/lib/types";
+import { Button } from "@/components/ui/button";
 import { LeadTable } from "./lead-table";
 import { FieldSchemaBuilder } from "./field-schema-builder";
 import { CsvUpload } from "./csv-upload";
+import { BatchCreationWizard } from "./batch-creation-wizard";
 
 type Tab = "leads" | "schema" | "upload";
 
@@ -21,12 +23,15 @@ export function FolderDetail({
   folder,
   fields,
   initialLeads,
+  totalCount,
 }: {
   folder: Folder;
   fields: FieldDefinition[];
   initialLeads: Lead[];
+  totalCount: number;
 }) {
   const [tab, setTab] = useState<Tab>("leads");
+  const [showEnrichWizard, setShowEnrichWizard] = useState(false);
 
   return (
     <div className="flex h-full flex-col bg-(--color-bg)">
@@ -43,8 +48,17 @@ export function FolderDetail({
             {folder.name}
           </h1>
         </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setShowEnrichWizard(true)}
+          disabled={totalCount === 0}
+        >
+          <Sparkles className="h-4 w-4" />
+          Create Enrichment Batch
+        </Button>
         <span className="flex items-center gap-1.5 rounded-full bg-(--color-surface-3) px-4 py-1.5 text-sm font-medium text-(--color-fg-muted)">
-          {initialLeads.length} Leads
+          {totalCount} Leads
         </span>
       </div>
 
@@ -79,6 +93,7 @@ export function FolderDetail({
             folderId={folder.id}
             fields={fields}
             initialLeads={initialLeads}
+            totalCount={totalCount}
           />
         )}
         {tab === "schema" && (
@@ -88,6 +103,16 @@ export function FolderDetail({
           <CsvUpload folderId={folder.id} fields={fields} />
         )}
       </div>
+
+      {/* Batch Creation Wizard */}
+      {showEnrichWizard && (
+        <BatchCreationWizard
+          folder={folder}
+          fields={fields}
+          totalCount={totalCount}
+          onClose={() => setShowEnrichWizard(false)}
+        />
+      )}
     </div>
   );
 }
