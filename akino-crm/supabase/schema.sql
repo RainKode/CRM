@@ -11,34 +11,26 @@ create extension if not exists "pg_trgm";
 -- =====================================================================
 -- 1. Profiles (extends auth.users)
 -- =====================================================================
-create type user_role as enum ('admin', 'sales_rep', 'viewer');
 
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   full_name text,
-  role user_role not null default 'sales_rep',
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_profiles_role on profiles(role);
-
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public
 as $$
-declare
-  first_user boolean;
 begin
-  select not exists(select 1 from profiles) into first_user;
-  insert into profiles (id, email, full_name, role)
+  insert into profiles (id, email, full_name)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.email),
-    case when first_user then 'admin'::user_role else 'sales_rep'::user_role end
+    coalesce(new.raw_user_meta_data->>'full_name', new.email)
   );
   return new;
 end;
@@ -64,7 +56,6 @@ create table if not exists companies (
 create table if not exists company_members (
   company_id uuid not null references companies(id) on delete cascade,
   user_id uuid not null references profiles(id) on delete cascade,
-  role user_role not null default 'sales_rep',
   is_default boolean not null default false,
   joined_at timestamptz not null default now(),
   primary key (company_id, user_id)

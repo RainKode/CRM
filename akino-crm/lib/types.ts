@@ -3,7 +3,6 @@
 // ==========================================================
 
 // ----- Enums (match Postgres enums) -----
-export type UserRole = "admin" | "sales_rep" | "viewer";
 export type FieldType =
   | "text"
   | "number"
@@ -37,7 +36,6 @@ export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
-  role: UserRole;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -55,7 +53,6 @@ export interface Company {
 export interface CompanyMember {
   company_id: string;
   user_id: string;
-  role: UserRole;
   is_default: boolean;
   joined_at: string;
 }

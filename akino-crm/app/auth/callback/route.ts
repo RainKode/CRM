@@ -48,7 +48,7 @@ export async function GET(request: Request) {
           .limit(1);
 
         if (!existing || existing.length === 0) {
-          // New user — add to all companies as sales_rep
+          // New user — add to all companies
           const { data: companies } = await admin
             .from("companies")
             .select("id");
@@ -56,7 +56,6 @@ export async function GET(request: Request) {
             const memberships = companies.map((c, i) => ({
               company_id: c.id,
               user_id: user.id,
-              role: "sales_rep" as const,
               is_default: i === 0,
             }));
             await admin
