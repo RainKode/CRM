@@ -660,6 +660,57 @@ function formatTimestamp(iso: string): string {
 }
 
 // ─────────────────────────────────────────────
+// Timeline card (used in alternating layout)
+// ─────────────────────────────────────────────
+type TimelineEvent = {
+  id: string;
+  type: TimelineEventType;
+  summary: string | null;
+  notes: string | null;
+  occurred_at: string;
+  stage_from: string | null;
+  stage_to: string | null;
+  email_subject: string | null;
+  call_direction: string | null;
+  call_duration_seconds: number | null;
+};
+
+function TimelineCard({ event }: { event: TimelineEvent }) {
+  return (
+    <div className="bg-(--color-surface-2)/50 border border-(--color-border)/15 rounded-xl p-3.5 shadow-sm hover:shadow-md hover:border-(--color-border)/30 transition-all">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <span className="text-[10px] font-medium text-(--color-fg-subtle) leading-tight">
+          {formatTimestamp(event.occurred_at)}
+        </span>
+        <span className={cn(
+          "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 leading-tight",
+          getTimelineBadgeColor(event.type)
+        )}>
+          {getTimelineTitle(event.type)}
+        </span>
+      </div>
+      {event.summary && (
+        <p className="text-[13px] text-(--color-fg) leading-snug mt-1">{event.summary}</p>
+      )}
+      {event.email_subject && (
+        <p className="text-[11px] text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
+      )}
+      {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
+        <p className="text-[11px] text-(--color-fg-subtle) mt-1">
+          {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
+          {event.call_direction && ` · ${event.call_direction}`}
+        </p>
+      )}
+      {event.notes && (
+        <div className="mt-2 p-2 rounded-lg bg-(--color-surface-3)/30 border border-(--color-border)/10">
+          <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Deal detail panel (full-width with timeline)
 // ─────────────────────────────────────────────
 function DealDetail({
@@ -831,7 +882,7 @@ function DealDetail({
             <h2 className="font-semibold text-base text-(--color-fg) tracking-tight">Client Timeline</h2>
             <p className="text-xs text-(--color-fg-muted) mt-0.5">Full activity history</p>
           </div>
-          <div ref={timelineRef} className="flex-1 overflow-y-auto py-8 px-4" style={{ scrollbarWidth: "thin" }}>
+          <div ref={timelineRef} className="flex-1 overflow-y-auto py-8 px-5" style={{ scrollbarWidth: "thin" }}>
             {loadingActivities ? (
               <div className="flex items-center justify-center py-12">
                 <div className="w-6 h-6 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
@@ -840,100 +891,42 @@ function DealDetail({
               <p className="text-sm text-(--color-fg-subtle) text-center py-12">No activity yet</p>
             ) : (
               <div className="relative">
-                {/* Center vertical line */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-(--color-border)/20" />
+                {/* Center vertical line — runs full height */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-(--color-border)/25 to-transparent" />
 
                 {timelineEvents.map((event, i) => {
                   const isLeft = i % 2 === 0;
                   return (
-                    <div key={event.id} className="relative flex items-start mb-8 last:mb-0">
-                      {/* Center dot */}
-                      <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10">
+                    <div
+                      key={event.id}
+                      className="relative grid grid-cols-[1fr_24px_1fr] items-start mb-10 last:mb-0"
+                    >
+                      {/* Left column */}
+                      <div className={isLeft ? "pr-3" : ""}>
+                        {isLeft && (
+                          <TimelineCard event={event} />
+                        )}
+                      </div>
+
+                      {/* Center dot column */}
+                      <div className="flex justify-center pt-4">
                         <div
                           className={cn(
-                            "w-3 h-3 rounded-full ring-[3px] ring-(--color-surface-1)",
+                            "w-3 h-3 rounded-full ring-[3px] ring-(--color-surface-1) relative z-10",
                             event.type === "won" ? "bg-(--color-success)" :
                             event.type === "lost" ? "bg-(--color-danger)" :
                             event.type === "created" ? "bg-(--color-accent)" :
-                            "bg-(--color-fg-subtle)"
+                            "bg-(--color-fg-subtle)/60"
                           )}
                         />
                       </div>
 
-                      {/* Left card */}
-                      {isLeft ? (
-                        <>
-                          <div className="w-[calc(50%-16px)] pr-2">
-                            <div className="bg-(--color-surface-2)/60 border border-(--color-border)/15 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-(--color-border)/25 transition-all group">
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-[10px] font-medium text-(--color-fg-subtle) tracking-wide uppercase">
-                                  {formatTimestamp(event.occurred_at)}
-                                </span>
-                                <span className={cn(
-                                  "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                  getTimelineBadgeColor(event.type)
-                                )}>
-                                  {getTimelineTitle(event.type)}
-                                </span>
-                              </div>
-                              {event.summary && (
-                                <p className="text-[13px] text-(--color-fg-muted) leading-relaxed">{event.summary}</p>
-                              )}
-                              {event.email_subject && (
-                                <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
-                              )}
-                              {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
-                                <p className="text-xs text-(--color-fg-subtle) mt-1">
-                                  {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
-                                  {event.call_direction && ` · ${event.call_direction}`}
-                                </p>
-                              )}
-                              {event.notes && (
-                                <div className="mt-2 p-2.5 rounded-lg bg-(--color-surface-3)/40 border border-(--color-border)/10">
-                                  <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="w-[calc(50%-16px)]" />
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-[calc(50%-16px)]" />
-                          <div className="w-[calc(50%-16px)] pl-2">
-                            <div className="bg-(--color-surface-2)/60 border border-(--color-border)/15 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-(--color-border)/25 transition-all group">
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-[10px] font-medium text-(--color-fg-subtle) tracking-wide uppercase">
-                                  {formatTimestamp(event.occurred_at)}
-                                </span>
-                                <span className={cn(
-                                  "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                  getTimelineBadgeColor(event.type)
-                                )}>
-                                  {getTimelineTitle(event.type)}
-                                </span>
-                              </div>
-                              {event.summary && (
-                                <p className="text-[13px] text-(--color-fg-muted) leading-relaxed">{event.summary}</p>
-                              )}
-                              {event.email_subject && (
-                                <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
-                              )}
-                              {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
-                                <p className="text-xs text-(--color-fg-subtle) mt-1">
-                                  {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
-                                  {event.call_direction && ` · ${event.call_direction}`}
-                                </p>
-                              )}
-                              {event.notes && (
-                                <div className="mt-2 p-2.5 rounded-lg bg-(--color-surface-3)/40 border border-(--color-border)/10">
-                                  <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      {/* Right column */}
+                      <div className={!isLeft ? "pl-3" : ""}>
+                        {!isLeft && (
+                          <TimelineCard event={event} />
+                        )}
+                      </div>
                     </div>
                   );
                 })}
