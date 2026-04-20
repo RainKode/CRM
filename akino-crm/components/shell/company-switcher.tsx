@@ -66,17 +66,23 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
   function handleCreate() {
     if (!newName.trim()) return;
     startTransition(async () => {
-      await createCompany(newName.trim());
-      const [list, current] = await Promise.all([
-        getMyCompanies(),
-        getActiveCompany(),
-      ]);
-      setCompanies(list);
-      setActive(current);
-      setNewName("");
-      setCreating(false);
-      setOpen(false);
-      router.refresh();
+      try {
+        await createCompany(newName.trim());
+        const [list, current] = await Promise.all([
+          getMyCompanies(),
+          getActiveCompany(),
+        ]);
+        setCompanies(list);
+        setActive(current);
+        setNewName("");
+        setCreating(false);
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        console.error("Failed to create company:", err);
+        setNewName("");
+        setCreating(false);
+      }
     });
   }
 

@@ -474,19 +474,39 @@ drop policy if exists notifications_own on notifications;
 create policy notifications_own on notifications for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- Security-definer helpers to avoid RLS recursion on company_members
+create or replace function public.is_member_of_company(p_company_id uuid)
+returns boolean language sql stable security definer as $$
+  select exists (
+    select 1 from company_members
+    where company_id = p_company_id
+      and user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_admin_of_company(p_company_id uuid)
+returns boolean language sql stable security definer as $$
+  select exists (
+    select 1 from company_members
+    where company_id = p_company_id
+      and user_id = auth.uid()
+      and role = 'admin'
+  );
+$$;
+
 -- Companies: users see companies they belong to
 create policy companies_member_read on companies for select
-  using (exists (select 1 from company_members where company_members.company_id = companies.id and company_members.user_id = auth.uid()));
+  using (public.is_member_of_company(id));
 create policy companies_insert on companies for insert
   with check (public.is_active_member());
 create policy companies_update on companies for update
-  using (exists (select 1 from company_members where company_members.company_id = companies.id and company_members.user_id = auth.uid() and company_members.role = 'admin'));
+  using (public.is_admin_of_company(id));
 
 -- Company members: users see members of companies they belong to
 create policy company_members_read on company_members for select
-  using (exists (select 1 from company_members cm where cm.company_id = company_members.company_id and cm.user_id = auth.uid()));
+  using (public.is_member_of_company(company_id));
 create policy company_members_manage on company_members for all
-  using (exists (select 1 from company_members cm where cm.company_id = company_members.company_id and cm.user_id = auth.uid() and cm.role = 'admin'));
+  using (public.is_admin_of_company(company_id));
 create policy company_members_self_update on company_members for update
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy company_members_self_insert on company_members for insert

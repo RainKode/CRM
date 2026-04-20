@@ -78,8 +78,14 @@ export async function createCompany(name: string): Promise<Company> {
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Company name is required");
 
+  // Use admin client for bootstrapping — the creator needs to set up their
+  // own admin membership and seed data, which is a chicken-and-egg problem
+  // with RLS (can't be admin before the membership row exists).
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
   // Create company
-  const { data: company, error } = await sb
+  const { data: company, error } = await admin
     .from("companies")
     .insert({ name: trimmedName, created_by: user.id })
     .select()
@@ -87,12 +93,13 @@ export async function createCompany(name: string): Promise<Company> {
   if (error) throw error;
 
   // Add creator as admin member
-  await sb.from("company_members").insert({
+  const { error: memberError } = await admin.from("company_members").insert({
     company_id: company.id,
     user_id: user.id,
     role: "admin",
     is_default: false,
   });
+  if (memberError) throw memberError;
 
   // Create default pipeline stages for the new company
   const defaultStages = [
@@ -107,7 +114,7 @@ export async function createCompany(name: string): Promise<Company> {
   ];
 
   // Create a default pipeline
-  const { data: pipeline } = await sb
+  const { data: pipeline, error: pipelineError } = await admin
     .from("pipelines")
     .insert({
       name: "Default",
@@ -117,31 +124,23 @@ export async function createCompany(name: string): Promise<Company> {
     })
     .select()
     .single();
+  if (pipelineError) throw pipelineError;
 
-  if (pipeline) {
-    for (const stage of defaultStages) {
-      await sb.from("pipeline_stages").insert({
-        ...stage,
-        pipeline_id: pipeline.id,
-      });
-    }
-  }
+  const stageRows = defaultStages.map((s) => ({ ...s, pipeline_id: pipeline.id }));
+  const { error: stagesError } = await admin.from("pipeline_stages").insert(stageRows);
+  if (stagesError) throw stagesError;
 
   // Create default loss reasons
-  const defaultLossReasons = [
+  const lossRows = [
     { label: "No Response", position: 0 },
     { label: "Budget", position: 1 },
     { label: "Wrong Contact", position: 2 },
     { label: "Went with Competitor", position: 3 },
     { label: "Not Interested", position: 4 },
     { label: "Other", position: 5 },
-  ];
-  for (const lr of defaultLossReasons) {
-    await sb.from("loss_reasons").insert({
-      ...lr,
-      company_id: company.id,
-    });
-  }
+  ].map((lr) => ({ ...lr, company_id: company.id }));
+  const { error: lrError } = await admin.from("loss_reasons").insert(lossRows);
+  if (lrError) throw lrError;
 
   // Switch to new company
   const cookieStore = await cookies();
