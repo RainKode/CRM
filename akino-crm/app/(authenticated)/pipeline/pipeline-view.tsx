@@ -1719,7 +1719,7 @@ export function PipelineView({
                         </button>
                       )}
                     </div>
-                  ))
+                  ))}
                   <div className="border-t border-(--color-border)/15 my-1" />
                   {showNewPipeline ? (
                     <div className="px-4 py-2 flex items-center gap-2">
