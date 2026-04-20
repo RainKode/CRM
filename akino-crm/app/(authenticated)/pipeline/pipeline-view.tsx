@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useMemo, useRef, useEffect } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -36,6 +37,10 @@ import {
   XCircle,
   Globe,
   User,
+  CheckSquare,
+  Square,
+  ArrowRight,
+  ChevronsRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,9 +101,15 @@ function activityDotColor(lastActivity: string | null): string {
 function DealCard({
   deal,
   onClick,
+  bulkMode,
+  isSelected,
+  onToggleSelect,
 }: {
   deal: Deal;
   onClick: () => void;
+  bulkMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const {
     attributes,
@@ -121,15 +132,35 @@ function DealCard({
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
-      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 border-(--color-card-border)"
+      onClick={bulkMode ? onToggleSelect : onClick}
+      className={cn(
+        "bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2",
+        isSelected
+          ? "border-(--color-accent) ring-1 ring-(--color-accent)/30"
+          : "border-(--color-card-border)"
+      )}
     >
       <div className="flex justify-between items-start mb-3">
-        <div>
-          <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
-            {deal.company || deal.contact_name}
-          </h4>
-          <p className="text-xs text-(--color-fg-muted)">{deal.contact_name}</p>
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {bulkMode && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+              className="shrink-0 mt-0.5"
+            >
+              {isSelected ? (
+                <CheckSquare className="h-4 w-4 text-(--color-accent)" />
+              ) : (
+                <Square className="h-4 w-4 text-(--color-fg-muted)" />
+              )}
+            </button>
+          )}
+          <div className="min-w-0">
+            <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1 truncate">
+              {deal.company || deal.contact_name}
+            </h4>
+            <p className="text-xs text-(--color-fg-muted) truncate">{deal.contact_name}</p>
+          </div>
         </div>
       </div>
       {deal.deal_value != null && (
@@ -162,16 +193,32 @@ function DealCard({
 function KanbanColumn({
   stage,
   deals,
+  totalCount,
   onCardClick,
   onCreateInStage,
+  onExpandColumn,
+  isExpanded,
+  bulkMode,
+  selectedDealIds,
+  onToggleSelect,
+  onSelectAll,
 }: {
   stage: PipelineStage;
   deals: Deal[];
+  totalCount: number;
   onCardClick: (deal: Deal) => void;
   onCreateInStage: (stageId: string) => void;
+  onExpandColumn?: () => void;
+  isExpanded?: boolean;
+  bulkMode?: boolean;
+  selectedDealIds?: Set<string>;
+  onToggleSelect?: (dealId: string) => void;
+  onSelectAll?: () => void;
 }) {
   const isWon = stage.is_won;
   const menu = useDropdown();
+  const queuedCount = totalCount - deals.length;
+  const allSelected = deals.length > 0 && deals.every((d) => selectedDealIds?.has(d.id));
 
   return (
     <div
@@ -184,6 +231,20 @@ function KanbanColumn({
     >
       <div className="flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-2">
+          {bulkMode && (
+            <button
+              type="button"
+              onClick={onSelectAll}
+              className="shrink-0"
+              title={allSelected ? "Deselect all" : "Select all"}
+            >
+              {allSelected ? (
+                <CheckSquare className="h-4 w-4 text-(--color-accent)" />
+              ) : (
+                <Square className="h-4 w-4 text-(--color-fg-muted)" />
+              )}
+            </button>
+          )}
           <h3
             className={cn(
               "font-semibold tracking-wide",
@@ -200,7 +261,7 @@ function KanbanColumn({
                 : "bg-(--color-surface-3) text-(--color-fg-muted)"
             )}
           >
-            {deals.length}
+            {totalCount}
           </span>
         </div>
         <div className="relative" ref={menu.ref}>
@@ -237,10 +298,23 @@ function KanbanColumn({
               key={deal.id}
               deal={deal}
               onClick={() => onCardClick(deal)}
+              bulkMode={bulkMode}
+              isSelected={selectedDealIds?.has(deal.id)}
+              onToggleSelect={() => onToggleSelect?.(deal.id)}
             />
           ))}
         </div>
       </SortableContext>
+      {queuedCount > 0 && (
+        <button
+          type="button"
+          onClick={onExpandColumn}
+          className="mt-2 w-full py-2 rounded-xl bg-(--color-surface-3)/50 hover:bg-(--color-surface-3) text-xs font-medium text-(--color-fg-muted) hover:text-(--color-fg) transition-colors flex items-center justify-center gap-1.5"
+        >
+          <ChevronsRight className="h-3.5 w-3.5" />
+          {isExpanded ? "Show less" : `+${queuedCount} more in queue`}
+        </button>
+      )}
     </div>
   );
 }
@@ -1354,6 +1428,9 @@ export function PipelineView({
   initialDeals: Deal[];
   lossReasons: LossReason[];
 }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pidFromUrl = searchParams.get("pid");
   const [view, setView] = useState<ViewMode>("kanban");
   const [createOpen, setCreateOpen] = useState(false);
   const [createStageId, setCreateStageId] = useState<string | null>(null);
@@ -1365,11 +1442,30 @@ export function PipelineView({
   const filterMenu = useDropdown();
   const pipelineMenu = useDropdown();
 
-  // Pipeline state
+  // Bulk selection
+  const [selectedDealIds, setSelectedDealIds] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+  const bulkActionsMenu = useDropdown();
+
+  // Column limit — show N deals per column, rest queued
+  const COLUMN_LIMIT = 50;
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
+
+  // Pipeline state — read pid from URL, fallback to default
   const defaultPipeline = pipelines.find((p) => p.is_default) ?? pipelines[0];
-  const [activePipelineId, setActivePipelineId] = useState(defaultPipeline?.id ?? "");
+  const initialPipelineId = pidFromUrl && pipelines.some(p => p.id === pidFromUrl)
+    ? pidFromUrl
+    : defaultPipeline?.id ?? "";
+  const [activePipelineId, setActivePipelineId] = useState(initialPipelineId);
   const [newPipelineName, setNewPipelineName] = useState("");
   const [showNewPipeline, setShowNewPipeline] = useState(false);
+
+  // Sync activePipelineId when URL pid changes
+  useEffect(() => {
+    if (pidFromUrl && pipelines.some(p => p.id === pidFromUrl)) {
+      setActivePipelineId(pidFromUrl);
+    }
+  }, [pidFromUrl, pipelines]);
 
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const pipelineStages = useMemo(
@@ -1399,6 +1495,66 @@ export function PipelineView({
     }
     return map;
   }, [pipelineStages, deals]);
+
+  // Visible deals per stage (column limit)
+  const visibleDealsByStage = useMemo(() => {
+    const map: Record<string, Deal[]> = {};
+    for (const [stageId, stageDeals] of Object.entries(dealsByStage)) {
+      map[stageId] = expandedColumns.has(stageId)
+        ? stageDeals
+        : stageDeals.slice(0, COLUMN_LIMIT);
+    }
+    return map;
+  }, [dealsByStage, expandedColumns, COLUMN_LIMIT]);
+
+  // Bulk selection helpers
+  const toggleDealSelection = useCallback((dealId: string) => {
+    setSelectedDealIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      return next;
+    });
+  }, []);
+
+  const selectAllInStage = useCallback((stageId: string) => {
+    const stageDeals = dealsByStage[stageId] ?? [];
+    setSelectedDealIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = stageDeals.every((d) => prev.has(d.id));
+      if (allSelected) {
+        stageDeals.forEach((d) => next.delete(d.id));
+      } else {
+        stageDeals.forEach((d) => next.add(d.id));
+      }
+      return next;
+    });
+  }, [dealsByStage]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedDealIds(new Set());
+    setBulkMode(false);
+  }, []);
+
+  async function bulkMoveDeals(targetStageId: string) {
+    const ids = Array.from(selectedDealIds);
+    startTransition(async () => {
+      for (const id of ids) {
+        await moveDeal(id, targetStageId);
+      }
+      clearSelection();
+    });
+  }
+
+  async function bulkDeleteDeals() {
+    const ids = Array.from(selectedDealIds);
+    startTransition(async () => {
+      for (const id of ids) {
+        await deleteDeal(id);
+      }
+      clearSelection();
+    });
+  }
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -1461,7 +1617,7 @@ export function PipelineView({
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); }}
+                      onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); router.push(`/pipeline?pid=${p.id}`, { scroll: false }); }}
                       className={cn(
                         "w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
                         p.id === activePipelineId
@@ -1629,6 +1785,19 @@ export function PipelineView({
             )}
           </div>
 
+          {/* Bulk mode toggle */}
+          <Button
+            size="sm"
+            variant={bulkMode ? "primary" : "outline"}
+            onClick={() => {
+              if (bulkMode) clearSelection();
+              else setBulkMode(true);
+            }}
+            className="hidden md:flex"
+          >
+            <CheckSquare className="h-4 w-4" /> {bulkMode ? "Exit Select" : "Select"}
+          </Button>
+
           {/* Add Deal */}
           <Button
             size="sm"
@@ -1639,6 +1808,52 @@ export function PipelineView({
           </Button>
         </div>
       </header>
+
+      {/* Bulk actions toolbar */}
+      {bulkMode && (
+        <div className="flex items-center gap-4 px-8 md:px-12 py-3 bg-(--color-surface-2)/60 border-b border-(--color-border)/20">
+          <span className="text-sm font-medium text-(--color-fg)">
+            {selectedDealIds.size} selected
+          </span>
+          <div className="relative" ref={bulkActionsMenu.ref}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => bulkActionsMenu.setOpen(!bulkActionsMenu.open)}
+              disabled={selectedDealIds.size === 0}
+            >
+              <ArrowRight className="h-3.5 w-3.5" /> Move to stage
+            </Button>
+            {bulkActionsMenu.open && (
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1 z-50">
+                {pipelineStages.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => { bulkMoveDeals(s.id); bulkActionsMenu.setOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={bulkDeleteDeals}
+            disabled={selectedDealIds.size === 0}
+            className="text-(--color-danger) border-(--color-danger)/30 hover:bg-(--color-danger)/10"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete
+          </Button>
+          <div className="flex-1" />
+          <Button size="sm" variant="ghost" onClick={clearSelection}>
+            <X className="h-3.5 w-3.5" /> Cancel
+          </Button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
@@ -1654,12 +1869,26 @@ export function PipelineView({
                 <KanbanColumn
                   key={stage.id}
                   stage={stage}
-                  deals={dealsByStage[stage.id] ?? []}
+                  deals={visibleDealsByStage[stage.id] ?? []}
+                  totalCount={(dealsByStage[stage.id] ?? []).length}
                   onCardClick={setSelectedDeal}
                   onCreateInStage={(stageId) => {
                     setCreateStageId(stageId);
                     setCreateOpen(true);
                   }}
+                  onExpandColumn={() => {
+                    setExpandedColumns((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(stage.id)) next.delete(stage.id);
+                      else next.add(stage.id);
+                      return next;
+                    });
+                  }}
+                  isExpanded={expandedColumns.has(stage.id)}
+                  bulkMode={bulkMode}
+                  selectedDealIds={selectedDealIds}
+                  onToggleSelect={toggleDealSelection}
+                  onSelectAll={() => selectAllInStage(stage.id)}
                 />
               ))}
             </div>

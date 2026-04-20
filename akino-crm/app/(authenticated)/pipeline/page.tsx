@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getStages, getDeals, getLossReasons, getPipelines } from "./actions";
 import { PipelineView } from "./pipeline-view";
 
@@ -10,11 +11,13 @@ export default async function PipelinePage() {
   ]);
 
   return (
-    <PipelineView
-      pipelines={pipelines}
-      stages={stages}
-      initialDeals={deals}
-      lossReasons={lossReasons}
-    />
+    <Suspense>
+      <PipelineView
+        pipelines={pipelines}
+        stages={stages}
+        initialDeals={deals}
+        lossReasons={lossReasons}
+      />
+    </Suspense>
   );
 }

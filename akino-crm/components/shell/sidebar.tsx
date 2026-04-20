@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -326,6 +326,7 @@ function NavLink({
 // ─── Sidebar ───────────────────────────────────────────────────────
 export function Sidebar() {
   const pathname = usePathname();
+  const sidebarSearchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [enrichmentGroups, setEnrichmentGroups] = useState<FolderBatchGroup[]>([]);
@@ -555,8 +556,7 @@ export function Sidebar() {
                                   className={cn(
                                     "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors",
                                     pathname === "/pipeline" &&
-                                      typeof window !== "undefined" &&
-                                      new URLSearchParams(window.location.search).get("pid") === pipeline.id
+                                      sidebarSearchParams.get("pid") === pipeline.id
                                       ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
                                       : "text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
                                   )}
