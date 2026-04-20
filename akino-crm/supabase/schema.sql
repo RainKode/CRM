@@ -177,7 +177,7 @@ create table if not exists pipeline_stages (
 );
 
 create unique index if not exists uniq_pipeline_stage_position
-  on pipeline_stages(position) where is_archived = false;
+  on pipeline_stages(pipeline_id, position) where is_archived = false;
 
 create table if not exists loss_reasons (
   id uuid primary key default gen_random_uuid(),
