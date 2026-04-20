@@ -1520,6 +1520,8 @@ export function PipelineView({
   const [activePipelineId, setActivePipelineId] = useState(initialPipelineId);
   const [newPipelineName, setNewPipelineName] = useState("");
   const [showNewPipeline, setShowNewPipeline] = useState(false);
+  const [deletingPipelineId, setDeletingPipelineId] = useState<string | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
   // Sync activePipelineId when URL pid changes
   useEffect(() => {
@@ -1690,23 +1692,34 @@ export function PipelineView({
                     <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Pipelines</span>
                   </div>
                   {pipelines.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); router.push(`/pipeline?pid=${p.id}`, { scroll: false }); }}
-                      className={cn(
-                        "w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
-                        p.id === activePipelineId
-                          ? "text-(--color-accent) bg-(--color-accent-muted)"
-                          : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                    <div key={p.id} className="flex items-center group">
+                      <button
+                        type="button"
+                        onClick={() => { setActivePipelineId(p.id); setFilterStageId(null); pipelineMenu.setOpen(false); router.push(`/pipeline?pid=${p.id}`, { scroll: false }); }}
+                        className={cn(
+                          "flex-1 text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
+                          p.id === activePipelineId
+                            ? "text-(--color-accent) bg-(--color-accent-muted)"
+                            : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                        )}
+                      >
+                        <span>{p.name}</span>
+                        {p.is_default && (
+                          <span className="text-[10px] text-(--color-fg-subtle) uppercase tracking-wider">Default</span>
+                        )}
+                      </button>
+                      {!p.is_default && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDeletingPipelineId(p.id); setDeleteConfirmName(""); }}
+                          className="opacity-0 group-hover:opacity-100 px-2 py-2 text-(--color-danger) hover:bg-(--color-danger)/10 rounded-lg transition-all mr-1"
+                          title="Delete pipeline"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       )}
-                    >
-                      <span>{p.name}</span>
-                      {p.is_default && (
-                        <span className="text-[10px] text-(--color-fg-subtle) uppercase tracking-wider">Default</span>
-                      )}
-                    </button>
-                  ))}
+                    </div>
+                  ))
                   <div className="border-t border-(--color-border)/15 my-1" />
                   {showNewPipeline ? (
                     <div className="px-4 py-2 flex items-center gap-2">
@@ -2074,6 +2087,74 @@ export function PipelineView({
       >
         <Plus className="h-7 w-7" />
       </button>
+
+      {/* Delete pipeline confirmation dialog */}
+      {deletingPipelineId && (() => {
+        const pipelineToDelete = pipelines.find((p) => p.id === deletingPipelineId);
+        if (!pipelineToDelete) return null;
+        const nameMatches = deleteConfirmName.trim() === pipelineToDelete.name;
+        return (
+          <Dialog open onOpenChange={() => { setDeletingPipelineId(null); setDeleteConfirmName(""); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Pipeline</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+                <p className="text-sm text-(--color-fg-muted) mb-4">
+                  This will permanently archive the pipeline <span className="font-semibold text-(--color-fg)">&ldquo;{pipelineToDelete.name}&rdquo;</span> and all its stages. Deals in this pipeline will no longer be visible.
+                </p>
+                <p className="text-sm text-(--color-fg) mb-2">
+                  To confirm, type the full pipeline name:
+                </p>
+                <Input
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  placeholder={pipelineToDelete.name}
+                  autoFocus
+                  className={cn(
+                    "font-mono",
+                    deleteConfirmName.trim() && !nameMatches && "border-(--color-danger)/50"
+                  )}
+                />
+                {deleteConfirmName.trim() && !nameMatches && (
+                  <p className="text-xs text-(--color-danger) mt-1">Name does not match.</p>
+                )}
+              </DialogBody>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setDeletingPipelineId(null); setDeleteConfirmName(""); }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!nameMatches}
+                  onClick={() => {
+                    startTransition(async () => {
+                      await deletePipeline(deletingPipelineId);
+                      setDeletingPipelineId(null);
+                      setDeleteConfirmName("");
+                      // Switch to default pipeline if we deleted the active one
+                      if (activePipelineId === deletingPipelineId) {
+                        const fallback = pipelines.find((p) => p.is_default && p.id !== deletingPipelineId) ?? pipelines.find((p) => p.id !== deletingPipelineId);
+                        if (fallback) {
+                          setActivePipelineId(fallback.id);
+                          router.push(`/pipeline?pid=${fallback.id}`, { scroll: false });
+                        }
+                      }
+                    });
+                  }}
+                  className="bg-(--color-danger) hover:bg-(--color-danger)/90 text-white border-none"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete Pipeline
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }
