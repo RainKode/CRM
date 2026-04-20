@@ -144,7 +144,7 @@ function EnrichmentFieldsModal({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-10 w-full max-w-[640px] bg-(--color-surface-1) rounded-xl shadow-(--shadow-popover) flex flex-col border border-(--color-card-border)/10">
+      <div className="relative z-10 w-full max-w-160 bg-(--color-surface-1) rounded-xl shadow-(--shadow-popover) flex flex-col border border-(--color-card-border)/10">
         {/* Header */}
         <div className="px-8 pt-8 pb-4 flex justify-between items-start">
           <div>
@@ -165,7 +165,7 @@ function EnrichmentFieldsModal({
         </div>
 
         {/* Body */}
-        <div className="px-8 py-4 flex flex-col gap-8 max-h-[614px] overflow-y-auto">
+        <div className="px-8 py-4 flex flex-col gap-8 max-h-153.5 overflow-y-auto">
           {isLoading ? (
             <p className="text-sm text-(--color-fg-muted) py-8 text-center">
               Loading fields…
@@ -535,7 +535,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                               </Badge>
                             </div>
                             <div>
-                              <h4 className="text-base font-bold text-(--color-fg) mb-0.5 break-words">
+                              <h4 className="text-base font-bold text-(--color-fg) mb-0.5 wrap-break-word">
                                 {batch.name}
                               </h4>
                               <p className="text-xs text-(--color-fg-muted)">

@@ -148,7 +148,7 @@ function KanbanColumn({
         )}
       </div>
       <SortableContext items={deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 space-y-3 min-h-[100px] rounded-xl p-2">
+        <div className="flex-1 space-y-3 min-h-25 rounded-xl p-2">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}

@@ -1,5 +1,5 @@
 -- =====================================================================
--- Akino CRM — Database Schema (Phase 1)
+-- Akino CRM — Database Schema (Phase 1 + Multi-Company)
 -- Target: Supabase (Postgres 15+)
 -- Run this in the Supabase SQL editor after creating a new project.
 -- =====================================================================
@@ -50,10 +50,34 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- =====================================================================
+-- 1b. Companies
+-- =====================================================================
+create table if not exists companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  logo_url text,
+  created_by uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists company_members (
+  company_id uuid not null references companies(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
+  role user_role not null default 'sales_rep',
+  is_default boolean not null default false,
+  joined_at timestamptz not null default now(),
+  primary key (company_id, user_id)
+);
+
+create index if not exists idx_company_members_user on company_members(user_id);
+
+-- =====================================================================
 -- 2. Folders
 -- =====================================================================
 create table if not exists folders (
   id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
   name text not null,
   description text,
   is_archived boolean not null default false,
@@ -62,6 +86,7 @@ create table if not exists folders (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists idx_folders_company on folders(company_id);
 create index if not exists idx_folders_archived on folders(is_archived);
 create index if not exists idx_folders_name_trgm on folders using gin (name gin_trgm_ops);
 
@@ -166,8 +191,25 @@ create index if not exists idx_batch_leads_lead on batch_leads(lead_id);
 -- =====================================================================
 -- 6. Pipeline
 -- =====================================================================
+create table if not exists pipelines (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  name text not null,
+  description text,
+  folder_id uuid references folders(id) on delete set null,
+  batch_id uuid references batches(id) on delete set null,
+  is_default boolean not null default false,
+  is_archived boolean not null default false,
+  created_by uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_pipelines_company on pipelines(company_id);
+
 create table if not exists pipeline_stages (
   id uuid primary key default gen_random_uuid(),
+  pipeline_id uuid not null references pipelines(id) on delete cascade,
   name text not null,
   position integer not null,
   is_won boolean not null default false,
@@ -181,13 +223,17 @@ create unique index if not exists uniq_pipeline_stage_position
 
 create table if not exists loss_reasons (
   id uuid primary key default gen_random_uuid(),
-  label text not null unique,
+  company_id uuid references companies(id) on delete cascade,
+  label text not null,
   position integer not null default 0,
   is_archived boolean not null default false
 );
 
+create index if not exists idx_loss_reasons_company on loss_reasons(company_id);
+
 create table if not exists deals (
   id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
   lead_id uuid references leads(id) on delete set null,  -- source lead
   source_folder_id uuid references folders(id) on delete set null,
   stage_id uuid not null references pipeline_stages(id),
@@ -214,6 +260,7 @@ create table if not exists deals (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists idx_deals_company on deals(company_id);
 create index if not exists idx_deals_stage on deals(stage_id);
 create index if not exists idx_deals_owner on deals(owner_id);
 create index if not exists idx_deals_follow_up on deals(follow_up_at)
@@ -334,7 +381,7 @@ $$;
 do $$
 declare tbl text;
 begin
-  foreach tbl in array array['folders','leads','deals','profiles'] loop
+  foreach tbl in array array['companies','folders','leads','deals','profiles','pipelines'] loop
     execute format(
       'drop trigger if exists trg_touch_%1$s on %1$s;
        create trigger trg_touch_%1$s before update on %1$s
@@ -375,6 +422,8 @@ on conflict do nothing;
 -- while still blocking anonymous access.
 
 alter table profiles enable row level security;
+alter table companies enable row level security;
+alter table company_members enable row level security;
 alter table folders enable row level security;
 alter table field_definitions enable row level security;
 alter table leads enable row level security;
@@ -402,7 +451,7 @@ declare t text;
 begin
   foreach t in array array[
     'folders','field_definitions','leads','batches','batch_leads',
-    'pipeline_stages','loss_reasons','deals','deal_stage_history',
+    'pipelines','pipeline_stages','loss_reasons','deals','deal_stage_history',
     'activities','import_history'
   ] loop
     execute format('drop policy if exists %1$s_member_all on %1$s;', t);
@@ -424,3 +473,21 @@ create policy profiles_update_self on profiles for update
 drop policy if exists notifications_own on notifications;
 create policy notifications_own on notifications for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Companies: users see companies they belong to
+create policy companies_member_read on companies for select
+  using (exists (select 1 from company_members where company_members.company_id = companies.id and company_members.user_id = auth.uid()));
+create policy companies_insert on companies for insert
+  with check (public.is_active_member());
+create policy companies_update on companies for update
+  using (exists (select 1 from company_members where company_members.company_id = companies.id and company_members.user_id = auth.uid() and company_members.role = 'admin'));
+
+-- Company members: users see members of companies they belong to
+create policy company_members_read on company_members for select
+  using (exists (select 1 from company_members cm where cm.company_id = company_members.company_id and cm.user_id = auth.uid()));
+create policy company_members_manage on company_members for all
+  using (exists (select 1 from company_members cm where cm.company_id = company_members.company_id and cm.user_id = auth.uid() and cm.role = 'admin'));
+create policy company_members_self_update on company_members for update
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy company_members_self_insert on company_members for insert
+  with check (user_id = auth.uid());

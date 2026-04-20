@@ -1,10 +1,19 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Deal, PipelineStage, Activity, Notification } from "@/lib/types";
 
 export async function getDashboardData() {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  // Get company pipelines first, then stages for those pipelines
+  const { data: companyPipelines } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("is_archived", false);
+  const pipelineIds = (companyPipelines ?? []).map((p) => p.id);
 
   const [
     { data: stages },
@@ -13,18 +22,22 @@ export async function getDashboardData() {
     { data: folders },
     { data: notifications },
   ] = await Promise.all([
-    sb
-      .from("pipeline_stages")
-      .select("*")
-      .eq("is_archived", false)
-      .order("position"),
-    sb.from("deals").select("*").is("won_at", null).is("lost_at", null),
+    pipelineIds.length > 0
+      ? sb
+          .from("pipeline_stages")
+          .select("*")
+          .in("pipeline_id", pipelineIds)
+          .eq("is_archived", false)
+          .order("position")
+      : Promise.resolve({ data: [] as PipelineStage[] }),
+    sb.from("deals").select("*").eq("company_id", companyId).is("won_at", null).is("lost_at", null),
     sb
       .from("activities")
-      .select("*")
+      .select("*, deals!inner(company_id)")
+      .eq("deals.company_id", companyId)
       .order("occurred_at", { ascending: false })
       .limit(20),
-    sb.from("folders").select("id, name, is_archived"),
+    sb.from("folders").select("id, name, is_archived").eq("company_id", companyId),
     sb
       .from("notifications")
       .select("*")
@@ -38,6 +51,7 @@ export async function getDashboardData() {
   const { data: followUps } = await sb
     .from("deals")
     .select("*")
+    .eq("company_id", companyId)
     .not("follow_up_at", "is", null)
     .lte("follow_up_at", now)
     .is("won_at", null)

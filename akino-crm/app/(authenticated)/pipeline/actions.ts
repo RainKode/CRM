@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Deal, PipelineStage, LossReason, Activity, Pipeline, Lead } from "@/lib/types";
 
 /** Bust cached pipeline data + revalidate the page */
@@ -13,10 +13,12 @@ function bustPipelineCache() {
 
 export async function getPipelines(): Promise<Pipeline[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const { data, error } = await sb
     .from("pipelines")
     .select("*")
     .eq("is_archived", false)
+    .eq("company_id", companyId)
     .order("created_at");
   if (error) throw error;
   return data as Pipeline[];
@@ -24,22 +26,42 @@ export async function getPipelines(): Promise<Pipeline[]> {
 
 export async function getStages(pipelineId?: string): Promise<PipelineStage[]> {
   const sb = await createClient();
-  let q = sb
+  if (pipelineId) {
+    const { data, error } = await sb
+      .from("pipeline_stages")
+      .select("*")
+      .eq("is_archived", false)
+      .eq("pipeline_id", pipelineId)
+      .order("position");
+    if (error) throw error;
+    return data as PipelineStage[];
+  }
+  // No pipelineId — scope to company's pipelines
+  const companyId = await getActiveCompanyId();
+  const { data: pipelines } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("is_archived", false);
+  const pipelineIds = (pipelines ?? []).map((p) => p.id);
+  if (pipelineIds.length === 0) return [];
+  const { data, error } = await sb
     .from("pipeline_stages")
     .select("*")
+    .in("pipeline_id", pipelineIds)
     .eq("is_archived", false)
     .order("position");
-  if (pipelineId) q = q.eq("pipeline_id", pipelineId);
-  const { data, error } = await q;
   if (error) throw error;
   return data as PipelineStage[];
 }
 
 export async function getDeals(): Promise<Deal[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const { data, error } = await sb
     .from("deals")
     .select("*")
+    .eq("company_id", companyId)
     .order("stage_entered_at", { ascending: false });
   if (error) throw error;
   return data as Deal[];
@@ -47,10 +69,12 @@ export async function getDeals(): Promise<Deal[]> {
 
 export async function getLossReasons(): Promise<LossReason[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const { data, error } = await sb
     .from("loss_reasons")
     .select("*")
     .eq("is_archived", false)
+    .eq("company_id", companyId)
     .order("position");
   if (error) throw error;
   return data as LossReason[];
@@ -116,6 +140,7 @@ export async function createDeal(input: {
   source_folder_id?: string;
 }) {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -125,6 +150,7 @@ export async function createDeal(input: {
     .from("deals")
     .insert({
       ...input,
+      company_id: companyId,
       owner_id: user.id,
       created_by: user.id,
     })
@@ -389,6 +415,7 @@ export async function reorderStages(orderedIds: string[]) {
 
 export async function createPipeline(name: string): Promise<Pipeline> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -396,7 +423,7 @@ export async function createPipeline(name: string): Promise<Pipeline> {
 
   const { data, error } = await sb
     .from("pipelines")
-    .insert({ name, created_by: user.id })
+    .insert({ name, company_id: companyId, created_by: user.id })
     .select()
     .single();
   if (error) throw error;
@@ -454,11 +481,13 @@ export type FolderPipelineGroup = {
 
 export async function getPipelinesGroupedByFolder(): Promise<FolderPipelineGroup[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
 
   const { data: pipelinesRaw, error } = await sb
     .from("pipelines")
     .select("*")
     .eq("is_archived", false)
+    .eq("company_id", companyId)
     .not("folder_id", "is", null)
     .order("created_at");
   if (error) throw error;
@@ -582,6 +611,7 @@ export async function createPipelineForBatch(
       name: batchName,
       folder_id: folderId,
       batch_id: batchId,
+      company_id: await getActiveCompanyId(),
       created_by: user.id,
     })
     .select()

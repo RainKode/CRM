@@ -43,8 +43,26 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyMember {
+  company_id: string;
+  user_id: string;
+  role: UserRole;
+  is_default: boolean;
+  joined_at: string;
+}
+
 export interface Folder {
   id: string;
+  company_id: string;
   name: string;
   description: string | null;
   is_archived: boolean;
@@ -129,6 +147,7 @@ export interface PipelineStage {
 
 export interface Pipeline {
   id: string;
+  company_id: string;
   name: string;
   description: string | null;
   is_default: boolean;
@@ -149,6 +168,7 @@ export interface LossReason {
 
 export interface Deal {
   id: string;
+  company_id: string;
   lead_id: string | null;
   source_folder_id: string | null;
   stage_id: string;

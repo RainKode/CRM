@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Folder, FolderWithCounts } from "@/lib/types";
 
 // ----- Queries -------------------------------------------------------
 
 export async function getFolders(): Promise<FolderWithCounts[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
 
   // Aggregate counts in a single query
   const { data, error } = await sb.rpc("get_folders_with_counts");
@@ -17,6 +18,7 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
     const { data: folders, error: fErr } = await sb
       .from("folders")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
     if (fErr) throw fErr;
     return (folders as Folder[]).map((f) => ({
@@ -27,7 +29,8 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
     }));
   }
 
-  return data as FolderWithCounts[];
+  // Filter by company_id (RPC may not filter)
+  return (data as FolderWithCounts[]).filter((f) => f.company_id === companyId);
 }
 
 export async function getFolder(id: string): Promise<Folder | null> {
@@ -45,6 +48,7 @@ export async function getFolder(id: string): Promise<Folder | null> {
 
 export async function createFolder(name: string, description?: string) {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
   const {
     data: { user },
   } = await sb.auth.getUser();
@@ -52,7 +56,7 @@ export async function createFolder(name: string, description?: string) {
 
   const { data, error } = await sb
     .from("folders")
-    .insert({ name, description: description ?? null, created_by: user.id })
+    .insert({ name, description: description ?? null, created_by: user.id, company_id: companyId })
     .select()
     .single();
   if (error) throw error;

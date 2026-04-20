@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Batch, BatchLead, Lead, FieldDefinition } from "@/lib/types";
 import { createPipelineForBatch } from "@/app/(authenticated)/pipeline/actions";
 
@@ -417,22 +417,26 @@ export type FolderBatchGroup = {
 
 export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
   const sb = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  // Get folders for this company first
+  const { data: companyFolders } = await sb
+    .from("folders")
+    .select("id, name")
+    .eq("company_id", companyId);
+  const companyFolderIds = (companyFolders ?? []).map((f) => f.id);
+  if (companyFolderIds.length === 0) return [];
+  const folderMap = new Map((companyFolders ?? []).map((f) => [f.id, f.name]));
 
   const { data: batches, error } = await sb
     .from("batches")
     .select("*")
+    .in("folder_id", companyFolderIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
 
   // Get unique folder IDs
   const folderIds = [...new Set((batches as Batch[]).map((b) => b.folder_id))];
-
-  // Fetch folder names
-  const { data: folders } = await sb
-    .from("folders")
-    .select("id, name")
-    .in("id", folderIds);
-  const folderMap = new Map((folders ?? []).map((f) => [f.id, f.name]));
 
   // Attach counts
   const batchesWithCounts: (Batch & { total: number; completed: number })[] = [];

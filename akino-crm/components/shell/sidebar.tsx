@@ -41,6 +41,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { CreatePanel } from "./create-panel";
+import { CompanySwitcher } from "./company-switcher";
 
 const STATUS_ICON: Record<BatchStatus, React.ElementType> = {
   not_started: Circle,
@@ -407,6 +408,9 @@ export function Sidebar() {
           )}
         </div>
 
+        {/* Company Switcher */}
+        <CompanySwitcher collapsed={collapsed} />
+
         {/* Navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
@@ -443,7 +447,7 @@ export function Sidebar() {
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             )}
                             <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-(--color-accent)" />
-                            <span className="flex-1 text-left leading-snug break-words">
+                            <span className="flex-1 text-left leading-snug wrap-break-word">
                               {group.folder_name}
                             </span>
                             <span className="text-[10px] text-(--color-fg-subtle) shrink-0 mt-0.5">
@@ -468,7 +472,7 @@ export function Sidebar() {
                                     )}
                                   >
                                     <Icon className="h-3 w-3 shrink-0 mt-0.5" />
-                                    <span className="flex-1 leading-snug break-words">
+                                    <span className="flex-1 leading-snug wrap-break-word">
                                       {batch.name}
                                     </span>
                                     <span className="text-[10px] text-(--color-fg-subtle) shrink-0">
@@ -523,7 +527,7 @@ export function Sidebar() {
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             )}
                             <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-(--color-accent)" />
-                            <span className="flex-1 text-left leading-snug break-words">
+                            <span className="flex-1 text-left leading-snug wrap-break-word">
                               {group.folder_name}
                             </span>
                             <span className="text-[10px] text-(--color-fg-subtle) shrink-0 mt-0.5">
@@ -562,7 +566,7 @@ export function Sidebar() {
                                   )}
                                 >
                                   <Circle className="h-3 w-3 shrink-0 mt-0.5" />
-                                  <span className="flex-1 leading-snug break-words">
+                                  <span className="flex-1 leading-snug wrap-break-word">
                                     {pipeline.name}
                                   </span>
                                   <span className="text-[10px] text-(--color-fg-subtle) shrink-0">

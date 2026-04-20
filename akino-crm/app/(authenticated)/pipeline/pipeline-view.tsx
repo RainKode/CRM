@@ -299,7 +299,7 @@ function KanbanColumn({
         items={deals.map((d) => d.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-col gap-4 overflow-y-auto flex-1 pb-4 min-h-[60px]" style={{ scrollbarWidth: "none" }}>
+        <div className="flex flex-col gap-4 overflow-y-auto flex-1 pb-4 min-h-15" style={{ scrollbarWidth: "none" }}>
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -870,14 +870,14 @@ function DealDetail({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex">
+    <div className="fixed inset-0 z-60 flex">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel container */}
-      <div className="relative ml-auto flex h-full w-full max-w-[1100px] animate-in slide-in-from-right-4 duration-200">
+      <div className="relative ml-auto flex h-full w-full max-w-275 animate-in slide-in-from-right-4 duration-200">
         {/* ── Left: Client Timeline (alternating cards) ── */}
-        <div className="hidden lg:flex w-[420px] shrink-0 bg-(--color-surface-1)/95 backdrop-blur-md border-r border-(--color-border)/10 flex-col overflow-hidden">
+        <div className="hidden lg:flex w-105 shrink-0 bg-(--color-surface-1)/95 backdrop-blur-md border-r border-(--color-border)/10 flex-col overflow-hidden">
           <div className="px-6 py-5 border-b border-(--color-border)/10 shrink-0">
             <h2 className="font-semibold text-base text-(--color-fg) tracking-tight">Client Timeline</h2>
             <p className="text-xs text-(--color-fg-muted) mt-0.5">Full activity history</p>
@@ -892,7 +892,7 @@ function DealDetail({
             ) : (
               <div className="relative">
                 {/* Center vertical line — runs full height */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-(--color-border)/25 to-transparent" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-linear-to-b from-transparent via-(--color-border)/25 to-transparent" />
 
                 {timelineEvents.map((event, i) => {
                   const isLeft = i % 2 === 0;
