@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { FieldDefinition } from "@/lib/types";
-import { importLeads } from "./actions";
+import { importLeadsChunk, logImport } from "./actions";
 
 type Step = "upload" | "map" | "preview" | "result";
 
@@ -101,8 +101,27 @@ export function CsvUpload({
 
   function handleImport() {
     startTransition(async () => {
-      const res = await importLeads(folderId, csvRows, mapping, dupMode);
-      setResult(res);
+      const CHUNK_SIZE = 200;
+      let totalImported = 0;
+      let totalSkipped = 0;
+      let totalErrors = 0;
+
+      for (let i = 0; i < csvRows.length; i += CHUNK_SIZE) {
+        const chunk = csvRows.slice(i, i + CHUNK_SIZE);
+        const res = await importLeadsChunk(folderId, chunk, mapping, dupMode, i);
+        totalImported += res.imported;
+        totalSkipped += res.skipped;
+        totalErrors += res.errors;
+      }
+
+      await logImport(folderId, {
+        totalRows: csvRows.length,
+        imported: totalImported,
+        skipped: totalSkipped,
+        errors: totalErrors,
+      });
+
+      setResult({ imported: totalImported, skipped: totalSkipped, errors: totalErrors });
       setStep("result");
     });
   }

@@ -29,6 +29,7 @@ export async function createClient() {
 /**
  * Read the active company ID from the cookie.
  * Falls back to the user's default company if no cookie is set.
+ * Returns null if the user has no company memberships.
  */
 export async function getActiveCompanyId(): Promise<string> {
   const cookieStore = await cookies();
@@ -49,7 +50,11 @@ export async function getActiveCompanyId(): Promise<string> {
     .eq("is_default", true)
     .single();
 
-  if (membership) return membership.company_id;
+  if (membership) {
+    // Set cookie for future requests
+    try { cookieStore.set("active_company_id", membership.company_id, { path: "/", maxAge: 60 * 60 * 24 * 365 }); } catch {}
+    return membership.company_id;
+  }
 
   // Last resort: any company the user belongs to
   const { data: anyMembership } = await sb
@@ -59,7 +64,10 @@ export async function getActiveCompanyId(): Promise<string> {
     .limit(1)
     .single();
 
-  if (anyMembership) return anyMembership.company_id;
+  if (anyMembership) {
+    try { cookieStore.set("active_company_id", anyMembership.company_id, { path: "/", maxAge: 60 * 60 * 24 * 365 }); } catch {}
+    return anyMembership.company_id;
+  }
 
   throw new Error("User is not a member of any company");
 }

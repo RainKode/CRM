@@ -312,11 +312,12 @@ export async function getFilteredLeadCount(
   return ids.length;
 }
 
-export async function importLeads(
+export async function importLeadsChunk(
   folderId: string,
   rows: Record<string, unknown>[],
   columnMapping: Record<string, string>, // csvHeader -> fieldKey
-  duplicateMode: "skip" | "overwrite"
+  duplicateMode: "skip" | "overwrite",
+  rowOffset: number = 0
 ) {
   const sb = await createClient();
   const {
@@ -372,7 +373,7 @@ export async function importLeads(
           .update({ name, company, data: mapped })
           .eq("id", existing.id);
         if (error) {
-          errors.push({ row: i + 1, reason: error.message });
+          errors.push({ row: rowOffset + i + 1, reason: error.message });
         } else {
           imported++;
         }
@@ -389,28 +390,38 @@ export async function importLeads(
       created_by: user.id,
     });
     if (error) {
-      errors.push({ row: i + 1, reason: error.message });
+      errors.push({ row: rowOffset + i + 1, reason: error.message });
     } else {
       imported++;
     }
   }
 
-  // Log import
+  return { imported, skipped, errors: errors.length };
+}
+
+export async function logImport(
+  folderId: string,
+  totals: { totalRows: number; imported: number; skipped: number; errors: number }
+) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) return;
+
   await sb.from("import_history").insert({
     folder_id: folderId,
     filename: "csv-upload",
-    total_rows: rows.length,
-    imported_rows: imported,
-    skipped_rows: skipped,
-    error_rows: errors.length,
-    error_report: errors.length > 0 ? errors : null,
+    total_rows: totals.totalRows,
+    imported_rows: totals.imported,
+    skipped_rows: totals.skipped,
+    error_rows: totals.errors,
     status: "complete",
     created_by: user.id,
     completed_at: new Date().toISOString(),
   });
 
   revalidatePath(`/folders/${folderId}`);
-  return { imported, skipped, errors: errors.length };
 }
 
 // ─── Create single lead ───────────────────────────────────────────────
