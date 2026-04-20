@@ -226,7 +226,8 @@ create table if not exists loss_reasons (
   company_id uuid references companies(id) on delete cascade,
   label text not null,
   position integer not null default 0,
-  is_archived boolean not null default false
+  is_archived boolean not null default false,
+  unique (company_id, label)
 );
 
 create index if not exists idx_loss_reasons_company on loss_reasons(company_id);
