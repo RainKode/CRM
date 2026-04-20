@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Akino CRM",
-  description: "Outbound sales CRM for Akino Studio",
+  title: "Rainhub CRM",
+  description: "Outbound sales CRM",
 };
 
 export default function RootLayout({

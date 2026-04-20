@@ -20,6 +20,7 @@ import {
   Settings2,
   AlertCircle,
   Star,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,12 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/enriched",
   },
   { href: "/team", label: "Team", icon: Users, disabled: true },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
+    matchPrefix: "/settings",
+  },
 ];
 
 // ─── Enrichment Fields Dialog ──────────────────────────────────────
