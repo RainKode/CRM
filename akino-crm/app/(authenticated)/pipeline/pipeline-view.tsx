@@ -636,6 +636,19 @@ function getTimelineColor(type: TimelineEventType): string {
   }
 }
 
+function getTimelineBadgeColor(type: TimelineEventType): string {
+  switch (type) {
+    case "created": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "won": return "bg-(--color-success)/15 text-(--color-success)";
+    case "lost": return "bg-(--color-danger)/15 text-(--color-danger)";
+    case "email": return "bg-(--color-info)/15 text-(--color-info)";
+    case "call": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
+    case "follow_up_set": return "bg-(--color-highlight)/15 text-(--color-highlight)";
+    case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
+  }
+}
+
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -806,19 +819,19 @@ function DealDetail({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex">
+    <div className="fixed inset-0 z-[60] flex">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel container */}
-      <div className="relative ml-auto flex h-full w-full max-w-5xl">
-        {/* ── Left: Client Timeline ── */}
-        <div className="hidden lg:flex w-[380px] shrink-0 bg-(--color-surface-1) border-r border-(--color-border)/15 flex-col overflow-hidden">
-          <div className="px-6 py-6 border-b border-(--color-border)/15 shrink-0">
-            <h2 className="font-semibold text-lg text-(--color-fg) tracking-tight">Client Timeline</h2>
-            <p className="text-sm text-(--color-fg-muted) mt-0.5">Full activity history</p>
+      <div className="relative ml-auto flex h-full w-full max-w-[1100px] animate-in slide-in-from-right-4 duration-200">
+        {/* ── Left: Client Timeline (alternating cards) ── */}
+        <div className="hidden lg:flex w-[420px] shrink-0 bg-(--color-surface-1)/95 backdrop-blur-md border-r border-(--color-border)/10 flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-(--color-border)/10 shrink-0">
+            <h2 className="font-semibold text-base text-(--color-fg) tracking-tight">Client Timeline</h2>
+            <p className="text-xs text-(--color-fg-muted) mt-0.5">Full activity history</p>
           </div>
-          <div ref={timelineRef} className="flex-1 overflow-y-auto px-6 py-6" style={{ scrollbarWidth: "thin" }}>
+          <div ref={timelineRef} className="flex-1 overflow-y-auto py-8 px-4" style={{ scrollbarWidth: "thin" }}>
             {loadingActivities ? (
               <div className="flex items-center justify-center py-12">
                 <div className="w-6 h-6 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
@@ -827,55 +840,103 @@ function DealDetail({
               <p className="text-sm text-(--color-fg-subtle) text-center py-12">No activity yet</p>
             ) : (
               <div className="relative">
-                {timelineEvents.map((event, i) => (
-                  <div key={event.id} className="relative flex gap-4 pb-8 last:pb-0">
-                    {/* Vertical connector line */}
-                    {i < timelineEvents.length - 1 && (
-                      <div className="absolute left-[15px] top-9 bottom-0 w-px bg-(--color-border)/30" />
-                    )}
-                    {/* Icon bubble */}
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-(--color-surface-1)",
-                        getTimelineColor(event.type)
-                      )}
-                    >
-                      {getTimelineIcon(event.type)}
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-(--color-fg)">{getTimelineTitle(event.type)}</p>
-                        {event.type === "won" && (
-                          <span className="text-[10px] bg-(--color-success)/15 text-(--color-success) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Won</span>
-                        )}
-                        {event.type === "lost" && (
-                          <span className="text-[10px] bg-(--color-danger)/15 text-(--color-danger) px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Lost</span>
-                        )}
+                {/* Center vertical line */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-(--color-border)/20" />
+
+                {timelineEvents.map((event, i) => {
+                  const isLeft = i % 2 === 0;
+                  return (
+                    <div key={event.id} className="relative flex items-start mb-8 last:mb-0">
+                      {/* Center dot */}
+                      <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10">
+                        <div
+                          className={cn(
+                            "w-3 h-3 rounded-full ring-[3px] ring-(--color-surface-1)",
+                            event.type === "won" ? "bg-(--color-success)" :
+                            event.type === "lost" ? "bg-(--color-danger)" :
+                            event.type === "created" ? "bg-(--color-accent)" :
+                            "bg-(--color-fg-subtle)"
+                          )}
+                        />
                       </div>
-                      {event.summary && (
-                        <p className="text-sm text-(--color-fg-muted) mt-0.5 leading-relaxed">{event.summary}</p>
+
+                      {/* Left card */}
+                      {isLeft ? (
+                        <>
+                          <div className="w-[calc(50%-16px)] pr-2">
+                            <div className="bg-(--color-surface-2)/60 border border-(--color-border)/15 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-(--color-border)/25 transition-all group">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="text-[10px] font-medium text-(--color-fg-subtle) tracking-wide uppercase">
+                                  {formatTimestamp(event.occurred_at)}
+                                </span>
+                                <span className={cn(
+                                  "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                  getTimelineBadgeColor(event.type)
+                                )}>
+                                  {getTimelineTitle(event.type)}
+                                </span>
+                              </div>
+                              {event.summary && (
+                                <p className="text-[13px] text-(--color-fg-muted) leading-relaxed">{event.summary}</p>
+                              )}
+                              {event.email_subject && (
+                                <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
+                              )}
+                              {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
+                                <p className="text-xs text-(--color-fg-subtle) mt-1">
+                                  {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
+                                  {event.call_direction && ` · ${event.call_direction}`}
+                                </p>
+                              )}
+                              {event.notes && (
+                                <div className="mt-2 p-2.5 rounded-lg bg-(--color-surface-3)/40 border border-(--color-border)/10">
+                                  <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="w-[calc(50%-16px)]" />
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-[calc(50%-16px)]" />
+                          <div className="w-[calc(50%-16px)] pl-2">
+                            <div className="bg-(--color-surface-2)/60 border border-(--color-border)/15 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-(--color-border)/25 transition-all group">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="text-[10px] font-medium text-(--color-fg-subtle) tracking-wide uppercase">
+                                  {formatTimestamp(event.occurred_at)}
+                                </span>
+                                <span className={cn(
+                                  "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                  getTimelineBadgeColor(event.type)
+                                )}>
+                                  {getTimelineTitle(event.type)}
+                                </span>
+                              </div>
+                              {event.summary && (
+                                <p className="text-[13px] text-(--color-fg-muted) leading-relaxed">{event.summary}</p>
+                              )}
+                              {event.email_subject && (
+                                <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
+                              )}
+                              {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
+                                <p className="text-xs text-(--color-fg-subtle) mt-1">
+                                  {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
+                                  {event.call_direction && ` · ${event.call_direction}`}
+                                </p>
+                              )}
+                              {event.notes && (
+                                <div className="mt-2 p-2.5 rounded-lg bg-(--color-surface-3)/40 border border-(--color-border)/10">
+                                  <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
                       )}
-                      {event.email_subject && (
-                        <p className="text-xs text-(--color-fg-subtle) mt-1">Subject: {event.email_subject}</p>
-                      )}
-                      {event.call_duration_seconds != null && event.call_duration_seconds > 0 && (
-                        <p className="text-xs text-(--color-fg-subtle) mt-1">
-                          Duration: {Math.floor(event.call_duration_seconds / 60)}m {event.call_duration_seconds % 60}s
-                          {event.call_direction && ` · ${event.call_direction}`}
-                        </p>
-                      )}
-                      {event.notes && (
-                        <div className="mt-2 p-3 rounded-lg bg-(--color-surface-2)/50 border border-(--color-border)/10">
-                          <p className="text-xs text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
-                        </div>
-                      )}
-                      <p className="text-[11px] text-(--color-fg-subtle) mt-1.5">
-                        {formatTimestamp(event.occurred_at)}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -884,42 +945,42 @@ function DealDetail({
         {/* ── Right: Detail panel ── */}
         <div className="flex-1 bg-(--color-bg) flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="px-8 pt-8 pb-6 shrink-0">
-            <div className="flex justify-between items-start mb-6">
+          <div className="px-8 pt-6 pb-5 shrink-0 border-b border-(--color-border)/10">
+            <div className="flex justify-between items-start mb-4">
               <div>
-                <h1 className="text-[28px] font-semibold tracking-tight text-(--color-fg) leading-tight">
+                <h1 className="text-2xl font-semibold tracking-tight text-(--color-fg) leading-tight">
                   {deal.contact_name}
                 </h1>
-                <p className="text-(--color-fg-muted) text-[15px] mt-1 font-medium">
+                <p className="text-(--color-fg-muted) text-sm mt-1 font-medium">
                   {[deal.company, currentStage?.name].filter(Boolean).join(" · ")}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="w-10 h-10 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+                className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Pipeline stage indicator */}
             {!isClosed && (
               <>
-                <div className="mb-6">
-                  <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-3">
+                <div className="mb-4">
+                  <p className="text-[11px] font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-2">
                     Pipeline Stage
                   </p>
-                  <div className="flex gap-2 flex-wrap">
-                    {activeStages.map((stage) => (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {activeStages.map((stage, i) => (
                       <button
                         key={stage.id}
                         type="button"
                         onClick={() => handleStageChange(stage.id)}
                         className={cn(
-                          "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                          "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                           stage.id === deal.stage_id
-                            ? "bg-(--color-accent) text-(--color-accent-fg) shadow-[0_4px_12px_rgba(0,194,204,0.25)]"
+                            ? "bg-(--color-accent) text-(--color-accent-fg) shadow-sm"
                             : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
                         )}
                       >
@@ -930,22 +991,22 @@ function DealDetail({
                 </div>
 
                 {/* Quick actions: Mark Won / Mark Lost */}
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={handleMarkWon}
-                    className="flex-1 bg-(--color-success) text-white font-medium py-3 rounded-full hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    className="flex-1 bg-(--color-success) text-white text-sm font-medium py-2.5 rounded-full hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   >
-                    <CheckCircle2 className="h-5 w-5" />
+                    <CheckCircle2 className="h-4 w-4" />
                     Mark as Won
                   </button>
                   <div className="relative flex-1" ref={lossMenu.ref}>
                     <button
                       type="button"
                       onClick={() => lossMenu.setOpen(!lossMenu.open)}
-                      className="w-full border border-(--color-border)/30 text-(--color-fg-muted) font-medium py-3 rounded-full hover:bg-(--color-danger)/10 hover:text-(--color-danger) hover:border-(--color-danger)/30 transition-all flex items-center justify-center gap-2"
+                      className="w-full border border-(--color-border)/20 text-(--color-fg-muted) text-sm font-medium py-2.5 rounded-full hover:bg-(--color-danger)/10 hover:text-(--color-danger) hover:border-(--color-danger)/30 transition-all flex items-center justify-center gap-2"
                     >
-                      <XCircle className="h-5 w-5" />
+                      <XCircle className="h-4 w-4" />
                       Mark as Lost
                     </button>
                     {lossMenu.open && (
@@ -1002,14 +1063,14 @@ function DealDetail({
           </div>
 
           {/* Tabs */}
-          <div className="px-8 border-b border-(--color-border)/15 flex gap-8 shrink-0">
+          <div className="px-8 border-b border-(--color-border)/10 flex gap-6 shrink-0">
             {(["details", "activity"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setActiveTab(t)}
                 className={cn(
-                  "pb-4 text-[15px] font-medium capitalize border-b-2 transition-colors",
+                  "pb-3 text-sm font-medium capitalize border-b-2 transition-colors",
                   activeTab === t
                     ? "text-(--color-fg) border-(--color-accent)"
                     : "text-(--color-fg-muted) border-transparent hover:text-(--color-fg)"
@@ -1021,7 +1082,7 @@ function DealDetail({
           </div>
 
           {/* Content area */}
-          <div className="flex-1 overflow-y-auto px-8 py-8 space-y-10">
+          <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8">
             {activeTab === "details" && (
               <>
                 {/* Deal value & follow-up */}
@@ -1078,8 +1139,8 @@ function DealDetail({
 
                 {/* Contact information */}
                 <div>
-                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Contact Information</h3>
-                  <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-(--color-fg) mb-4 tracking-tight">Contact Information</h3>
+                  <div className="space-y-3">
                     {/* Email */}
                     <div
                       className="group flex items-start gap-4 cursor-pointer"
@@ -1207,7 +1268,7 @@ function DealDetail({
 
                 {/* Deal Context / Notes */}
                 <div>
-                  <h3 className="font-semibold text-lg text-(--color-fg) mb-5 tracking-tight">Deal Context</h3>
+                  <h3 className="font-semibold text-base text-(--color-fg) mb-4 tracking-tight">Deal Context</h3>
                   <div
                     className="group cursor-pointer"
                     onClick={() => !editingField && startEditing("notes", deal.notes || "")}
