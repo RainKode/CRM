@@ -101,6 +101,21 @@ export async function createCompany(name: string): Promise<Company> {
   });
   if (memberError) throw memberError;
 
+  // Add all other existing users to this company as sales_rep
+  const { data: allProfiles } = await admin
+    .from("profiles")
+    .select("id")
+    .neq("id", user.id);
+  if (allProfiles && allProfiles.length > 0) {
+    const otherMembers = allProfiles.map((p) => ({
+      company_id: company.id,
+      user_id: p.id,
+      role: "sales_rep" as const,
+      is_default: false,
+    }));
+    await admin.from("company_members").insert(otherMembers);
+  }
+
   // Create default pipeline stages for the new company
   const defaultStages = [
     { name: "New", position: 0, is_won: false, is_lost: false },

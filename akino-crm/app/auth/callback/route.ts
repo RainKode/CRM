@@ -32,6 +32,41 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Auto-add new users to all existing companies
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        const admin = createAdminClient();
+
+        // Check if user has any memberships already
+        const { data: existing } = await admin
+          .from("company_members")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          // New user — add to all companies as sales_rep
+          const { data: companies } = await admin
+            .from("companies")
+            .select("id");
+          if (companies && companies.length > 0) {
+            const memberships = companies.map((c, i) => ({
+              company_id: c.id,
+              user_id: user.id,
+              role: "sales_rep" as const,
+              is_default: i === 0,
+            }));
+            await admin
+              .from("company_members")
+              .insert(memberships)
+              .throwOnError();
+          }
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
