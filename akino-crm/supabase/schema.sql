@@ -197,6 +197,8 @@ create table if not exists deals (
   email text,
   phone text,
   linkedin_url text,
+  website text,
+  decision_maker text,
   deal_value numeric(14,2),                -- optional (P2)
   currency text default 'GBP',
   notes text,

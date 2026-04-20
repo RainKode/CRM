@@ -178,15 +178,33 @@ export async function completeBatchLead(
   // Update lead data
   const { data: lead } = await sb
     .from("leads")
-    .select("data, folder_id")
+    .select("data, folder_id, name, company, email")
     .eq("id", leadId)
     .single();
+
+  // Merge enrichment into the data JSON
+  const mergedData = { ...lead?.data, ...enrichmentData };
+
+  // Helper: extract a string field from merged data (case-insensitive)
+  const pick = (...keys: string[]): string | null => {
+    for (const k of keys) {
+      const val = mergedData[k] ?? mergedData[k.toLowerCase()] ?? mergedData[k.charAt(0).toUpperCase() + k.slice(1)];
+      if (typeof val === "string" && val.trim()) return val.trim();
+    }
+    return null;
+  };
+
+  // Extract key fields from enrichment data into top-level lead columns
+  const extractedEmail = pick("email", "Email") ?? lead?.email ?? null;
+  const extractedCompany = pick("company", "Company", "company_name") ?? lead?.company ?? null;
 
   if (lead) {
     await sb
       .from("leads")
       .update({
-        data: { ...lead.data, ...enrichmentData },
+        data: mergedData,
+        email: extractedEmail,
+        company: extractedCompany,
         status: "enriched",
         enriched_at: new Date().toISOString(),
       })
@@ -226,45 +244,29 @@ export async function completeBatchLead(
         .single();
 
       if (firstStage) {
-        // Get full lead data for the deal
-        const { data: fullLead } = await sb
-          .from("leads")
-          .select("id, name, company, email, data, folder_id")
-          .eq("id", leadId)
-          .single();
+        // Check if a deal already exists for this lead (unique constraint on active lead)
+        const { count: existingDeals } = await sb
+          .from("deals")
+          .select("id", { count: "exact", head: true })
+          .eq("lead_id", leadId)
+          .is("won_at", null)
+          .is("lost_at", null);
 
-        if (fullLead) {
-          // Check if a deal already exists for this lead in this pipeline's stages
-          const { data: pipelineStages } = await sb
-            .from("pipeline_stages")
-            .select("id")
-            .eq("pipeline_id", pipeline.id)
-            .eq("is_archived", false);
-          const stageIds = (pipelineStages ?? []).map((s) => s.id);
-
-          const { count: existingDeals } = await sb
-            .from("deals")
-            .select("id", { count: "exact", head: true })
-            .eq("lead_id", leadId)
-            .in("stage_id", stageIds);
-
-          if ((existingDeals ?? 0) === 0) {
-            const phone = typeof fullLead.data?.phone === "string" ? fullLead.data.phone
-              : typeof fullLead.data?.Phone === "string" ? fullLead.data.Phone
-              : null;
-
-            await sb.from("deals").insert({
-              lead_id: fullLead.id,
-              source_folder_id: fullLead.folder_id,
-              stage_id: firstStage.id,
-              owner_id: user?.id ?? null,
-              contact_name: fullLead.name || fullLead.email || "Unknown",
-              company: fullLead.company ?? null,
-              email: fullLead.email ?? null,
-              phone,
-              created_by: user?.id ?? null,
-            });
-          }
+        if ((existingDeals ?? 0) === 0) {
+          await sb.from("deals").insert({
+            lead_id: leadId,
+            source_folder_id: lead?.folder_id ?? null,
+            stage_id: firstStage.id,
+            owner_id: user?.id ?? null,
+            contact_name: lead?.name || extractedEmail || "Unknown",
+            company: extractedCompany,
+            email: extractedEmail,
+            phone: pick("phone", "Phone") ?? null,
+            linkedin_url: pick("linkedin_url", "LinkedIn", "linkedin") ?? null,
+            website: pick("website", "Website", "url") ?? null,
+            decision_maker: pick("decision_maker", "Decision Maker", "decision_maker_name", "contact_person") ?? null,
+            created_by: user?.id ?? null,
+          });
         }
       }
     }

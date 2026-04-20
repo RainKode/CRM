@@ -158,6 +158,8 @@ export interface Deal {
   email: string | null;
   phone: string | null;
   linkedin_url: string | null;
+  website: string | null;
+  decision_maker: string | null;
   deal_value: number | null;
   currency: string;
   notes: string | null;

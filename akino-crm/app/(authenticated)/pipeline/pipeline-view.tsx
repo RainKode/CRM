@@ -34,6 +34,8 @@ import {
   Star,
   CheckCircle2,
   XCircle,
+  Globe,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1083,6 +1085,39 @@ function DealDetail({
                           >
                             View Profile
                           </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Website */}
+                    {deal.website && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                          <Globe className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">Website</p>
+                          <a
+                            href={deal.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[15px] text-(--color-accent) hover:underline"
+                          >
+                            {deal.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Decision Maker */}
+                    {deal.decision_maker && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) shrink-0 mt-0.5">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1">Decision Maker</p>
+                          <p className="text-[15px] text-(--color-fg)">{deal.decision_maker}</p>
                         </div>
                       </div>
                     )}
