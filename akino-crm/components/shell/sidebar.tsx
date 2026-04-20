@@ -380,7 +380,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "hidden md:flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 transition-all duration-300 rounded-r-2xl",
-          collapsed ? "w-20 px-3" : "w-72 px-6"
+          collapsed ? "w-20 px-3" : "w-80 px-6"
         )}
         style={{ boxShadow: "var(--shadow-sidebar)" }}
       >

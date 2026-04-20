@@ -204,6 +204,75 @@ export async function completeBatchLead(
     .eq("batch_id", batchId)
     .eq("lead_id", leadId);
 
+  // Auto-create deal in the batch's pipeline
+  try {
+    // Find the pipeline linked to this batch
+    const { data: pipeline } = await sb
+      .from("pipelines")
+      .select("id")
+      .eq("batch_id", batchId)
+      .eq("is_archived", false)
+      .single();
+
+    if (pipeline) {
+      // Get first stage (lowest position) for this pipeline
+      const { data: firstStage } = await sb
+        .from("pipeline_stages")
+        .select("id")
+        .eq("pipeline_id", pipeline.id)
+        .eq("is_archived", false)
+        .order("position", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (firstStage) {
+        // Get full lead data for the deal
+        const { data: fullLead } = await sb
+          .from("leads")
+          .select("id, name, company, email, data, folder_id")
+          .eq("id", leadId)
+          .single();
+
+        if (fullLead) {
+          // Check if a deal already exists for this lead in this pipeline's stages
+          const { data: pipelineStages } = await sb
+            .from("pipeline_stages")
+            .select("id")
+            .eq("pipeline_id", pipeline.id)
+            .eq("is_archived", false);
+          const stageIds = (pipelineStages ?? []).map((s) => s.id);
+
+          const { count: existingDeals } = await sb
+            .from("deals")
+            .select("id", { count: "exact", head: true })
+            .eq("lead_id", leadId)
+            .in("stage_id", stageIds);
+
+          if ((existingDeals ?? 0) === 0) {
+            const phone = typeof fullLead.data?.phone === "string" ? fullLead.data.phone
+              : typeof fullLead.data?.Phone === "string" ? fullLead.data.Phone
+              : null;
+
+            await sb.from("deals").insert({
+              lead_id: fullLead.id,
+              source_folder_id: fullLead.folder_id,
+              stage_id: firstStage.id,
+              owner_id: user?.id ?? null,
+              contact_name: fullLead.name || fullLead.email || "Unknown",
+              company: fullLead.company ?? null,
+              email: fullLead.email ?? null,
+              phone,
+              created_by: user?.id ?? null,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-fatal: don't block enrichment if deal creation fails
+    console.error("Auto-create deal failed for lead", leadId);
+  }
+
   // Check if all leads in batch are done
   const { count: remaining } = await sb
     .from("batch_leads")
@@ -224,6 +293,7 @@ export async function completeBatchLead(
   }
 
   revalidatePath("/enrichment");
+  revalidatePath("/pipeline");
 }
 
 export async function skipBatchLead(batchId: string, leadId: string) {
