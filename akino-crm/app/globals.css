@@ -100,9 +100,9 @@
   --color-surface-4: #374151;
 
   /* Text */
-  --color-fg: #e5e7eb;
-  --color-fg-muted: #9ca3af;
-  --color-fg-subtle: #6b7280;
+  --color-fg: #f1f3f5;
+  --color-fg-muted: #b0b8c4;
+  --color-fg-subtle: #8b95a5;
   --color-fg-disabled: #374151;
 
   /* Borders — thick black */
@@ -182,8 +182,8 @@
 
   /* Text */
   --color-fg: #0f172a;
-  --color-fg-muted: #5b6475;
-  --color-fg-subtle: #64748b;
+  --color-fg-muted: #3e4a5c;
+  --color-fg-subtle: #475569;
   --color-fg-disabled: #94a3b8;
 
   /* Borders — thick black */
