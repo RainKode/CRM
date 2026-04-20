@@ -9,6 +9,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
@@ -220,13 +221,19 @@ function KanbanColumn({
   const queuedCount = totalCount - deals.length;
   const allSelected = deals.length > 0 && deals.every((d) => selectedDealIds?.has(d.id));
 
+  // Make the column itself a droppable zone so empty columns can receive drops
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id: stage.id });
+
   return (
     <div
+      ref={setDroppableRef}
       className={cn(
-        "w-[320px] flex flex-col h-full rounded-2xl p-4 border-2",
-        isWon
-          ? "bg-(--color-success)/10 border-(--color-success)/40"
-          : "bg-(--color-surface-2)/30 border-(--color-card-border)"
+        "w-[320px] flex flex-col h-full rounded-2xl p-4 border-2 transition-colors",
+        isOver
+          ? "border-(--color-accent) bg-(--color-accent)/5"
+          : isWon
+            ? "bg-(--color-success)/10 border-(--color-success)/40"
+            : "bg-(--color-surface-2)/30 border-(--color-card-border)"
       )}
     >
       <div className="flex justify-between items-center mb-6 px-2">
@@ -1477,15 +1484,20 @@ export function PipelineView({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  // Optimistic stage overrides: dealId → newStageId (for instant DnD feedback)
+  const [optimisticMoves, setOptimisticMoves] = useState<Record<string, string>>({});
+
   const deals = useMemo(() => {
-    let result = initialDeals;
+    let result = initialDeals.map((d) =>
+      optimisticMoves[d.id] ? { ...d, stage_id: optimisticMoves[d.id] } : d
+    );
     // Filter to current pipeline's stages
     const stageIds = new Set(pipelineStages.map((s) => s.id));
     result = result.filter((d) => stageIds.has(d.stage_id));
     if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
     if (filterStageId) result = result.filter((d) => d.stage_id === filterStageId);
     return result;
-  }, [initialDeals, showClosed, filterStageId, pipelineStages]);
+  }, [initialDeals, optimisticMoves, showClosed, filterStageId, pipelineStages]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
@@ -1580,7 +1592,17 @@ export function PipelineView({
     }
 
     if (targetStageId) {
-      startTransition(() => moveDeal(dealId, targetStageId));
+      // Optimistic: move card instantly in the UI
+      setOptimisticMoves((prev) => ({ ...prev, [dealId]: targetStageId }));
+      startTransition(async () => {
+        await moveDeal(dealId, targetStageId);
+        // Clear optimistic override after server confirms (revalidation provides new data)
+        setOptimisticMoves((prev) => {
+          const next = { ...prev };
+          delete next[dealId];
+          return next;
+        });
+      });
     }
   }
 

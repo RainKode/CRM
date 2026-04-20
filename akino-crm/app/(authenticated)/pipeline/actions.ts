@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Deal, PipelineStage, LossReason, Activity, Pipeline, Lead } from "@/lib/types";
 
+/** Bust cached pipeline data + revalidate the page */
+function bustPipelineCache() {
+  revalidatePath("/pipeline");
+}
+
 // ─── Reads ─────────────────────────────────────────────────────────────
 
 export async function getPipelines(): Promise<Pipeline[]> {
@@ -126,7 +131,7 @@ export async function createDeal(input: {
     .select()
     .single();
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
   return data as Deal;
 }
 
@@ -188,7 +193,7 @@ export async function moveDeal(dealId: string, newStageId: string) {
     created_by: user?.id ?? null,
   });
 
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function logActivity(input: {
@@ -211,7 +216,7 @@ export async function logActivity(input: {
     created_by: user?.id ?? null,
   });
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function setFollowUp(
@@ -241,7 +246,7 @@ export async function setFollowUp(
     created_by: user?.id ?? null,
   });
 
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function markDealLost(dealId: string, lossReasonId: string) {
@@ -265,14 +270,14 @@ export async function markDealLost(dealId: string, lossReasonId: string) {
     .eq("id", dealId);
   if (error) throw error;
 
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function deleteDeal(dealId: string) {
   const sb = await createClient();
   const { error } = await sb.from("deals").delete().eq("id", dealId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function updateDeal(
@@ -282,7 +287,7 @@ export async function updateDeal(
   const sb = await createClient();
   const { error } = await sb.from("deals").update(updates).eq("id", dealId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 // ─── Stage CRUD ────────────────────────────────────────────────────────
@@ -333,7 +338,7 @@ export async function createStage(name: string, pipelineId?: string) {
     .select()
     .single();
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
   return data as PipelineStage;
 }
 
@@ -347,7 +352,7 @@ export async function updateStage(
     .update(updates)
     .eq("id", stageId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function deleteStage(stageId: string) {
@@ -368,7 +373,7 @@ export async function deleteStage(stageId: string) {
     .update({ is_archived: true })
     .eq("id", stageId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function reorderStages(orderedIds: string[]) {
@@ -377,7 +382,7 @@ export async function reorderStages(orderedIds: string[]) {
     sb.from("pipeline_stages").update({ position: i }).eq("id", id)
   );
   await Promise.all(updates);
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 // ─── Pipeline CRUD ─────────────────────────────────────────────────────
@@ -406,7 +411,7 @@ export async function createPipeline(name: string): Promise<Pipeline> {
   ];
   await sb.from("pipeline_stages").insert(defaultStages);
 
-  revalidatePath("/pipeline");
+  bustPipelineCache();
   return data as Pipeline;
 }
 
@@ -417,7 +422,7 @@ export async function renamePipeline(pipelineId: string, name: string) {
     .update({ name, updated_at: new Date().toISOString() })
     .eq("id", pipelineId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 export async function deletePipeline(pipelineId: string) {
@@ -436,7 +441,7 @@ export async function deletePipeline(pipelineId: string) {
     .update({ is_archived: true })
     .eq("id", pipelineId);
   if (error) throw error;
-  revalidatePath("/pipeline");
+  bustPipelineCache();
 }
 
 // ─── Folder-grouped pipeline queries ───────────────────────────────────
@@ -613,6 +618,6 @@ export async function createPipelineForBatch(
     await sb.from("pipeline_stages").insert(defaultStages);
   }
 
-  revalidatePath("/pipeline");
+  bustPipelineCache();
   return pipeline as Pipeline;
 }
