@@ -6,6 +6,10 @@
 -- /folders page; without it the page falls back to an unaggregated query.
 -- =====================================================================
 
+-- Ensure dedupe_keys column exists before the RPC selects it. Some envs were
+-- provisioned before this column was introduced.
+alter table folders add column if not exists dedupe_keys text[] not null default '{}';
+
 create or replace function public.get_folders_with_counts()
 returns table (
   id uuid,
