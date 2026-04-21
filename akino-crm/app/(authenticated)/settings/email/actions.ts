@@ -291,12 +291,33 @@ export async function disconnectMailbox(accountId: string): Promise<void> {
 }
 
 function extractEmail(acc: { connection_params?: Record<string, unknown> | null; name?: string }): string | null {
-  const cp = acc.connection_params ?? {};
-  const direct =
-    (cp.mail as string | undefined) ??
-    (cp.email as string | undefined) ??
-    (cp.email_address as string | undefined);
-  if (direct && direct.includes("@")) return direct.toLowerCase();
+  const cp = (acc.connection_params ?? {}) as Record<string, unknown>;
+
+  // connection_params.mail / email / email_address can be either a bare string
+  // OR a nested object like { address: "foo@bar" } or { identifier: "foo@bar" }
+  // depending on the provider. Walk a few shapes defensively.
+  const asString = (v: unknown): string | null => {
+    if (typeof v === "string") return v;
+    if (v && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      for (const k of ["address", "identifier", "email", "mail", "value"]) {
+        const inner = o[k];
+        if (typeof inner === "string") return inner;
+      }
+    }
+    return null;
+  };
+
+  const candidates: unknown[] = [cp.mail, cp.email, cp.email_address, cp.username, cp.login];
+  for (const c of candidates) {
+    const s = asString(c);
+    if (s && s.includes("@")) return s.toLowerCase();
+  }
+
+  // Last resort: some providers put the email in the top-level `name` when the
+  // correlation token isn't used.
+  if (typeof acc.name === "string" && acc.name.includes("@")) return acc.name.toLowerCase();
+
   return null;
 }
 
