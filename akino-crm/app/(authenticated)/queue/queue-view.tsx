@@ -99,7 +99,8 @@ function iconForItem(item: QueueItem): React.ElementType {
   if (item.kind === "follow_up") return AlarmClock;
   if (item.kind === "awaiting_reply") return MailQuestion;
   // scheduled_activity — icon by activity type
-  switch (item.activity_type) {
+  const activityItem = item as Extract<QueueItem, { kind: "scheduled_activity" }>;
+  switch (activityItem.activity_type) {
     case "call":
       return Phone;
     case "email":
