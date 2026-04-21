@@ -26,6 +26,7 @@ export type SendEmailInput = {
   trackOpens?: boolean;
   trackClicks?: boolean;
   templateId?: string | null;
+  baseUrl?: string;                  // for tracking URLs; falls back to env
 };
 
 export type SendEmailResult = {
@@ -38,7 +39,10 @@ export async function sendEmailAndPersist(
   input: SendEmailInput,
 ): Promise<SendEmailResult> {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
+    input.baseUrl ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
   // 1. Create or reuse a thread
   let threadId = input.threadId ?? null;

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Task, Activity, Deal } from "@/lib/types";
 
-export type QueueItemKind = "task" | "scheduled_activity" | "follow_up";
+export type QueueItemKind = "task" | "scheduled_activity" | "follow_up" | "awaiting_reply";
 
 export type QueueItem =
   | {
@@ -37,6 +37,16 @@ export type QueueItem =
       deal_id: string;
       deal_name: string;
       overdue: boolean;
+    }
+  | {
+      kind: "awaiting_reply";
+      id: string;              // deal id
+      due_at: string;          // last_outbound_at
+      title: string;
+      subtitle: string | null;
+      deal_id: string;
+      deal_name: string;
+      overdue: boolean;        // >3d since outbound
     };
 
 function bust() {
@@ -59,7 +69,8 @@ export async function getQueueItems(): Promise<QueueItem[]> {
   endOfToday.setHours(23, 59, 59, 999);
 
   // Parallel fetches — keeps response fast.
-  const [tasksRes, activitiesRes, dealsRes] = await Promise.all([
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const [tasksRes, activitiesRes, dealsRes, awaitingRes] = await Promise.all([
     sb
       .from("tasks")
       .select("id,title,notes,due_at,deal_id")
@@ -89,12 +100,24 @@ export async function getQueueItems(): Promise<QueueItem[]> {
       .not("follow_up_at", "is", null)
       .lte("follow_up_at", endOfToday.toISOString())
       .order("follow_up_at", { ascending: true }),
+    sb
+      .from("deals")
+      .select("id,contact_name,company,last_outbound_at,email_status")
+      .eq("company_id", companyId)
+      .is("won_at", null)
+      .is("lost_at", null)
+      .in("email_status", ["awaiting_reply", "stale"])
+      .not("last_outbound_at", "is", null)
+      .lte("last_outbound_at", threeDaysAgo)
+      .order("last_outbound_at", { ascending: true })
+      .limit(100),
   ]);
 
   // If any of the parallel calls errored we surface a readable message.
   if (tasksRes.error) throw new Error(tasksRes.error.message);
   if (activitiesRes.error) throw new Error(activitiesRes.error.message);
   if (dealsRes.error) throw new Error(dealsRes.error.message);
+  if (awaitingRes.error) throw new Error(awaitingRes.error.message);
 
   // Pull deal names for tasks linked to deals (one extra round-trip if any).
   const taskDealIds = Array.from(
@@ -163,6 +186,25 @@ export async function getQueueItems(): Promise<QueueItem[]> {
     });
   }
 
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  for (const d of awaitingRes.data ?? []) {
+    const name = d.company || d.contact_name || "Deal";
+    const outbound = d.last_outbound_at as string;
+    items.push({
+      kind: "awaiting_reply",
+      id: d.id as string,
+      due_at: outbound,
+      title: `Waiting on ${name}`,
+      subtitle:
+        d.email_status === "stale"
+          ? "No reply in 14+ days — time for a bump"
+          : "Last outbound > 3 days ago",
+      deal_id: d.id as string,
+      deal_name: name,
+      overdue: new Date(outbound) < sevenDaysAgo,
+    });
+  }
+
   // Soonest first; overdue naturally lands first due to older timestamps.
   items.sort(
     (a, b) =>
@@ -208,6 +250,14 @@ export async function completeQueueItem(
       .update({ follow_up_at: null, follow_up_note: null })
       .eq("id", id);
     if (error) throw new Error(error.message);
+  } else if (kind === "awaiting_reply") {
+    // Dismiss: reset to 'no_contact' so it drops off the queue. A new send
+    // will flip it back to 'awaiting_reply' automatically via the trigger.
+    const { error } = await sb
+      .from("deals")
+      .update({ email_status: "no_contact" })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
   }
 
   bust();
@@ -242,6 +292,13 @@ export async function snoozeQueueItem(
     const { error } = await sb
       .from("deals")
       .update({ follow_up_at: iso })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  } else if (kind === "awaiting_reply") {
+    // Snooze by setting a follow_up_at so it reappears in the main queue.
+    const { error } = await sb
+      .from("deals")
+      .update({ follow_up_at: iso, follow_up_note: "Bump for reply" })
       .eq("id", id);
     if (error) throw new Error(error.message);
   }

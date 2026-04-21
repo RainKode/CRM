@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import { sendEmailAndPersist } from "@/lib/unipile/send";
 
@@ -93,6 +94,7 @@ export async function sendEmail(input: ComposeInput): Promise<ComposeResult> {
       trackOpens: input.trackOpens ?? true,
       trackClicks: input.trackClicks ?? true,
       templateId: input.templateId ?? null,
+      baseUrl: await resolveBaseUrl(),
     });
     revalidatePath("/inbox");
     if (input.dealId) revalidatePath("/pipeline");
@@ -125,4 +127,15 @@ export async function getPrimaryAccount(): Promise<{
     .maybeSingle();
 
   return (data as { id: string; email_address: string } | null) ?? null;
+}
+
+async function resolveBaseUrl(): Promise<string> {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  if (host) return `${proto}://${host}`;
+  return "";
 }

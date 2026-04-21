@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import {
   createHostedAuthLink,
@@ -51,8 +52,7 @@ export async function beginConnectMailbox(opts?: {
   if (!user) throw new Error("Not authenticated");
   const companyId = await getActiveCompanyId();
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
-  if (!base) throw new Error("NEXT_PUBLIC_APP_URL is not configured");
+  const base = await resolveAppUrl();
   if (!process.env.UNIPILE_DSN) throw new Error("UNIPILE_DSN is not configured");
 
   // `name` is echoed back on the notify webhook so we can correlate which
@@ -217,6 +217,54 @@ export async function connectAccountById(
   return { ok: true, id: inserted.id as string, email };
 }
 
+/**
+ * Ping Unipile for the current status of a connected mailbox. Returns
+ * `online: true` when at least one source reports status 'OK' (or no sources
+ * array is returned, in which case Unipile treats the account as healthy).
+ */
+export async function pingAccount(
+  accountRowId: string,
+): Promise<{ online: boolean; status: string; error?: string }> {
+  const sb = await createClient();
+  const companyId = await getActiveCompanyId();
+  if (!companyId) return { online: false, status: "no_company", error: "No active company" };
+
+  const { data: row } = await sb
+    .from("email_accounts")
+    .select("id, unipile_account_id")
+    .eq("id", accountRowId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (!row) return { online: false, status: "missing", error: "Account not found" };
+
+  try {
+    const acc = await getAccount(row.unipile_account_id as string);
+    const sources = acc.sources ?? [];
+    const online =
+      sources.length === 0 ? true : sources.some((s) => (s.status ?? "").toUpperCase() === "OK");
+    const status = sources[0]?.status ?? "OK";
+
+    // Mirror into our row so the UI can reflect it after a refresh.
+    await sb
+      .from("email_accounts")
+      .update({
+        status: online ? "connected" : "error",
+        sync_error: online ? null : `Unipile status: ${status}`,
+      })
+      .eq("id", accountRowId);
+
+    return { online, status };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "ping failed";
+    await sb
+      .from("email_accounts")
+      .update({ status: "error", sync_error: msg })
+      .eq("id", accountRowId);
+    return { online: false, status: "error", error: msg };
+  }
+}
+
 export async function disconnectMailbox(accountId: string): Promise<void> {
   const sb = await createClient();
   const companyId = await getActiveCompanyId();
@@ -250,4 +298,23 @@ function extractEmail(acc: { connection_params?: Record<string, unknown> | null;
     (cp.email_address as string | undefined);
   if (direct && direct.includes("@")) return direct.toLowerCase();
   return null;
+}
+
+/**
+ * Prefer NEXT_PUBLIC_APP_URL; fall back to VERCEL_URL or the current request
+ * host so the flow works even if the env var wasn't set explicitly.
+ */
+async function resolveAppUrl(): Promise<string> {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+
+  const vercel = process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel}`;
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  if (host) return `${proto}://${host}`;
+
+  throw new Error("Could not determine app URL");
 }

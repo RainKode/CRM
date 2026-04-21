@@ -10,6 +10,7 @@ import {
   connectAccountById,
   disconnectMailbox,
   listAccounts,
+  pingAccount,
   type EmailAccount,
 } from "./actions";
 
@@ -37,6 +38,7 @@ export function EmailSettingsView({
   );
   const [manualId, setManualId] = useState("");
   const [linking, startLinking] = useTransition();
+  const [pingState, setPingState] = useState<Record<string, { status: "idle" | "checking" | "online" | "offline"; message?: string }>>({});
 
   // Poll sync progress while any account is backfilling
   useEffect(() => {
@@ -69,6 +71,22 @@ export function EmailSettingsView({
     if (!confirm("Disconnect this mailbox? Existing threads and messages stay in the CRM.")) return;
     await disconnectMailbox(id);
     setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, status: "disconnected" } : a)));
+  }
+
+  async function handlePing(id: string) {
+    setPingState((prev) => ({ ...prev, [id]: { status: "checking" } }));
+    const res = await pingAccount(id);
+    setPingState((prev) => ({
+      ...prev,
+      [id]: res.online
+        ? { status: "online", message: `Live · ${res.status}` }
+        : { status: "offline", message: res.error ?? res.status },
+    }));
+    if (!res.online) {
+      setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, status: "error" } : a)));
+    } else {
+      setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, status: "connected" } : a)));
+    }
   }
 
   function handleManualLink() {
@@ -140,11 +158,12 @@ export function EmailSettingsView({
                     <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-(--color-fg) truncate">
+                    <p className="text-sm font-semibold text-(--color-fg) truncate flex items-center gap-2">
                       {a.email_address}
+                      <StatusDot state={pingState[a.id]?.status ?? (a.status === "connected" ? "online" : a.status === "error" ? "offline" : "idle")} />
                     </p>
                     <p className="text-xs text-(--color-fg-subtle) capitalize">
-                      {a.provider} · {renderStatus(a)}
+                      {a.provider} · {pingState[a.id]?.message ?? renderStatus(a)}
                     </p>
                   </div>
                   {a.sync_state === "backfilling" && (
@@ -160,6 +179,19 @@ export function EmailSettingsView({
                       </p>
                     </div>
                   )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handlePing(a.id)}
+                    disabled={pingState[a.id]?.status === "checking" || a.status === "disconnected"}
+                  >
+                    {pingState[a.id]?.status === "checking" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                    Check
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -257,4 +289,16 @@ function renderStatus(a: EmailAccount): string {
     default:
       return a.last_sync_at ? `Synced · ${new Date(a.last_sync_at).toLocaleString()}` : "Connected";
   }
+}
+
+function StatusDot({ state }: { state: "idle" | "checking" | "online" | "offline" }) {
+  const color =
+    state === "online"
+      ? "bg-emerald-500"
+      : state === "offline"
+        ? "bg-rose-500"
+        : state === "checking"
+          ? "bg-amber-400 animate-pulse"
+          : "bg-(--color-fg-subtle)/40";
+  return <span aria-hidden className={`inline-block h-2 w-2 rounded-full ${color}`} />;
 }
