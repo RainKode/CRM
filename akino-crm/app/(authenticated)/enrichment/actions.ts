@@ -57,6 +57,8 @@ export async function createBatch(input: {
   description?: string;
   lead_ids: string[];
   assignee_id?: string;
+  sort_by_field?: string;
+  filter_by_field?: string;
 }) {
   const sb = await createClient();
   const {
@@ -72,6 +74,8 @@ export async function createBatch(input: {
       description: input.description ?? null,
       assignee_id: input.assignee_id ?? null,
       created_by: user.id,
+      sort_by_field: input.sort_by_field ?? null,
+      filter_by_field: input.filter_by_field ?? null,
     })
     .select()
     .single();
@@ -120,6 +124,8 @@ export async function createMultipleBatches(input: {
   name_prefix: string;
   lead_ids: string[];
   batch_size: number;
+  sort_by_field?: string;
+  filter_by_field?: string;
 }) {
   const sb = await createClient();
   const {
@@ -141,6 +147,8 @@ export async function createMultipleBatches(input: {
         folder_id,
         name: batchName,
         created_by: user.id,
+        sort_by_field: input.sort_by_field ?? null,
+        filter_by_field: input.filter_by_field ?? null,
       })
       .select()
       .single();
@@ -279,7 +287,9 @@ export async function completeBatchLead(
         .is("lost_at", null);
 
       if ((existingDeals ?? 0) === 0) {
+        const companyId = await getActiveCompanyId();
         await sb.from("deals").insert({
+          company_id: companyId,
           lead_id: leadId,
           source_folder_id: lead?.folder_id ?? null,
           stage_id: firstStage.id,
@@ -294,9 +304,9 @@ export async function completeBatchLead(
           created_by: user?.id ?? null,
         });
       }
-    } catch {
+    } catch (err) {
       // Non-fatal: don't block enrichment if deal creation fails
-      console.error("Auto-create deal failed for lead", leadId);
+      console.error("Auto-create deal failed for lead", leadId, err);
     }
   })();
 
@@ -563,6 +573,13 @@ export async function deleteBatch(input: {
     .select("batch_id", { count: "exact", head: true })
     .eq("batch_id", batch.id);
 
+  // Archive the auto-created pipeline for this batch BEFORE deleting the batch
+  // row. Once the batch row is gone the FK becomes null and we can't find it.
+  await sb
+    .from("pipelines")
+    .update({ is_archived: true })
+    .eq("batch_id", batch.id);
+
   // Delete. batch_leads has `on delete cascade`, so deleting the batch
   // row is sufficient. We still delete batch_leads first as defence in
   // depth in case the FK is ever changed.
@@ -579,6 +596,7 @@ export async function deleteBatch(input: {
   if (delErr) throw delErr;
 
   revalidatePath("/enrichment");
+  revalidatePath("/pipeline");
   revalidatePath(`/folders/${batch.folder_id}`);
 
   return {

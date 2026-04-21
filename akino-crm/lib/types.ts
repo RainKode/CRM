@@ -124,6 +124,8 @@ export interface Batch {
   created_by: string | null;
   created_at: string;
   completed_at: string | null;
+  sort_by_field: string | null;
+  filter_by_field: string | null;
 }
 
 export interface BatchLead {

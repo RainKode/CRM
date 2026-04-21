@@ -131,6 +131,21 @@ function fieldIcon(field: FieldDefinition): LucideIcon {
   return FileText;
 }
 
+/** Return the best display label for a lead given the batch's preferred field. */
+function displayFor(bl: BLWithLead, preferredKey: string | null | undefined): string {
+  if (preferredKey) {
+    const data = bl.lead.data as Record<string, unknown>;
+    let val: string | null | undefined;
+    if (preferredKey === "company") val = bl.lead.company;
+    else if (preferredKey === "name") val = bl.lead.name;
+    else if (preferredKey === "email") val = bl.lead.email;
+    else val = data[preferredKey] != null ? String(data[preferredKey]) : undefined;
+    if (val && val.trim()) return val.trim();
+  }
+  // Fall back to the original chain
+  return bl.lead.name || bl.lead.company || bl.lead.email || "";
+}
+
 export function EnrichmentQueue({
   batch,
   batchLeads,
@@ -140,6 +155,8 @@ export function EnrichmentQueue({
   batchLeads: BLWithLead[];
   enrichmentFields: FieldDefinition[];
 }) {
+  // Prefer sort_by_field, then filter_by_field, then default chain
+  const preferredDisplayKey = batch.sort_by_field ?? batch.filter_by_field ?? null;
   const [currentIdx, setCurrentIdx] = useState(() => {
     const idx = batchLeads.findIndex(
       (bl) => !bl.is_completed && !bl.is_skipped
@@ -382,7 +399,7 @@ export function EnrichmentQueue({
                 </span>
                 <div className="flex-1 min-w-0">
                   <h3 className={cn("font-medium text-sm truncate", isActive ? "text-(--color-fg)" : "text-(--color-fg)")}>
-                    {bl.lead.name || bl.lead.company || bl.lead.email || `Lead ${i + 1}`}
+                    {displayFor(bl, preferredDisplayKey) || `Lead ${i + 1}`}
                   </h3>
                   {missing.length > 0 && !bl.is_completed && (
                     <p className="text-xs text-(--color-fg-muted) mt-1 truncate">
@@ -400,7 +417,7 @@ export function EnrichmentQueue({
       <section className="flex-1 flex flex-col bg-(--color-surface-1) overflow-hidden">
         <header className="p-8 pb-4 shrink-0">
           <h2 className="text-2xl font-bold text-(--color-fg) tracking-tight">
-            {lead.name || lead.company || "Unnamed Lead"}
+            {displayFor(current, preferredDisplayKey) || "Unnamed Lead"}
           </h2>
           <p className="text-sm text-(--color-fg-muted) mt-2">Existing Data — click any field to edit</p>
         </header>

@@ -152,7 +152,9 @@ create table if not exists batches (
   status batch_status not null default 'not_started',
   created_by uuid references profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  completed_at timestamptz
+  completed_at timestamptz,
+  sort_by_field text,
+  filter_by_field text
 );
 
 create index if not exists idx_batches_folder on batches(folder_id);

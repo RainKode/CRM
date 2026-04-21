@@ -123,6 +123,8 @@ export function BatchCreationWizard({
           name_prefix: namePrefix || folder.name,
           lead_ids: filteredIds,
           batch_size: batchSize,
+          sort_by_field: sortField || undefined,
+          filter_by_field: filterField || undefined,
         });
         onClose();
         router.push("/enrichment");
