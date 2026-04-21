@@ -2,21 +2,22 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Deal, PipelineStage, LossReason, Activity, Pipeline, Lead } from "@/lib/types";
 
 /** Bust cached pipeline data + revalidate the page */
 async function bustPipelineCache() {
   const companyId = await getActiveCompanyId();
   revalidatePath("/pipeline");
-  revalidateTag(`pipelines-${companyId}`, "default");
-  revalidateTag(`stages-${companyId}`, "default");
-  revalidateTag(`loss-reasons-${companyId}`, "default");
+  revalidateTag(`pipelines-${companyId}`, {});
+  revalidateTag(`stages-${companyId}`, {});
+  revalidateTag(`loss-reasons-${companyId}`, {});
 }
 
 // ─── Reads ─────────────────────────────────────────────────────────────
 
 async function _getPipelines(companyId: string): Promise<Pipeline[]> {
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { data, error } = await sb
     .from("pipelines")
     .select("*")
@@ -37,7 +38,7 @@ export async function getPipelines(): Promise<Pipeline[]> {
 }
 
 async function _getStages(companyId: string, pipelineId?: string): Promise<PipelineStage[]> {
-  const sb = await createClient();
+  const sb = createAdminClient();
   if (pipelineId) {
     const { data, error } = await sb
       .from("pipeline_stages")
@@ -88,7 +89,7 @@ export async function getDeals(): Promise<Deal[]> {
 }
 
 async function _getLossReasons(companyId: string): Promise<LossReason[]> {
-  const sb = await createClient();
+  const sb = createAdminClient();
   const { data, error } = await sb
     .from("loss_reasons")
     .select("*")

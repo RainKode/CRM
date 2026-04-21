@@ -2,12 +2,13 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Folder, FolderWithCounts } from "@/lib/types";
 
 // ----- Queries -------------------------------------------------------
 
 async function _getFolders(companyId: string): Promise<FolderWithCounts[]> {
-  const sb = await createClient();
+  const sb = createAdminClient();
 
   // Aggregate counts in a single query
   const { data, error } = await sb.rpc("get_folders_with_counts");
@@ -50,7 +51,7 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
 async function bustFoldersCache() {
   const companyId = await getActiveCompanyId();
   revalidatePath("/folders");
-  revalidateTag(`folders-${companyId}`, "default");
+  revalidateTag(`folders-${companyId}`, {});
 }
 
 export async function getFolder(id: string): Promise<Folder | null> {
