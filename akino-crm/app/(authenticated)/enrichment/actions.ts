@@ -66,6 +66,21 @@ export async function createBatch(input: {
   } = await sb.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Pre-filter: exclude leads already in an active (incomplete) batch.
+  // The partial unique index uniq_lead_active_batch prevents a lead from
+  // appearing in more than one active batch — inserting one would throw.
+  let freeIds = input.lead_ids;
+  if (input.lead_ids.length > 0) {
+    const { data: activeBatchLeads, error: activeErr } = await sb
+      .from("batch_leads")
+      .select("lead_id")
+      .eq("is_completed", false)
+      .in("lead_id", input.lead_ids);
+    if (activeErr) throw activeErr;
+    const alreadyActiveSet = new Set((activeBatchLeads ?? []).map((r) => r.lead_id));
+    freeIds = input.lead_ids.filter((id) => !alreadyActiveSet.has(id));
+  }
+
   const { data: batch, error } = await sb
     .from("batches")
     .insert({
@@ -81,15 +96,23 @@ export async function createBatch(input: {
     .single();
   if (error) throw error;
 
-  // Insert batch_leads
-  if (input.lead_ids.length > 0) {
-    const { error: blErr } = await sb.from("batch_leads").insert(
-      input.lead_ids.map((lid) => ({
+  // Insert batch_leads with upsert to guard against intra-payload dupes.
+  if (freeIds.length > 0) {
+    const { error: blErr } = await sb.from("batch_leads").upsert(
+      freeIds.map((lid) => ({
         batch_id: batch.id,
         lead_id: lid,
-      }))
+      })),
+      { onConflict: "batch_id,lead_id", ignoreDuplicates: true }
     );
-    if (blErr) throw blErr;
+    if (blErr) {
+      // Best-effort rollback: remove the orphaned batch row.
+      await sb.from("batches").delete().eq("id", batch.id);
+      const pg = blErr as { code?: string; message?: string; details?: string };
+      const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
+      console.error("createBatch: batch_leads insert failed for batch", batch.id, blErr);
+      throw new Error(`Failed to assign leads to batch "${input.name}": ${msg}`);
+    }
   }
 
   revalidatePath("/enrichment");
@@ -126,19 +149,43 @@ export async function createMultipleBatches(input: {
   batch_size: number;
   sort_by_field?: string;
   filter_by_field?: string;
-}) {
+}): Promise<{ created: Batch[]; skippedLeadCount: number }> {
   const sb = await createClient();
   const {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { lead_ids, batch_size, name_prefix, folder_id } = input;
-  const totalBatches = Math.ceil(lead_ids.length / batch_size);
+  const { batch_size, name_prefix, folder_id } = input;
+
+  // Pre-filter: exclude leads already in an active (incomplete) batch.
+  // The partial unique index uniq_lead_active_batch prevents a lead from
+  // appearing in more than one active batch — inserting one would throw,
+  // leaving an empty ghost batch row behind.
+  let freeIds = input.lead_ids;
+  if (input.lead_ids.length > 0) {
+    const { data: activeBatchLeads, error: activeErr } = await sb
+      .from("batch_leads")
+      .select("lead_id")
+      .eq("is_completed", false)
+      .in("lead_id", input.lead_ids);
+    if (activeErr) throw activeErr;
+    const alreadyActiveSet = new Set((activeBatchLeads ?? []).map((r) => r.lead_id));
+    freeIds = input.lead_ids.filter((id) => !alreadyActiveSet.has(id));
+  }
+
+  const skippedLeadCount = input.lead_ids.length - freeIds.length;
+
+  if (freeIds.length === 0) {
+    revalidatePath("/enrichment");
+    return { created: [], skippedLeadCount };
+  }
+
+  const totalBatches = Math.ceil(freeIds.length / batch_size);
   const created: Batch[] = [];
 
   for (let i = 0; i < totalBatches; i++) {
-    const chunk = lead_ids.slice(i * batch_size, (i + 1) * batch_size);
+    const chunk = freeIds.slice(i * batch_size, (i + 1) * batch_size);
     const batchName = `${name_prefix} - Batch #${i + 1}`;
 
     const { data: batch, error } = await sb
@@ -154,13 +201,30 @@ export async function createMultipleBatches(input: {
       .single();
     if (error) throw error;
 
-    // Insert batch_leads in chunks of 500
+    // Insert batch_leads in chunks of 500.
+    // Upsert with ignoreDuplicates guards against intra-payload dupes.
+    // If the insert still fails, roll back the just-created batch row so
+    // no empty ghost batches accumulate.
+    let batchLeadErr: unknown = null;
     for (let j = 0; j < chunk.length; j += 500) {
       const slice = chunk.slice(j, j + 500);
-      const { error: blErr } = await sb.from("batch_leads").insert(
-        slice.map((lid) => ({ batch_id: batch.id, lead_id: lid }))
+      const { error: blErr } = await sb.from("batch_leads").upsert(
+        slice.map((lid) => ({ batch_id: batch.id, lead_id: lid })),
+        { onConflict: "batch_id,lead_id", ignoreDuplicates: true }
       );
-      if (blErr) throw blErr;
+      if (blErr) {
+        batchLeadErr = blErr;
+        break;
+      }
+    }
+
+    if (batchLeadErr) {
+      // Best-effort rollback: remove the empty batch row.
+      await sb.from("batches").delete().eq("id", batch.id);
+      const pg = batchLeadErr as { code?: string; message?: string; details?: string };
+      const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
+      console.error("createMultipleBatches: batch_leads insert failed for batch", batch.id, batchLeadErr);
+      throw new Error(`Failed to assign leads to batch "${batchName}": ${msg}`);
     }
 
     created.push(batch as Batch);
@@ -175,7 +239,7 @@ export async function createMultipleBatches(input: {
   }
 
   revalidatePath("/enrichment");
-  return created;
+  return { created, skippedLeadCount };
 }
 
 export async function getBatchLeads(
@@ -573,27 +637,45 @@ export async function deleteBatch(input: {
     .select("batch_id", { count: "exact", head: true })
     .eq("batch_id", batch.id);
 
-  // Archive the auto-created pipeline for this batch BEFORE deleting the batch
-  // row. Once the batch row is gone the FK becomes null and we can't find it.
-  await sb
-    .from("pipelines")
-    .update({ is_archived: true })
-    .eq("batch_id", batch.id);
+  try {
+    // Archive the auto-created pipeline for this batch BEFORE deleting the batch
+    // row. Once the batch row is gone the FK becomes null and we can't find it.
+    // Non-fatal: if RLS denies the update we log it and proceed with deletion.
+    const { error: archErr } = await sb
+      .from("pipelines")
+      .update({ is_archived: true })
+      .eq("batch_id", batch.id);
+    if (archErr) {
+      console.error("deleteBatch: pipeline archive failed (non-fatal)", archErr);
+    }
 
-  // Delete. batch_leads has `on delete cascade`, so deleting the batch
-  // row is sufficient. We still delete batch_leads first as defence in
-  // depth in case the FK is ever changed.
-  const { error: blErr } = await sb
-    .from("batch_leads")
-    .delete()
-    .eq("batch_id", batch.id);
-  if (blErr) throw blErr;
+    // Delete. batch_leads has `on delete cascade`, so deleting the batch
+    // row is sufficient. We still delete batch_leads first as defence in
+    // depth in case the FK is ever changed.
+    const { error: blErr } = await sb
+      .from("batch_leads")
+      .delete()
+      .eq("batch_id", batch.id);
+    if (blErr) {
+      const pg = blErr as { code?: string; message?: string; details?: string };
+      const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
+      throw new Error(`Failed to delete batch leads: ${msg}`);
+    }
 
-  const { error: delErr } = await sb
-    .from("batches")
-    .delete()
-    .eq("id", batch.id);
-  if (delErr) throw delErr;
+    const { error: delErr } = await sb
+      .from("batches")
+      .delete()
+      .eq("id", batch.id);
+    if (delErr) {
+      const pg = delErr as { code?: string; message?: string; details?: string };
+      const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
+      throw new Error(`Failed to delete batch: ${msg}`);
+    }
+  } catch (err) {
+    console.error("deleteBatch: error deleting batch", input.batchId, err);
+    if (err instanceof Error) throw err;
+    throw new Error("Unexpected error during batch deletion.");
+  }
 
   revalidatePath("/enrichment");
   revalidatePath("/pipeline");

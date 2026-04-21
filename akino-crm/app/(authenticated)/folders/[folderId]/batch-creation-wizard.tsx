@@ -58,6 +58,7 @@ export function BatchCreationWizard({
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [skippedCount, setSkippedCount] = useState<number>(0);
 
   const effectiveCount = filteredCount ?? totalCount;
   const totalBatches = batchSize > 0 ? Math.ceil(effectiveCount / batchSize) : 0;
@@ -116,9 +117,10 @@ export function BatchCreationWizard({
     if (filteredIds.length === 0 || batchSize <= 0) return;
     setIsCreating(true);
     setCreateError(null);
+    setSkippedCount(0);
     startTransition(async () => {
       try {
-        await createMultipleBatches({
+        const result = await createMultipleBatches({
           folder_id: folder.id,
           name_prefix: namePrefix || folder.name,
           lead_ids: filteredIds,
@@ -126,8 +128,15 @@ export function BatchCreationWizard({
           sort_by_field: sortField || undefined,
           filter_by_field: filterField || undefined,
         });
-        onClose();
-        router.push("/enrichment");
+        if (result.skippedLeadCount > 0) {
+          // Stay open so the user can see the skip notice before closing.
+          setSkippedCount(result.skippedLeadCount);
+          setIsCreating(false);
+          router.push("/enrichment");
+        } else {
+          onClose();
+          router.push("/enrichment");
+        }
       } catch (err) {
         console.error("Batch creation failed:", err);
         setCreateError(
@@ -420,6 +429,16 @@ export function BatchCreationWizard({
                 </div>
               )}
 
+              {skippedCount > 0 && (
+                <div className="rounded-2xl bg-(--color-accent)/10 border-2 border-(--color-accent)/20 p-4">
+                  <p className="text-sm font-medium text-(--color-accent)">
+                    Batches created.{" "}
+                    {skippedCount} lead{skippedCount === 1 ? " was" : "s were"} already in active batches and{" "}
+                    {skippedCount === 1 ? "was" : "were"} skipped.
+                  </p>
+                </div>
+              )}
+
               {/* Batch list preview */}
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {Array.from({ length: Math.min(totalBatches, 10) }, (_, i) => {
@@ -489,16 +508,22 @@ export function BatchCreationWizard({
               </Button>
             )}
             {step === "review" && (
-              <Button
-                size="sm"
-                onClick={handleCreate}
-                disabled={isCreating || filteredIds.length === 0}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                {isCreating
-                  ? "Creating…"
-                  : `Create ${totalBatches} Batch${totalBatches > 1 ? "es" : ""}`}
-              </Button>
+              skippedCount > 0 ? (
+                <Button size="sm" onClick={onClose}>
+                  Done
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleCreate}
+                  disabled={isCreating || filteredIds.length === 0}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {isCreating
+                    ? "Creating…"
+                    : `Create ${totalBatches} Batch${totalBatches > 1 ? "es" : ""}`}
+                </Button>
+              )
             )}
           </div>
         </div>
