@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Send, X, Loader2, Eye, MousePointerClick, Clock } from "lucide-react";
+import { Send, X, Loader2, Eye, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendEmail } from "./compose-actions";
@@ -39,7 +39,6 @@ export function ReplyComposer({
   const [body, setBody] = useState<string>("");
   const [trackOpens, setTrackOpens] = useState(true);
   const [trackClicks, setTrackClicks] = useState(true);
-  const [scheduledAt, setScheduledAt] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [sending, startSending] = useTransition();
 
@@ -79,7 +78,6 @@ export function ReplyComposer({
         leadId: thread.lead_id,
         trackOpens,
         trackClicks,
-        scheduledSendAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       });
       if (!res.ok) {
         setError(res.error);
@@ -164,24 +162,6 @@ export function ReplyComposer({
               <MousePointerClick className="h-3 w-3" />
               Track clicks
             </label>
-            <label className="flex items-center gap-1.5 cursor-pointer hover:text-(--color-fg)">
-              <Clock className="h-3 w-3" />
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="bg-(--color-surface-2) border border-(--color-card-border) rounded px-2 py-0.5 text-xs"
-              />
-              {scheduledAt && (
-                <button
-                  type="button"
-                  onClick={() => setScheduledAt("")}
-                  className="text-(--color-fg-muted) hover:text-(--color-fg)"
-                >
-                  ×
-                </button>
-              )}
-            </label>
           </div>
 
           <Button onClick={handleSend} disabled={sending}>
@@ -190,7 +170,7 @@ export function ReplyComposer({
             ) : (
               <Send className="h-3.5 w-3.5" />
             )}
-            {scheduledAt ? "Schedule" : "Send"}
+            Send
           </Button>
         </div>
       </div>

@@ -18,11 +18,10 @@ export type ComposeInput = {
   trackOpens?: boolean;
   trackClicks?: boolean;
   templateId?: string | null;
-  scheduledSendAt?: string | null;   // ISO — if set, store as 'scheduled' and defer to cron
 };
 
 export type ComposeResult =
-  | { ok: true; message_id: string; thread_id: string; scheduled?: boolean }
+  | { ok: true; message_id: string; thread_id: string }
   | { ok: false; error: string };
 
 export async function sendEmail(input: ComposeInput): Promise<ComposeResult> {
@@ -73,67 +72,6 @@ export async function sendEmail(input: ComposeInput): Promise<ComposeResult> {
       .eq("id", input.replyToMessageId)
       .maybeSingle();
     replyToUnipileMessageId = (parent?.unipile_message_id as string) ?? null;
-  }
-
-  // --- Scheduled send branch: persist a 'scheduled' message row and return.
-  // The cron at /api/cron/scheduled-sends will call Unipile when it's due.
-  if (input.scheduledSendAt) {
-    const when = new Date(input.scheduledSendAt);
-    if (isNaN(when.getTime()) || when.getTime() < Date.now() + 60_000) {
-      return { ok: false, error: "Schedule time must be at least 1 minute in the future" };
-    }
-
-    // Create or reuse a thread for the scheduled send
-    let threadId = input.threadId ?? null;
-    if (!threadId) {
-      const participants = Array.from(
-        new Set([
-          account.email_address.toLowerCase(),
-          ...input.to.map((e) => e.toLowerCase()),
-          ...(input.cc ?? []).map((e) => e.toLowerCase()),
-        ]),
-      );
-      const { data: thr, error: terr } = await sb
-        .from("email_threads")
-        .insert({
-          company_id: companyId,
-          deal_id: input.dealId ?? null,
-          lead_id: input.leadId ?? null,
-          subject: input.subject,
-          participants,
-          last_message_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      if (terr || !thr) return { ok: false, error: terr?.message ?? "Failed to create thread" };
-      threadId = thr.id as string;
-    }
-
-    const { data: msg, error: merr } = await sb
-      .from("email_messages")
-      .insert({
-        company_id: companyId,
-        thread_id: threadId,
-        direction: "outbound",
-        status: "scheduled",
-        scheduled_send_at: when.toISOString(),
-        from_address: account.email_address,
-        to_addresses: input.to,
-        cc_addresses: input.cc ?? [],
-        bcc_addresses: input.bcc ?? [],
-        subject: input.subject,
-        body_html: input.bodyHtml,
-        sent_by_user_id: user.id,
-        sent_from_account_id: account.id,
-        template_id: input.templateId ?? null,
-        is_read: true,
-      })
-      .select("id")
-      .single();
-    if (merr || !msg) return { ok: false, error: merr?.message ?? "Failed to schedule" };
-
-    revalidatePath("/inbox");
-    return { ok: true, scheduled: true, message_id: msg.id as string, thread_id: threadId };
   }
 
   try {
@@ -187,58 +125,4 @@ export async function getPrimaryAccount(): Promise<{
     .maybeSingle();
 
   return (data as { id: string; email_address: string } | null) ?? null;
-}
-
-/** Cancel a scheduled send. Only deletes rows still in 'scheduled' status. */
-export async function cancelScheduledEmail(
-  messageId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const sb = await createClient();
-  const companyId = await getActiveCompanyId();
-  const { error } = await sb
-    .from("email_messages")
-    .delete()
-    .eq("id", messageId)
-    .eq("company_id", companyId)
-    .eq("status", "scheduled");
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/inbox");
-  return { ok: true };
-}
-
-export type ScheduledSend = {
-  id: string;
-  subject: string;
-  to_addresses: string[];
-  scheduled_send_at: string;
-  thread_id: string;
-  deal_id: string | null;
-};
-
-/** Upcoming scheduled sends for the current company. */
-export async function listScheduledSends(): Promise<ScheduledSend[]> {
-  const sb = await createClient();
-  const companyId = await getActiveCompanyId();
-
-  const { data, error } = await sb
-    .from("email_messages")
-    .select("id, subject, to_addresses, scheduled_send_at, thread_id, email_threads!inner(deal_id)")
-    .eq("company_id", companyId)
-    .eq("status", "scheduled")
-    .order("scheduled_send_at", { ascending: true });
-
-  if (error) return [];
-  return (data ?? []).map((r) => ({
-    id: r.id as string,
-    subject: (r.subject as string) ?? "",
-    to_addresses: (r.to_addresses as string[]) ?? [],
-    scheduled_send_at: r.scheduled_send_at as string,
-    thread_id: r.thread_id as string,
-    deal_id: (() => {
-      const et = (r as unknown as { email_threads?: { deal_id: string | null } | { deal_id: string | null }[] }).email_threads;
-      if (!et) return null;
-      if (Array.isArray(et)) return et[0]?.deal_id ?? null;
-      return et.deal_id ?? null;
-    })(),
-  }));
 }
