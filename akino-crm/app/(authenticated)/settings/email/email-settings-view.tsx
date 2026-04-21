@@ -2,9 +2,16 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Plug, Unplug, Loader2, AlertCircle } from "lucide-react";
+import { Mail, Plug, Unplug, Loader2, AlertCircle, KeyRound, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { beginConnectMailbox, disconnectMailbox, listAccounts, type EmailAccount } from "./actions";
+import { Input } from "@/components/ui/input";
+import {
+  beginConnectMailbox,
+  connectAccountById,
+  disconnectMailbox,
+  listAccounts,
+  type EmailAccount,
+} from "./actions";
 
 const PROVIDERS: Array<{ id: "gmail" | "outlook" | "imap"; label: string }> = [
   { id: "gmail", label: "Gmail" },
@@ -28,6 +35,8 @@ export function EmailSettingsView({
   const [banner, setBanner] = useState<string | null>(
     justConnected ? "Mailbox connected. Backfilling recent messages…" : null,
   );
+  const [manualId, setManualId] = useState("");
+  const [linking, startLinking] = useTransition();
 
   // Poll sync progress while any account is backfilling
   useEffect(() => {
@@ -60,6 +69,26 @@ export function EmailSettingsView({
     if (!confirm("Disconnect this mailbox? Existing threads and messages stay in the CRM.")) return;
     await disconnectMailbox(id);
     setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, status: "disconnected" } : a)));
+  }
+
+  function handleManualLink() {
+    setError(null);
+    const id = manualId.trim();
+    if (!id) {
+      setError("Paste a Unipile account ID");
+      return;
+    }
+    startLinking(async () => {
+      const res = await connectAccountById(id);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setManualId("");
+      setBanner(`Linked ${res.email}. Backfilling recent messages…`);
+      const fresh = await listAccounts();
+      setAccounts(fresh);
+    });
   }
 
   return (
@@ -172,6 +201,44 @@ export function EmailSettingsView({
                 {p.label}
               </button>
             ))}
+          </div>
+
+          {/* Manual: paste Unipile account ID */}
+          <div className="mt-6 pt-6 border-t border-(--color-card-border)">
+            <div className="flex items-center gap-2 mb-1">
+              <KeyRound className="h-4 w-4 text-(--color-fg-subtle)" />
+              <h4 className="text-sm font-semibold text-(--color-fg)">
+                Or link by Unipile account ID
+              </h4>
+            </div>
+            <p className="text-xs text-(--color-fg-muted) mb-3">
+              Already connected an account inside the Unipile dashboard? Paste its
+              account ID here to link it to this workspace.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={manualId}
+                onChange={(e) => setManualId(e.target.value)}
+                placeholder="e.g. abc12345-6789-..."
+                disabled={linking}
+                className="font-mono text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleManualLink();
+                }}
+              />
+              <Button
+                onClick={handleManualLink}
+                disabled={linking || !manualId.trim()}
+                className="shrink-0"
+              >
+                {linking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                Link account
+              </Button>
+            </div>
           </div>
         </div>
       </div>
