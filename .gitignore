@@ -2,6 +2,9 @@
 .vscode/mcp.json
 .env*
 
+# Vercel
+.vercel
+
 # Python caches
 __pycache__/
 *.pyc
