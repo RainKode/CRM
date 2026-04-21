@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Batch, BatchLead, Lead, FieldDefinition } from "@/lib/types";
 import { createPipelineForBatch } from "@/app/(authenticated)/pipeline/actions";
+import { BATCH_DELETE_PHRASE } from "./constants";
 
 /**
  * Aggregate batch-level counts from a flat list of batch_leads rows.
@@ -508,7 +509,9 @@ export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
 //   3. The typed `confirmName` must exactly match the batch's name, AND
 //      the typed `confirmPhrase` must equal "DELETE FOREVER".
 // Any failure throws with a specific reason so the UI can surface it.
-export const BATCH_DELETE_PHRASE = "DELETE FOREVER";
+//
+// Note: BATCH_DELETE_PHRASE lives in ./constants.ts because "use server"
+// files may only export async functions.
 
 export async function deleteBatch(input: {
   batchId: string;

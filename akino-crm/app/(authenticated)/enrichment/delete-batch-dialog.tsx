@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { deleteBatch, BATCH_DELETE_PHRASE } from "./actions";
+import { deleteBatch } from "./actions";
+import { BATCH_DELETE_PHRASE } from "./constants";
 
 type Props = {
   open: boolean;
