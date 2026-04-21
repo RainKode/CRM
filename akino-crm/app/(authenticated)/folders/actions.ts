@@ -50,7 +50,7 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
 async function bustFoldersCache() {
   const companyId = await getActiveCompanyId();
   revalidatePath("/folders");
-  revalidateTag(`folders-${companyId}`);
+  revalidateTag(`folders-${companyId}`, "default");
 }
 
 export async function getFolder(id: string): Promise<Folder | null> {

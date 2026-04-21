@@ -8,9 +8,9 @@ import type { Deal, PipelineStage, LossReason, Activity, Pipeline, Lead } from "
 async function bustPipelineCache() {
   const companyId = await getActiveCompanyId();
   revalidatePath("/pipeline");
-  revalidateTag(`pipelines-${companyId}`);
-  revalidateTag(`stages-${companyId}`);
-  revalidateTag(`loss-reasons-${companyId}`);
+  revalidateTag(`pipelines-${companyId}`, "default");
+  revalidateTag(`stages-${companyId}`, "default");
+  revalidateTag(`loss-reasons-${companyId}`, "default");
 }
 
 // ─── Reads ─────────────────────────────────────────────────────────────

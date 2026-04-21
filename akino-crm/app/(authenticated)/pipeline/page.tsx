@@ -2,13 +2,7 @@ import { Suspense } from "react";
 import { getStages, getDeals, getLossReasons, getPipelines } from "./actions";
 import { listSavedViews } from "../saved-views/actions";
 import { createClient } from "@/lib/supabase/server";
-import dynamic from "next/dynamic";
-import PipelineLoading from "./loading";
-
-const PipelineView = dynamic(
-  () => import("./pipeline-view").then((m) => ({ default: m.PipelineView })),
-  { loading: () => <PipelineLoading />, ssr: false }
-);
+import PipelineViewClient from "./pipeline-view-client";
 
 export default async function PipelinePage() {
   const [pipelines, stages, deals, lossReasons, savedViews, userRes] =
@@ -23,7 +17,7 @@ export default async function PipelinePage() {
 
   return (
     <Suspense>
-      <PipelineView
+      <PipelineViewClient
         pipelines={pipelines}
         stages={stages}
         initialDeals={deals}

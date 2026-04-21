@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { PipelineStage, Activity, Notification, Task } from "@/lib/types";
+import type { PipelineStage, Activity, Notification, Task, Deal } from "@/lib/types";
 
 export async function getDashboardData() {
   const sb = await createClient();
