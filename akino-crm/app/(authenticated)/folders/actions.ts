@@ -14,15 +14,19 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
   const { data, error } = await sb.rpc("get_folders_with_counts");
 
   if (error) {
+    console.error("[getFolders] RPC get_folders_with_counts failed:", error);
     // Fallback: simple query if RPC not yet deployed
     const { data: folders, error: fErr } = await sb
       .from("folders")
       .select("*")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
-    if (fErr) throw fErr;
-    return (folders as Folder[]).map((f) => ({
-      ...f,
+    if (fErr) {
+      console.error("[getFolders] fallback folders query failed:", fErr);
+      throw new Error(`Folders query failed: ${fErr.message}`);
+    }
+    return (folders ?? []).map((f) => ({
+      ...(f as Folder),
       lead_count: 0,
       enriched_count: 0,
       pipeline_count: 0,
@@ -30,7 +34,9 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
   }
 
   // Filter by company_id (RPC may not filter)
-  return (data as FolderWithCounts[]).filter((f) => f.company_id === companyId);
+  return ((data ?? []) as FolderWithCounts[]).filter(
+    (f) => f.company_id === companyId,
+  );
 }
 
 export async function getFolder(id: string): Promise<Folder | null> {

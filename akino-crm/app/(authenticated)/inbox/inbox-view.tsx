@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Paperclip,
   Loader2,
+  Reply,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -23,6 +24,8 @@ import {
   type InboxThread,
   type ThreadDetail,
 } from "./actions";
+import { ReplyComposer } from "./reply-composer";
+import { getPrimaryAccount } from "./compose-actions";
 
 const TABS: Array<{ id: InboxFilter; label: string; icon: React.ElementType }> = [
   { id: "primary", label: "Primary", icon: Inbox },
@@ -49,7 +52,16 @@ export function InboxView({
   );
   const [detail, setDetail] = useState<ThreadDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [primaryAccount, setPrimaryAccount] = useState<{
+    id: string;
+    email_address: string;
+  } | null>(null);
   const [, startTransition] = useTransition();
+
+  // Load primary account once
+  useEffect(() => {
+    getPrimaryAccount().then(setPrimaryAccount);
+  }, []);
 
   // Load threads when tab changes
   useEffect(() => {
@@ -146,7 +158,15 @@ export function InboxView({
             <Loader2 className="h-6 w-6 animate-spin text-(--color-fg-subtle)" />
           </div>
         ) : detail ? (
-          <ThreadDetailView detail={detail} />
+          <ThreadDetailView
+            detail={detail}
+            primaryEmail={primaryAccount?.email_address ?? null}
+            onSent={() => {
+              // Refresh the thread after send
+              getThread(detail.id).then((d) => setDetail(d));
+              listThreads(tab).then(setThreads);
+            }}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-sm text-(--color-fg-subtle)">
             Select a thread
@@ -224,7 +244,16 @@ function ThreadRow({
   );
 }
 
-function ThreadDetailView({ detail }: { detail: ThreadDetail }) {
+function ThreadDetailView({
+  detail,
+  primaryEmail,
+  onSent,
+}: {
+  detail: ThreadDetail;
+  primaryEmail: string | null;
+  onSent: () => void;
+}) {
+  const [showReply, setShowReply] = useState(false);
   return (
     <div className="max-w-3xl mx-auto px-8 py-8">
       <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-(--color-card-border)">
@@ -236,15 +265,26 @@ function ThreadDetailView({ detail }: { detail: ThreadDetail }) {
             {detail.participants.join(", ")}
           </p>
         </div>
-        {detail.deal_id && (
-          <Link
-            href={`/pipeline?deal=${detail.deal_id}`}
-            className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent) hover:underline shrink-0"
-          >
-            View deal
-            <ChevronRight className="h-3 w-3" />
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {!showReply && (
+            <button
+              onClick={() => setShowReply(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent-fg) bg-(--color-accent) hover:opacity-90 px-3 py-1.5 rounded-full shadow-(--shadow-btn)"
+            >
+              <Reply className="h-3 w-3" />
+              Reply
+            </button>
+          )}
+          {detail.deal_id && (
+            <Link
+              href={`/pipeline?deal=${detail.deal_id}`}
+              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent) hover:underline"
+            >
+              View deal
+              <ChevronRight className="h-3 w-3" />
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -252,6 +292,18 @@ function ThreadDetailView({ detail }: { detail: ThreadDetail }) {
           <MessageCard key={m.id} message={m} />
         ))}
       </div>
+
+      {showReply && (
+        <ReplyComposer
+          thread={detail}
+          fromAddress={primaryEmail}
+          onCancel={() => setShowReply(false)}
+          onSent={() => {
+            setShowReply(false);
+            onSent();
+          }}
+        />
+      )}
     </div>
   );
 }

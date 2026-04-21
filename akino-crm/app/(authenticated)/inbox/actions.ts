@@ -41,6 +41,7 @@ export type ThreadDetail = {
   participants: string[];
   deal_id: string | null;
   deal_name: string | null;
+  lead_id: string | null;
   messages: ThreadMessage[];
 };
 
@@ -93,7 +94,7 @@ export async function getThread(threadId: string): Promise<ThreadDetail | null> 
   const { data: thread, error: terr } = await sb
     .from("email_threads")
     .select(
-      `id, subject, participants, deal_id,
+      `id, subject, participants, deal_id, lead_id,
        deals:deal_id ( contact_name )`,
     )
     .eq("id", threadId)
@@ -124,6 +125,7 @@ export async function getThread(threadId: string): Promise<ThreadDetail | null> 
     deal_id: (thread.deal_id as string | null) ?? null,
     deal_name:
       (thread as { deals?: { contact_name?: string } }).deals?.contact_name ?? null,
+    lead_id: (thread.lead_id as string | null) ?? null,
     messages: (messages ?? []) as ThreadMessage[],
   };
 }

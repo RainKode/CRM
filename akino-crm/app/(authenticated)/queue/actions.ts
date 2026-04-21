@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Task, Activity, Deal } from "@/lib/types";
 
-export type QueueItemKind = "task" | "scheduled_activity" | "follow_up";
+export type QueueItemKind = "task" | "scheduled_activity" | "follow_up" | "awaiting_reply";
 
 export type QueueItem =
   | {
@@ -32,6 +32,16 @@ export type QueueItem =
       kind: "follow_up";
       id: string;
       due_at: string;
+      title: string;
+      subtitle: string | null;
+      deal_id: string;
+      deal_name: string;
+      overdue: boolean;
+    }
+  | {
+      kind: "awaiting_reply";
+      id: string;
+      due_at: string;        // last_outbound_at
       title: string;
       subtitle: string | null;
       deal_id: string;
@@ -160,6 +170,41 @@ export async function getQueueItems(): Promise<QueueItem[]> {
       deal_id: d.id,
       deal_name: name,
       overdue: new Date(d.follow_up_at!) < startOfToday,
+    });
+  }
+
+  // Awaiting-reply deals: last_outbound > 3 days ago and no reply yet.
+  // These are a softer signal than follow_up_at, so we fetch separately.
+  const cutoff3d = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
+  const { data: awaiting } = await sb
+    .from("deals")
+    .select(
+      "id, contact_name, company, last_outbound_at, email_status",
+    )
+    .eq("company_id", companyId)
+    .eq("email_status", "awaiting_reply")
+    .is("won_at", null)
+    .is("lost_at", null)
+    .not("last_outbound_at", "is", null)
+    .lte("last_outbound_at", cutoff3d)
+    .order("last_outbound_at", { ascending: true })
+    .limit(50);
+
+  for (const d of awaiting ?? []) {
+    const name = d.company || d.contact_name || "Deal";
+    const last = d.last_outbound_at as string;
+    const days = Math.floor(
+      (Date.now() - new Date(last).getTime()) / (24 * 3600 * 1000),
+    );
+    items.push({
+      kind: "awaiting_reply",
+      id: d.id,
+      due_at: last,
+      title: `Bump ${name}`,
+      subtitle: `No reply for ${days}d · last sent ${new Date(last).toLocaleDateString()}`,
+      deal_id: d.id,
+      deal_name: name,
+      overdue: days > 7,
     });
   }
 

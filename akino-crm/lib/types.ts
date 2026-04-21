@@ -200,6 +200,10 @@ export interface Deal {
   updated_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
+  email_status?: string | null;
+  last_inbound_at?: string | null;
+  last_outbound_at?: string | null;
+  auto_advance_on_reply?: boolean;
 }
 
 export interface Activity {

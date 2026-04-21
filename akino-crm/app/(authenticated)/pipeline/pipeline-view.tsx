@@ -43,6 +43,9 @@ import {
   ArrowRight,
   ChevronsRight,
   Download,
+  MailCheck,
+  MailQuestion,
+  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -181,15 +184,18 @@ function DealCard({
           <div className={cn("w-1.5 h-1.5 rounded-full", activityDotColor(deal.last_activity_at))} />
           <span>{deal.last_activity_at ? relativeTime(deal.last_activity_at) : "No activity"}</span>
         </div>
-        {deal.follow_up_at && (
-          <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
-            <Calendar className="h-3.5 w-3.5" />
-            {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-            })}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <EmailStatusBadge deal={deal} />
+          {deal.follow_up_at && (
+            <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
+              <Calendar className="h-3.5 w-3.5" />
+              {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick-log row — shows on hover; opens popover anchored to the button */}
@@ -215,6 +221,64 @@ function DealCard({
       )}
     </div>
   );
+}
+
+// ─────────────────────────────────────────────
+// Email status badge on DealCard
+// ─────────────────────────────────────────────
+function EmailStatusBadge({ deal }: { deal: Deal }) {
+  const status = deal.email_status ?? "no_contact";
+  if (status === "no_contact") return null;
+
+  const lastInbound = deal.last_inbound_at ? new Date(deal.last_inbound_at) : null;
+  const lastOutbound = deal.last_outbound_at ? new Date(deal.last_outbound_at) : null;
+
+  if (status === "replied" && lastInbound) {
+    return (
+      <span
+        className="flex items-center gap-1 text-xs font-semibold text-(--color-ok) bg-(--color-ok)/10 px-1.5 py-0.5 rounded-full"
+        title={`Replied ${relativeTime(lastInbound.toISOString())}`}
+      >
+        <MailCheck className="h-3 w-3" />
+        Replied
+      </span>
+    );
+  }
+
+  if (status === "awaiting_reply" && lastOutbound) {
+    const days = Math.floor(
+      (Date.now() - lastOutbound.getTime()) / (24 * 3600 * 1000),
+    );
+    const isStale = days > 3;
+    return (
+      <span
+        className={cn(
+          "flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-full",
+          isStale
+            ? "text-(--color-warn) bg-(--color-warn)/10"
+            : "text-(--color-fg-muted) bg-(--color-surface-3)",
+        )}
+        title={`Waiting on them · last sent ${relativeTime(lastOutbound.toISOString())}`}
+      >
+        <MailQuestion className="h-3 w-3" />
+        {days > 0 ? `${days}d` : "Sent"}
+      </span>
+    );
+  }
+
+  if (status === "stale") {
+    return (
+      <span
+        className="flex items-center gap-1 text-xs font-semibold text-(--color-fg-subtle) bg-(--color-surface-3) px-1.5 py-0.5 rounded-full"
+        title="No email activity for 14+ days"
+      >
+        <Moon className="h-3 w-3" />
+        Stale
+      </span>
+    );
+  }
+
+  return null;
 }
 
 // ─────────────────────────────────────────────
