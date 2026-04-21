@@ -1,14 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Folder, FolderWithCounts } from "@/lib/types";
 
 // ----- Queries -------------------------------------------------------
 
-export async function getFolders(): Promise<FolderWithCounts[]> {
+async function _getFolders(companyId: string): Promise<FolderWithCounts[]> {
   const sb = await createClient();
-  const companyId = await getActiveCompanyId();
 
   // Aggregate counts in a single query
   const { data, error } = await sb.rpc("get_folders_with_counts");
@@ -39,6 +38,21 @@ export async function getFolders(): Promise<FolderWithCounts[]> {
   );
 }
 
+export async function getFolders(): Promise<FolderWithCounts[]> {
+  const companyId = await getActiveCompanyId();
+  return unstable_cache(
+    () => _getFolders(companyId),
+    [`folders-${companyId}`],
+    { tags: [`folders-${companyId}`], revalidate: 300 }
+  )();
+}
+
+async function bustFoldersCache() {
+  const companyId = await getActiveCompanyId();
+  revalidatePath("/folders");
+  revalidateTag(`folders-${companyId}`);
+}
+
 export async function getFolder(id: string): Promise<Folder | null> {
   const sb = await createClient();
   const { data, error } = await sb
@@ -67,7 +81,7 @@ export async function createFolder(name: string, description?: string) {
     .single();
   if (error) throw error;
 
-  revalidatePath("/folders");
+  await bustFoldersCache();
   return data as Folder;
 }
 
@@ -75,14 +89,14 @@ export async function renameFolder(id: string, name: string) {
   const sb = await createClient();
   const { error } = await sb.from("folders").update({ name }).eq("id", id);
   if (error) throw error;
-  revalidatePath("/folders");
+  await bustFoldersCache();
 }
 
 export async function deleteFolder(id: string) {
   const sb = await createClient();
   const { error } = await sb.from("folders").delete().eq("id", id);
   if (error) throw error;
-  revalidatePath("/folders");
+  await bustFoldersCache();
 }
 
 export async function archiveFolder(id: string, archived: boolean) {
@@ -92,5 +106,5 @@ export async function archiveFolder(id: string, archived: boolean) {
     .update({ is_archived: archived })
     .eq("id", id);
   if (error) throw error;
-  revalidatePath("/folders");
+  await bustFoldersCache();
 }

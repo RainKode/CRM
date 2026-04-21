@@ -1,19 +1,22 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Deal, PipelineStage, LossReason, Activity, Pipeline, Lead } from "@/lib/types";
 
 /** Bust cached pipeline data + revalidate the page */
-function bustPipelineCache() {
+async function bustPipelineCache() {
+  const companyId = await getActiveCompanyId();
   revalidatePath("/pipeline");
+  revalidateTag(`pipelines-${companyId}`);
+  revalidateTag(`stages-${companyId}`);
+  revalidateTag(`loss-reasons-${companyId}`);
 }
 
 // ─── Reads ─────────────────────────────────────────────────────────────
 
-export async function getPipelines(): Promise<Pipeline[]> {
+async function _getPipelines(companyId: string): Promise<Pipeline[]> {
   const sb = await createClient();
-  const companyId = await getActiveCompanyId();
   const { data, error } = await sb
     .from("pipelines")
     .select("*")
@@ -24,7 +27,16 @@ export async function getPipelines(): Promise<Pipeline[]> {
   return data as Pipeline[];
 }
 
-export async function getStages(pipelineId?: string): Promise<PipelineStage[]> {
+export async function getPipelines(): Promise<Pipeline[]> {
+  const companyId = await getActiveCompanyId();
+  return unstable_cache(
+    () => _getPipelines(companyId),
+    [`pipelines-${companyId}`],
+    { tags: [`pipelines-${companyId}`], revalidate: 300 }
+  )();
+}
+
+async function _getStages(companyId: string, pipelineId?: string): Promise<PipelineStage[]> {
   const sb = await createClient();
   if (pipelineId) {
     const { data, error } = await sb
@@ -36,8 +48,6 @@ export async function getStages(pipelineId?: string): Promise<PipelineStage[]> {
     if (error) throw error;
     return data as PipelineStage[];
   }
-  // No pipelineId — scope to company's pipelines
-  const companyId = await getActiveCompanyId();
   const { data: pipelines } = await sb
     .from("pipelines")
     .select("id")
@@ -55,6 +65,16 @@ export async function getStages(pipelineId?: string): Promise<PipelineStage[]> {
   return data as PipelineStage[];
 }
 
+export async function getStages(pipelineId?: string): Promise<PipelineStage[]> {
+  const companyId = await getActiveCompanyId();
+  const cacheKey = pipelineId ? `stages-${companyId}-${pipelineId}` : `stages-${companyId}`;
+  return unstable_cache(
+    () => _getStages(companyId, pipelineId),
+    [cacheKey],
+    { tags: [`stages-${companyId}`], revalidate: 300 }
+  )();
+}
+
 export async function getDeals(): Promise<Deal[]> {
   const sb = await createClient();
   const companyId = await getActiveCompanyId();
@@ -67,9 +87,8 @@ export async function getDeals(): Promise<Deal[]> {
   return data as Deal[];
 }
 
-export async function getLossReasons(): Promise<LossReason[]> {
+async function _getLossReasons(companyId: string): Promise<LossReason[]> {
   const sb = await createClient();
-  const companyId = await getActiveCompanyId();
   const { data, error } = await sb
     .from("loss_reasons")
     .select("*")
@@ -78,6 +97,15 @@ export async function getLossReasons(): Promise<LossReason[]> {
     .order("position");
   if (error) throw error;
   return data as LossReason[];
+}
+
+export async function getLossReasons(): Promise<LossReason[]> {
+  const companyId = await getActiveCompanyId();
+  return unstable_cache(
+    () => _getLossReasons(companyId),
+    [`loss-reasons-${companyId}`],
+    { tags: [`loss-reasons-${companyId}`], revalidate: 300 }
+  )();
 }
 
 export async function getFolderName(folderId: string): Promise<string> {
@@ -157,7 +185,7 @@ export async function createDeal(input: {
     .select()
     .single();
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
   return data as Deal;
 }
 
@@ -231,7 +259,7 @@ export async function moveDeal(
     created_by: user?.id ?? null,
   });
 
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function logActivity(input: {
@@ -265,7 +293,7 @@ export async function logActivity(input: {
     created_by: user?.id ?? null,
   });
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 /**
@@ -279,7 +307,7 @@ export async function completeScheduledActivity(id: string) {
     .update({ status: "done", occurred_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function setFollowUp(
@@ -309,7 +337,7 @@ export async function setFollowUp(
     created_by: user?.id ?? null,
   });
 
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function markDealLost(dealId: string, lossReasonId: string) {
@@ -333,7 +361,7 @@ export async function markDealLost(dealId: string, lossReasonId: string) {
     .eq("id", dealId);
   if (error) throw error;
 
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function deleteDeal(dealId: string) {
@@ -349,7 +377,7 @@ export async function deleteDeal(dealId: string) {
     })
     .eq("id", dealId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
   revalidatePath("/trash");
 }
 
@@ -360,7 +388,7 @@ export async function updateDeal(
   const sb = await createClient();
   const { error } = await sb.from("deals").update(updates).eq("id", dealId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 // ─── Stage CRUD ────────────────────────────────────────────────────────
@@ -411,7 +439,7 @@ export async function createStage(name: string, pipelineId?: string) {
     .select()
     .single();
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
   return data as PipelineStage;
 }
 
@@ -425,7 +453,7 @@ export async function updateStage(
     .update(updates)
     .eq("id", stageId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function deleteStage(stageId: string) {
@@ -446,7 +474,7 @@ export async function deleteStage(stageId: string) {
     .update({ is_archived: true })
     .eq("id", stageId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function reorderStages(orderedIds: string[]) {
@@ -455,7 +483,7 @@ export async function reorderStages(orderedIds: string[]) {
     sb.from("pipeline_stages").update({ position: i }).eq("id", id)
   );
   await Promise.all(updates);
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 // ─── Pipeline CRUD ─────────────────────────────────────────────────────
@@ -485,7 +513,7 @@ export async function createPipeline(name: string): Promise<Pipeline> {
   ];
   await sb.from("pipeline_stages").insert(defaultStages);
 
-  bustPipelineCache();
+  await bustPipelineCache();
   return data as Pipeline;
 }
 
@@ -496,7 +524,7 @@ export async function renamePipeline(pipelineId: string, name: string) {
     .update({ name, updated_at: new Date().toISOString() })
     .eq("id", pipelineId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 export async function deletePipeline(pipelineId: string) {
@@ -515,7 +543,7 @@ export async function deletePipeline(pipelineId: string) {
     .update({ is_archived: true })
     .eq("id", pipelineId);
   if (error) throw error;
-  bustPipelineCache();
+  await bustPipelineCache();
 }
 
 // ─── Folder-grouped pipeline queries ───────────────────────────────────
@@ -695,6 +723,6 @@ export async function createPipelineForBatch(
     await sb.from("pipeline_stages").insert(defaultStages);
   }
 
-  bustPipelineCache();
+  await bustPipelineCache();
   return pipeline as Pipeline;
 }

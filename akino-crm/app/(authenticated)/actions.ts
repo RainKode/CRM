@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { Deal, PipelineStage, Activity, Notification, Task } from "@/lib/types";
+import type { PipelineStage, Activity, Notification, Task } from "@/lib/types";
 
 export async function getDashboardData() {
   const sb = await createClient();
@@ -19,7 +19,6 @@ export async function getDashboardData() {
     { data: stages },
     { data: deals },
     { data: activities },
-    { data: folders },
     { data: notifications },
   ] = await Promise.all([
     pipelineIds.length > 0
@@ -30,14 +29,13 @@ export async function getDashboardData() {
           .eq("is_archived", false)
           .order("position")
       : Promise.resolve({ data: [] as PipelineStage[] }),
-    sb.from("deals").select("*").eq("company_id", companyId).is("won_at", null).is("lost_at", null),
+    sb.from("deals").select("id, stage_id").eq("company_id", companyId).is("won_at", null).is("lost_at", null),
     sb
       .from("activities")
       .select("*, deals!inner(company_id)")
       .eq("deals.company_id", companyId)
       .order("occurred_at", { ascending: false })
       .limit(20),
-    sb.from("folders").select("id, name, is_archived").eq("company_id", companyId),
     sb
       .from("notifications")
       .select("*")
@@ -117,30 +115,20 @@ export async function getDashboardData() {
 
   // Stage counts
   const stageCounts: Record<string, number> = {};
-  for (const d of (deals ?? []) as Deal[]) {
+  for (const d of (deals ?? []) as { id: string; stage_id: string }[]) {
     stageCounts[d.stage_id] = (stageCounts[d.stage_id] ?? 0) + 1;
   }
 
-  // Folder lead counts
-  const folderIds = (folders ?? []).filter((f) => !f.is_archived).map((f) => f.id);
-  const folderStats: { id: string; name: string; total: number; enriched: number }[] = [];
-  for (const f of (folders ?? []).filter((f) => !f.is_archived)) {
-    const { count: total } = await sb
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .eq("folder_id", f.id);
-    const { count: enriched } = await sb
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .eq("folder_id", f.id)
-      .eq("status", "enriched");
-    folderStats.push({
+  // Folder lead counts — single RPC replaces N+1 loop
+  const { data: folderRpc } = await sb.rpc("get_folders_with_counts");
+  const folderStats = ((folderRpc ?? []) as { id: string; name: string; is_archived: boolean; lead_count: number; enriched_count: number }[])
+    .filter((f) => !f.is_archived)
+    .map((f) => ({
       id: f.id,
       name: f.name,
-      total: total ?? 0,
-      enriched: enriched ?? 0,
-    });
-  }
+      total: f.lead_count ?? 0,
+      enriched: f.enriched_count ?? 0,
+    }));
 
   return {
     stages: (stages ?? []) as PipelineStage[],

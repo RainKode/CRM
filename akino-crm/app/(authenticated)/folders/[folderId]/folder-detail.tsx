@@ -1,17 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Table2, Settings2, Upload, Sparkles } from "lucide-react";
+import { ArrowLeft, Table2, Settings2, Upload, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import type { Folder, FieldDefinition, Lead } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { LeadTable } from "./lead-table";
 import { FieldSchemaBuilder } from "./field-schema-builder";
 import { CsvUpload } from "./csv-upload";
 import { BatchCreationWizard } from "./batch-creation-wizard";
 import { UndoImportButton } from "./undo-import-button";
 import { DedupeKeysPanel } from "./dedupe-keys-panel";
+
+const LeadTable = dynamic(
+  () => import("./lead-table").then((m) => ({ default: m.LeadTable })),
+  {
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-(--color-fg-muted)" />
+      </div>
+    ),
+    ssr: false,
+  }
+);
 
 type Tab = "leads" | "schema" | "upload";
 

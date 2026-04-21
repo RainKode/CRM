@@ -40,19 +40,36 @@ export function EmailSettingsView({
   const [linking, startLinking] = useTransition();
   const [pingState, setPingState] = useState<Record<string, { status: "idle" | "checking" | "online" | "offline"; message?: string }>>({});
 
-  // Poll sync progress while any account is backfilling
+  // Poll sync progress while any account is backfilling — exponential backoff
   useEffect(() => {
     const hasActive = accounts.some((a) => a.sync_state === "backfilling");
     if (!hasActive) return;
-    const t = setInterval(async () => {
+
+    const MAX_POLLS = 40;
+    const BASE_MS = 3000;
+    const MAX_MS = 30000;
+    let polls = 0;
+    let tid: ReturnType<typeof setTimeout>;
+
+    async function poll() {
+      if (polls >= MAX_POLLS) {
+        setBanner("Sync is taking a while. Refresh the page later.");
+        return;
+      }
       const fresh = await listAccounts();
       setAccounts(fresh);
       if (!fresh.some((a) => a.sync_state === "backfilling")) {
         setBanner(null);
         router.refresh();
+        return;
       }
-    }, 3000);
-    return () => clearInterval(t);
+      const delay = Math.min(BASE_MS * Math.pow(1.5, polls), MAX_MS);
+      polls++;
+      tid = setTimeout(poll, delay);
+    }
+
+    tid = setTimeout(poll, BASE_MS);
+    return () => clearTimeout(tid);
   }, [accounts, router]);
 
   function handleConnect(provider: "gmail" | "outlook" | "imap") {

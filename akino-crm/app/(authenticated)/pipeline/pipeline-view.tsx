@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useTransition, useOptimistic, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   DndContext,
@@ -1789,8 +1789,13 @@ export function PipelineView({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  // Optimistic stage overrides: dealId → newStageId (for instant DnD feedback)
-  const [optimisticMoves, setOptimisticMoves] = useState<Record<string, string>>({});
+  // Optimistic deals — useOptimistic auto-reverts after transition settles
+  type OptMove = { dealId: string; newStageId: string };
+  const [optimisticDeals, applyOptimisticMove] = useOptimistic(
+    initialDeals,
+    (current: Deal[], { dealId, newStageId }: OptMove) =>
+      current.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d))
+  );
 
   // Pending Lost-stage move — shown in LossReasonDialog until confirmed/cancelled.
   // For single deal: { dealIds: [id], targetStageId }; for bulk: multiple ids.
@@ -1801,16 +1806,14 @@ export function PipelineView({
   } | null>(null);
 
   const deals = useMemo(() => {
-    let result = initialDeals.map((d) =>
-      optimisticMoves[d.id] ? { ...d, stage_id: optimisticMoves[d.id] } : d
-    );
+    let result = [...optimisticDeals];
     // Filter to current pipeline's stages
     const stageIds = new Set(pipelineStages.map((s) => s.id));
     result = result.filter((d) => stageIds.has(d.stage_id));
     if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
     if (filterStageId) result = result.filter((d) => d.stage_id === filterStageId);
     return result;
-  }, [initialDeals, optimisticMoves, showClosed, filterStageId, pipelineStages]);
+  }, [optimisticDeals, showClosed, filterStageId, pipelineStages]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
@@ -1922,16 +1925,10 @@ export function PipelineView({
         });
         return;
       }
-      // Optimistic: move card instantly in the UI
-      setOptimisticMoves((prev) => ({ ...prev, [dealId]: targetStageId }));
+      // Optimistic: move card instantly in the UI, auto-reverts on error
       startTransition(async () => {
+        applyOptimisticMove({ dealId, newStageId: targetStageId });
         await moveDeal(dealId, targetStageId);
-        // Clear optimistic override after server confirms (revalidation provides new data)
-        setOptimisticMoves((prev) => {
-          const next = { ...prev };
-          delete next[dealId];
-          return next;
-        });
       });
     }
   }
@@ -2445,28 +2442,22 @@ export function PipelineView({
         dealName={pendingLost?.dealName}
         dealCount={pendingLost?.dealIds.length}
         onCancel={() => setPendingLost(null)}
-        onConfirm={async (reasonId) => {
+        onConfirm={(reasonId) => {
           if (!pendingLost) return;
           const { dealIds, targetStageId } = pendingLost;
-          // Optimistic UI for single-deal case
-          if (dealIds.length === 1) {
-            setOptimisticMoves((prev) => ({ ...prev, [dealIds[0]]: targetStageId }));
-          }
-          try {
-            for (const id of dealIds) {
-              await moveDeal(id, targetStageId, { lossReasonId: reasonId });
-            }
-          } finally {
+          startTransition(async () => {
             if (dealIds.length === 1) {
-              setOptimisticMoves((prev) => {
-                const next = { ...prev };
-                delete next[dealIds[0]];
-                return next;
-              });
+              applyOptimisticMove({ dealId: dealIds[0], newStageId: targetStageId });
             }
-            if (dealIds.length > 1) clearSelection();
-            setPendingLost(null);
-          }
+            try {
+              for (const id of dealIds) {
+                await moveDeal(id, targetStageId, { lossReasonId: reasonId });
+              }
+            } finally {
+              if (dealIds.length > 1) clearSelection();
+              setPendingLost(null);
+            }
+          });
         }}
       />
 
