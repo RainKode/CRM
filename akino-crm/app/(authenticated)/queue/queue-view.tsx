@@ -13,6 +13,7 @@ import {
   Clock,
   Inbox,
   Mail,
+  MailQuestion,
   Phone,
   StickyNote,
   Workflow,
@@ -39,7 +40,7 @@ function useDropdown() {
   return { open, setOpen, ref };
 }
 
-type Tab = "all" | "overdue" | "today" | "tasks" | "activities" | "follow_ups";
+type Tab = "all" | "overdue" | "today" | "tasks" | "activities" | "follow_ups" | "awaiting_reply";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "all", label: "All", icon: Inbox },
@@ -48,6 +49,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "tasks", label: "Tasks", icon: CheckSquare },
   { id: "activities", label: "Scheduled", icon: CalendarClock },
   { id: "follow_ups", label: "Follow-ups", icon: AlarmClock },
+  { id: "awaiting_reply", label: "Awaiting Reply", icon: MailQuestion },
 ];
 
 const SNOOZE_OPTIONS: { label: string; days: number }[] = [
@@ -95,6 +97,7 @@ function formatDue(iso: string | null): string {
 function iconForItem(item: QueueItem): React.ElementType {
   if (item.kind === "task") return CheckSquare;
   if (item.kind === "follow_up") return AlarmClock;
+  if (item.kind === "awaiting_reply") return MailQuestion;
   // scheduled_activity — icon by activity type
   switch (item.activity_type) {
     case "call":
@@ -128,6 +131,8 @@ export function QueueView({ initialItems }: { initialItems: QueueItem[] }) {
         return items.filter((i) => i.kind === "scheduled_activity");
       case "follow_ups":
         return items.filter((i) => i.kind === "follow_up");
+      case "awaiting_reply":
+        return items.filter((i) => i.kind === "awaiting_reply");
       default:
         return items;
     }
@@ -141,6 +146,7 @@ export function QueueView({ initialItems }: { initialItems: QueueItem[] }) {
       tasks: items.filter((i) => i.kind === "task").length,
       activities: items.filter((i) => i.kind === "scheduled_activity").length,
       follow_ups: items.filter((i) => i.kind === "follow_up").length,
+      awaiting_reply: items.filter((i) => i.kind === "awaiting_reply").length,
     };
   }, [items]);
 

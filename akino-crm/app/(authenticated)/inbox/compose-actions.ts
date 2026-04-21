@@ -234,11 +234,11 @@ export async function listScheduledSends(): Promise<ScheduledSend[]> {
     to_addresses: (r.to_addresses as string[]) ?? [],
     scheduled_send_at: r.scheduled_send_at as string,
     thread_id: r.thread_id as string,
-    deal_id:
-      (r as { email_threads?: { deal_id: string | null } | { deal_id: string | null }[] }).email_threads
-        ? Array.isArray((r as { email_threads: unknown }).email_threads)
-          ? ((r as { email_threads: { deal_id: string | null }[] }).email_threads[0]?.deal_id ?? null)
-          : ((r as { email_threads: { deal_id: string | null } }).email_threads.deal_id ?? null)
-        : null,
+    deal_id: (() => {
+      const et = (r as unknown as { email_threads?: { deal_id: string | null } | { deal_id: string | null }[] }).email_threads;
+      if (!et) return null;
+      if (Array.isArray(et)) return et[0]?.deal_id ?? null;
+      return et.deal_id ?? null;
+    })(),
   }));
 }
