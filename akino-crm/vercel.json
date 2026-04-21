@@ -1,8 +1,8 @@
 {
   "regions": ["sin1"],
   "crons": [
-    { "path": "/api/cron/scheduled-sends", "schedule": "5 3 * * *" },
-    { "path": "/api/cron/sequences", "schedule": "10 3 * * *" },
+    { "path": "/api/cron/scheduled-sends", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/sequences", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/email-staleness", "schedule": "17 3 * * *" }
   ]
 }
