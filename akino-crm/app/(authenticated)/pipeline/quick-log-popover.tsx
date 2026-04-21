@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Phone, Mail, StickyNote, CalendarClock, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logActivity } from "./actions";
+import { TemplateInserter } from "./template-inserter";
 
 type ActivityKind = "call" | "email" | "note" | "meeting";
 
@@ -39,6 +40,8 @@ export function QuickLogPopover({
 }) {
   const [kind, setKind] = useState<ActivityKind>("call");
   const [summary, setSummary] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [templateId, setTemplateId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isSchedule, setIsSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -71,6 +74,7 @@ export function QuickLogPopover({
           deal_id: dealId,
           type: kind,
           summary: text,
+          email_subject: kind === "email" ? (emailSubject.trim() || undefined) : undefined,
           status: isSchedule ? "scheduled" : "done",
           scheduled_at: isSchedule && scheduledAt
             ? new Date(scheduledAt).toISOString()
@@ -85,7 +89,7 @@ export function QuickLogPopover({
   }
 
   // Position popover below the trigger, keeping it inside viewport.
-  const MAX_W = 320;
+  const MAX_W = kind === "email" ? 384 : 320;
   const left = Math.max(
     8,
     Math.min(anchorRect.left, window.innerWidth - MAX_W - 8)
@@ -95,7 +99,10 @@ export function QuickLogPopover({
   return (
     <div
       ref={ref}
-      className="fixed z-100 w-80 rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) p-3"
+      className={cn(
+        "fixed z-100 rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) p-3",
+        kind === "email" ? "w-96" : "w-80",
+      )}
       style={{ left, top }}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
@@ -139,14 +146,45 @@ export function QuickLogPopover({
         })}
       </div>
 
+      {/* Email-only: subject + "Insert template" */}
+      {kind === "email" && (
+        <>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle)">
+              Subject
+            </span>
+            <TemplateInserter
+              dealId={dealId}
+              onInsert={({ subject, body, templateId: tid }) => {
+                setEmailSubject(subject);
+                setSummary(body);
+                setTemplateId(tid);
+              }}
+            />
+          </div>
+          <input
+            type="text"
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            placeholder="Email subject"
+            className="w-full mb-2 rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+          />
+          {templateId && (
+            <p className="mb-2 text-[10px] text-(--color-fg-subtle)">
+              Template inserted. Variables substituted from the deal.
+            </p>
+          )}
+        </>
+      )}
+
       {/* Summary */}
       <textarea
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
         placeholder={`Quick ${KIND_CONFIG[kind].label.toLowerCase()} summary…`}
-        rows={2}
+        rows={kind === "email" ? 6 : 2}
         autoFocus
-        className="w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-none"
+        className="w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-y"
       />
 
       {/* Schedule toggle */}

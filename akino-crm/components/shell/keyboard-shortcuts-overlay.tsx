@@ -26,6 +26,8 @@ const GROUPS: ShortcutGroup[] = [
       { keys: ["G", "F"], label: "Go to Folders" },
       { keys: ["G", "P"], label: "Go to Pipeline" },
       { keys: ["G", "E"], label: "Go to Enrichment" },
+      { keys: ["G", "Q"], label: "Go to Follow-up Queue" },
+      { keys: ["G", "T"], label: "Go to Tasks" },
       { keys: ["G", "S"], label: "Go to Settings" },
     ],
   },
@@ -33,7 +35,15 @@ const GROUPS: ShortcutGroup[] = [
     title: "Lists & tables",
     shortcuts: [
       { keys: ["↑", "↓"], label: "Navigate rows / results" },
+      { keys: ["J", "K"], label: "Next / previous row (vim-style)" },
       { keys: ["Enter"], label: "Open highlighted item" },
+    ],
+  },
+  {
+    title: "Follow-up queue",
+    shortcuts: [
+      { keys: ["X"], label: "Complete highlighted item" },
+      { keys: ["S"], label: "Snooze highlighted item (tomorrow)" },
     ],
   },
 ];
@@ -93,6 +103,8 @@ export function KeyboardShortcutsOverlay() {
           f: "/folders",
           p: "/pipeline",
           e: "/enrichment",
+          q: "/queue",
+          t: "/tasks",
           s: "/settings",
         };
         const target = map[k];

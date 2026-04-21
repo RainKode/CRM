@@ -338,9 +338,19 @@ export async function markDealLost(dealId: string, lossReasonId: string) {
 
 export async function deleteDeal(dealId: string) {
   const sb = await createClient();
-  const { error } = await sb.from("deals").delete().eq("id", dealId);
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const { error } = await sb
+    .from("deals")
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: user?.id ?? null,
+    })
+    .eq("id", dealId);
   if (error) throw error;
   bustPipelineCache();
+  revalidatePath("/trash");
 }
 
 export async function updateDeal(

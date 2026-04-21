@@ -59,12 +59,15 @@ export interface CompanyMember {
   joined_at: string;
 }
 
+export type DedupeKey = "email" | "phone" | "name_company";
+
 export interface Folder {
   id: string;
   company_id: string;
   name: string;
   description: string | null;
   is_archived: boolean;
+  dedupe_keys: DedupeKey[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -103,9 +106,12 @@ export interface Lead {
   notes: string | null;
   enriched_at: string | null;
   quality_rating: number | null;
+  import_batch_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
 }
 
 export interface Batch {
@@ -192,6 +198,8 @@ export interface Deal {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
 }
 
 export interface Activity {
@@ -236,8 +244,12 @@ export interface ImportHistory {
   imported_rows: number;
   skipped_rows: number;
   error_rows: number;
+  new_rows: number;
+  updated_rows: number;
   error_report: unknown | null;
   status: "processing" | "complete" | "failed";
+  dedupe_keys: DedupeKey[];
+  undone_at: string | null;
   created_by: string | null;
   created_at: string;
   completed_at: string | null;
@@ -252,4 +264,18 @@ export interface Notification {
   link: string | null;
   is_read: boolean;
   created_at: string;
+}
+
+export interface EmailTemplate {
+  id: string;
+  company_id: string;
+  folder_id: string | null;
+  name: string;
+  subject: string;
+  body_html: string;
+  variables: string[];
+  created_by: string | null;
+  is_shared: boolean;
+  created_at: string;
+  updated_at: string;
 }

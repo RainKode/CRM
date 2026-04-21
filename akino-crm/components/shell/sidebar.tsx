@@ -22,6 +22,10 @@ import {
   Star,
   Settings,
   CheckSquare,
+  Inbox,
+  Mail,
+  Trash2,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -73,6 +77,12 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/pipeline",
   },
   {
+    href: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    matchPrefix: "/analytics",
+  },
+  {
     href: "/enrichment",
     label: "Enrichment",
     icon: Sparkles,
@@ -85,12 +95,30 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/enriched",
   },
   {
+    href: "/queue",
+    label: "Follow-up Queue",
+    icon: Inbox,
+    matchPrefix: "/queue",
+  },
+  {
+    href: "/inbox",
+    label: "Inbox",
+    icon: Mail,
+    matchPrefix: "/inbox",
+  },
+  {
     href: "/tasks",
     label: "Tasks",
     icon: CheckSquare,
     matchPrefix: "/tasks",
   },
   { href: "/team", label: "Team", icon: Users, disabled: true },
+  {
+    href: "/trash",
+    label: "Recycle Bin",
+    icon: Trash2,
+    matchPrefix: "/trash",
+  },
   {
     href: "/settings",
     label: "Settings",

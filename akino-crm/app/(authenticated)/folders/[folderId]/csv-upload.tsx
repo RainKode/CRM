@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useEffect, useTransition } from "react";
 import Papa from "papaparse";
 import {
   Upload,
@@ -9,29 +9,52 @@ import {
   CheckCircle2,
   AlertCircle,
   Download,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { FieldDefinition } from "@/lib/types";
-import { importLeadsChunk, logImport } from "./actions";
+import type { DedupeKey, FieldDefinition } from "@/lib/types";
+import {
+  importLeadsChunk,
+  createImportBatch,
+  finalizeImport,
+  previewImport,
+} from "./actions";
 
 type Step = "upload" | "map" | "preview" | "result";
+
+const DEDUPE_LABELS: Record<DedupeKey, string> = {
+  email: "email",
+  phone: "phone",
+  name_company: "name + company",
+};
 
 export function CsvUpload({
   folderId,
   fields,
+  dedupeKeys,
 }: {
   folderId: string;
   fields: FieldDefinition[];
+  dedupeKeys: DedupeKey[];
 }) {
   const [step, setStep] = useState<Step>("upload");
+  const [fileName, setFileName] = useState<string>("csv-upload");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvRows, setCsvRows] = useState<Record<string, unknown>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [dupMode, setDupMode] = useState<"skip" | "overwrite">("skip");
+  const [previewCounts, setPreviewCounts] = useState<{
+    new: number;
+    updated: number;
+    skipped: number;
+  } | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [result, setResult] = useState<{
     imported: number;
+    newRows: number;
+    updatedRows: number;
     skipped: number;
     errors: number;
   } | null>(null);
@@ -79,6 +102,7 @@ export function CsvUpload({
   );
 
   function handleFile(file: File) {
+    setFileName(file.name);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -88,6 +112,7 @@ export function CsvUpload({
         setCsvHeaders(headers);
         setCsvRows(rows);
         setMapping(autoMap(headers));
+        setPreviewCounts(null);
         setStep("map");
       },
     });
@@ -99,32 +124,93 @@ export function CsvUpload({
     if (file && file.name.endsWith(".csv")) handleFile(file);
   }
 
+  // Run a dry-run preview every time we enter the preview step or mapping
+  // changes while on it, so the "X new / Y updated / Z skipped" counts stay
+  // honest.
+  useEffect(() => {
+    if (step !== "preview") return;
+    let cancelled = false;
+    setIsPreviewing(true);
+    (async () => {
+      try {
+        const counts = await previewImport({
+          folderId,
+          rows: csvRows,
+          columnMapping: mapping,
+          dedupeKeys,
+        });
+        if (!cancelled) setPreviewCounts(counts);
+      } catch {
+        if (!cancelled) setPreviewCounts(null);
+      } finally {
+        if (!cancelled) setIsPreviewing(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, folderId, csvRows, mapping, dedupeKeys]);
+
   function handleImport() {
     startTransition(async () => {
       const CHUNK_SIZE = 200;
       let totalImported = 0;
+      let totalNew = 0;
+      let totalUpdated = 0;
       let totalSkipped = 0;
       let totalErrors = 0;
 
-      for (let i = 0; i < csvRows.length; i += CHUNK_SIZE) {
-        const chunk = csvRows.slice(i, i + CHUNK_SIZE);
-        const res = await importLeadsChunk(folderId, chunk, mapping, dupMode, i);
-        totalImported += res.imported;
-        totalSkipped += res.skipped;
-        totalErrors += res.errors;
+      const batchId = await createImportBatch({
+        folderId,
+        filename: fileName,
+        totalRows: csvRows.length,
+        dedupeKeys,
+      });
+
+      try {
+        for (let i = 0; i < csvRows.length; i += CHUNK_SIZE) {
+          const chunk = csvRows.slice(i, i + CHUNK_SIZE);
+          const res = await importLeadsChunk(
+            folderId,
+            chunk,
+            mapping,
+            dupMode,
+            i,
+            { importBatchId: batchId, dedupeKeys }
+          );
+          totalImported += res.imported;
+          totalNew += res.newRows;
+          totalUpdated += res.updatedRows;
+          totalSkipped += res.skipped;
+          totalErrors += res.errors;
+        }
+      } finally {
+        await finalizeImport({
+          batchId,
+          folderId,
+          totals: {
+            totalRows: csvRows.length,
+            imported: totalImported,
+            newRows: totalNew,
+            updatedRows: totalUpdated,
+            skipped: totalSkipped,
+            errors: totalErrors,
+          },
+        });
       }
 
-      await logImport(folderId, {
-        totalRows: csvRows.length,
+      setResult({
         imported: totalImported,
+        newRows: totalNew,
+        updatedRows: totalUpdated,
         skipped: totalSkipped,
         errors: totalErrors,
       });
-
-      setResult({ imported: totalImported, skipped: totalSkipped, errors: totalErrors });
       setStep("result");
     });
   }
+
+  const dedupeSummary = dedupeKeys.map((k) => DEDUPE_LABELS[k]).join(" · ");
 
   // Targets for mapping — only user-defined columns
   const targetOptions = [
@@ -171,6 +257,12 @@ export function CsvUpload({
           </p>
           <p className="text-sm text-(--color-fg-subtle)">
             Supports up to 50,000 rows · Comma or semicolon separated
+          </p>
+          <p className="text-xs text-(--color-fg-subtle)">
+            Duplicates matched on:{" "}
+            <span className="font-medium text-(--color-fg-muted)">
+              {dedupeSummary}
+            </span>
           </p>
         </div>
 
@@ -284,7 +376,8 @@ export function CsvUpload({
           <div>
             <h2 className="text-lg font-bold text-(--color-fg)">Import Preview</h2>
             <p className="text-sm text-(--color-fg-muted)">
-              First 10 of {csvRows.length} rows as they will appear
+              First 10 of {csvRows.length} rows · Dedupe on{" "}
+              <span className="font-medium text-(--color-fg)">{dedupeSummary}</span>
             </p>
           </div>
           <div className="flex gap-3">
@@ -295,12 +388,40 @@ export function CsvUpload({
             >
               Back
             </Button>
-            <Button size="sm" onClick={handleImport} disabled={isPending}>
+            <Button
+              size="sm"
+              onClick={handleImport}
+              disabled={isPending || isPreviewing}
+            >
               {isPending
                 ? "Importing…"
                 : `Import ${csvRows.length} rows`}
             </Button>
           </div>
+        </div>
+
+        {/* Dry-run summary */}
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) px-5 py-4 shadow-sm">
+          {isPreviewing || !previewCounts ? (
+            <span className="flex items-center gap-2 text-sm text-(--color-fg-muted)">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Calculating preview…
+            </span>
+          ) : (
+            <>
+              <span className="text-sm font-semibold text-(--color-success)">
+                {previewCounts.new} new
+              </span>
+              <span className="text-(--color-fg-subtle)">·</span>
+              <span className="text-sm font-semibold text-(--color-accent)">
+                {previewCounts.updated}{" "}
+                {dupMode === "overwrite" ? "will be updated" : "matched (will be skipped)"}
+              </span>
+              <span className="text-(--color-fg-subtle)">·</span>
+              <span className="text-sm font-semibold text-(--color-fg-muted)">
+                {previewCounts.skipped} in-file duplicates
+              </span>
+            </>
+          )}
         </div>
 
         <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
@@ -347,9 +468,12 @@ export function CsvUpload({
         <CheckCircle2 className="h-8 w-8 text-(--color-success)" />
       </div>
       <h2 className="text-xl font-bold text-(--color-fg)">Import Complete</h2>
-      <div className="flex gap-5 text-sm">
+      <div className="flex flex-wrap justify-center gap-5 text-sm">
         <span className="text-(--color-success) font-medium">
-          {result?.imported ?? 0} imported
+          {result?.newRows ?? 0} new
+        </span>
+        <span className="text-(--color-accent) font-medium">
+          {result?.updatedRows ?? 0} updated
         </span>
         <span className="text-(--color-fg-muted)">
           {result?.skipped ?? 0} skipped
@@ -360,6 +484,9 @@ export function CsvUpload({
           </span>
         )}
       </div>
+      <p className="text-xs text-(--color-fg-subtle)">
+        You can undo this import from the folder header within 24 hours.
+      </p>
       <Button
         variant="secondary"
         size="sm"
@@ -369,6 +496,7 @@ export function CsvUpload({
           setCsvRows([]);
           setMapping({});
           setResult(null);
+          setPreviewCounts(null);
         }}
       >
         Upload another

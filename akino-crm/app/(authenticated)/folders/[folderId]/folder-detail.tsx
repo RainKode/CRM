@@ -10,6 +10,8 @@ import { LeadTable } from "./lead-table";
 import { FieldSchemaBuilder } from "./field-schema-builder";
 import { CsvUpload } from "./csv-upload";
 import { BatchCreationWizard } from "./batch-creation-wizard";
+import { UndoImportButton } from "./undo-import-button";
+import { DedupeKeysPanel } from "./dedupe-keys-panel";
 
 type Tab = "leads" | "schema" | "upload";
 
@@ -57,6 +59,7 @@ export function FolderDetail({
           <Sparkles className="h-4 w-4" />
           Create Enrichment Batch
         </Button>
+        <UndoImportButton folderId={folder.id} />
         <span className="flex items-center gap-1.5 rounded-full bg-(--color-surface-3) px-4 py-1.5 text-sm font-medium text-(--color-fg-muted)">
           {totalCount} Leads
         </span>
@@ -97,10 +100,22 @@ export function FolderDetail({
           />
         )}
         {tab === "schema" && (
-          <FieldSchemaBuilder folderId={folder.id} fields={fields} />
+          <div className="p-6 md:p-8 pb-0">
+            <DedupeKeysPanel
+              folderId={folder.id}
+              initial={folder.dedupe_keys ?? ["email"]}
+            />
+            <div className="-mx-6 md:-mx-8">
+              <FieldSchemaBuilder folderId={folder.id} fields={fields} />
+            </div>
+          </div>
         )}
         {tab === "upload" && (
-          <CsvUpload folderId={folder.id} fields={fields} />
+          <CsvUpload
+            folderId={folder.id}
+            fields={fields}
+            dedupeKeys={folder.dedupe_keys ?? ["email"]}
+          />
         )}
       </div>
 

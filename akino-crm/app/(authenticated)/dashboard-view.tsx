@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   CheckCircle,
   CheckSquare,
+  Inbox,
 } from "lucide-react";
 import { relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, Activity, Notification, Task } from "@/lib/types";
@@ -26,6 +27,7 @@ type DashboardData = {
   folderStats: { id: string; name: string; total: number; enriched: number }[];
   notifications: Notification[];
   openTasks: Task[];
+  queueCount: number;
 };
 
 const ACTIVITY_ICON: Record<string, React.ElementType> = {
@@ -80,6 +82,35 @@ export function DashboardView({ data }: { data: DashboardData }) {
             {formatDate()}
           </p>
         </div>
+
+        {/* Follow-up Queue CTA — single entry point to everything due today */}
+        <Link
+          href="/queue"
+          className="group flex items-center justify-between gap-4 rounded-2xl bg-(--color-surface-1) p-5 sm:p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div
+              className={`h-12 w-12 flex-none rounded-xl flex items-center justify-center ${
+                data.queueCount > 0
+                  ? "bg-(--color-accent)/10 text-(--color-accent)"
+                  : "bg-(--color-success)/10 text-(--color-success)"
+              }`}
+            >
+              <Inbox className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold text-(--color-fg) tracking-tight">
+                {data.queueCount > 0
+                  ? `${data.queueCount} item${data.queueCount === 1 ? "" : "s"} need you today`
+                  : "Inbox zero — nothing due today"}
+              </h3>
+              <p className="text-sm text-(--color-fg-muted) truncate">
+                Tasks, scheduled calls, and deal follow-ups in one queue.
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 flex-none text-(--color-fg-muted) group-hover:text-(--color-fg) group-hover:translate-x-1 transition-all" />
+        </Link>
 
         {/* Featured Follow-up Card */}
         {topFollowUp && (

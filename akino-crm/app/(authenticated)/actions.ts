@@ -81,6 +81,40 @@ export async function getDashboardData() {
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(10);
 
+  // Queue count: everything due today (tasks + scheduled activities + deal follow-ups).
+  const endOfTodayIso = (() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d.toISOString();
+  })();
+  const [{ count: queueTasks }, { count: queueScheduled }, { count: queueFollowUps }] =
+    await Promise.all([
+      sb
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", companyId)
+        .is("completed_at", null)
+        .not("due_at", "is", null)
+        .lte("due_at", endOfTodayIso),
+      sb
+        .from("activities")
+        .select("id,deal:deals!inner(company_id)", { count: "exact", head: true })
+        .eq("deal.company_id", companyId)
+        .eq("status", "scheduled")
+        .not("scheduled_at", "is", null)
+        .lte("scheduled_at", endOfTodayIso),
+      sb
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", companyId)
+        .is("won_at", null)
+        .is("lost_at", null)
+        .not("follow_up_at", "is", null)
+        .lte("follow_up_at", endOfTodayIso),
+    ]);
+  const queueCount =
+    (queueTasks ?? 0) + (queueScheduled ?? 0) + (queueFollowUps ?? 0);
+
   // Stage counts
   const stageCounts: Record<string, number> = {};
   for (const d of (deals ?? []) as Deal[]) {
@@ -117,5 +151,6 @@ export async function getDashboardData() {
     folderStats,
     notifications: (notifications ?? []) as Notification[],
     openTasks: (openTasks ?? []) as Task[],
+    queueCount,
   };
 }

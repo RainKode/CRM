@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Save } from "lucide-react";
+import { User, LogOut, Save, Mail, ChevronRight, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function ProfileView({
@@ -61,6 +62,45 @@ export function ProfileView({
         <p className="text-(--color-fg-muted) text-sm mb-10">
           Manage your account and preferences
         </p>
+
+        {/* Sub-sections nav */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-(--color-accent)/50 bg-(--color-accent)/5 p-4">
+            <div className="h-10 w-10 rounded-full bg-(--color-accent) text-(--color-accent-fg) flex items-center justify-center">
+              <User className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-(--color-fg)">Profile</p>
+              <p className="text-xs text-(--color-fg-subtle)">Your name & sign-out</p>
+            </div>
+          </div>
+          <Link
+            href="/settings/email"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) p-4 hover:border-(--color-accent) transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+              <Mail className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-(--color-fg)">Email accounts</p>
+              <p className="text-xs text-(--color-fg-subtle)">Connect Gmail / Outlook</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-(--color-fg-subtle)" />
+          </Link>
+          <Link
+            href="/settings/templates"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) p-4 hover:border-(--color-accent) transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-(--color-fg)">Email templates</p>
+              <p className="text-xs text-(--color-fg-subtle)">Reusable subject & body snippets</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-(--color-fg-subtle)" />
+          </Link>
+        </div>
 
         {/* Profile Card */}
         <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-8">

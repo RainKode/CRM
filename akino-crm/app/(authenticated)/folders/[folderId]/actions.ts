@@ -212,20 +212,38 @@ export async function updateLead(
 
 export async function deleteLeads(leadIds: string[], folderId: string) {
   const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const deletedAt = new Date().toISOString();
   // Batch in chunks of 200 to avoid URL length limits
   for (let i = 0; i < leadIds.length; i += 200) {
     const chunk = leadIds.slice(i, i + 200);
-    const { error } = await sb.from("leads").delete().in("id", chunk);
+    const { error } = await sb
+      .from("leads")
+      .update({ deleted_at: deletedAt, deleted_by: user?.id ?? null })
+      .in("id", chunk);
     if (error) throw error;
   }
   revalidatePath(`/folders/${folderId}`);
+  revalidatePath("/trash");
 }
 
 export async function deleteAllLeadsInFolder(folderId: string) {
   const sb = await createClient();
-  const { error } = await sb.from("leads").delete().eq("folder_id", folderId);
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const { error } = await sb
+    .from("leads")
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: user?.id ?? null,
+    })
+    .eq("folder_id", folderId);
   if (error) throw error;
   revalidatePath(`/folders/${folderId}`);
+  revalidatePath("/trash");
 }
 
 /**
@@ -388,25 +406,32 @@ export async function getFilteredLeadCount(
   return ids.length;
 }
 
-export async function importLeadsChunk(
-  folderId: string,
-  rows: Record<string, unknown>[],
-  columnMapping: Record<string, string>, // csvHeader -> fieldKey
-  duplicateMode: "skip" | "overwrite",
-  rowOffset: number = 0
-) {
-  const sb = await createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+// ─── Import dedupe helpers ──────────────────────────────────────────
+import type { DedupeKey, ImportHistory } from "@/lib/types";
 
-  let imported = 0;
-  let skipped = 0;
-  const errors: { row: number; reason: string }[] = [];
+/** Normalise raw field values into comparable strings for each match key. */
+function buildLookupKeys(input: {
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+  company: string | null;
+}): Partial<Record<DedupeKey, string>> {
+  const keys: Partial<Record<DedupeKey, string>> = {};
+  if (input.email) keys.email = input.email.trim().toLowerCase();
+  if (input.phone) {
+    const digits = input.phone.replace(/\D+/g, "");
+    if (digits.length >= 5) keys.phone = digits;
+  }
+  if (input.name && input.company) {
+    keys.name_company = `${input.name.trim().toLowerCase()}|${input.company
+      .trim()
+      .toLowerCase()}`;
+  }
+  return keys;
+}
 
-  // Deduplicate mapping: if multiple CSV columns target the same field,
-  // keep only the first CSV column for that target
+/** Dedupe a column mapping so two CSV columns can't target the same field. */
+function dedupeMapping(columnMapping: Record<string, string>) {
   const deduped: Record<string, string> = {};
   const seenTargets = new Set<string>();
   for (const [csvKey, fieldKey] of Object.entries(columnMapping)) {
@@ -415,107 +440,381 @@ export async function importLeadsChunk(
     seenTargets.add(fieldKey);
     deduped[csvKey] = fieldKey;
   }
+  return deduped;
+}
 
-  // ─── Pre-flight: map all rows, then batch-check dupes in ONE query ───
-  // Previously this did a per-row `.ilike("email", email)` which is O(N)
-  // round-trips and crawled for 1k+ row imports. Now: normalise all emails
-  // from the chunk, fetch existing id/email/phone for them in a single
-  // `.in()` query, and route each row through the cached map.
-  type MappedRow = {
-    rowIndex: number;
-    email: string | null;
-    emailKey: string | null; // lowercased for matching
-    phone: string | null;
-    name: string | null;
-    company: string | null;
-    data: Record<string, unknown>;
-  };
+type MappedRow = {
+  rowIndex: number;
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+  company: string | null;
+  data: Record<string, unknown>;
+  lookup: Partial<Record<DedupeKey, string>>;
+};
 
-  const mapped: MappedRow[] = rows.map((row, i) => {
+function mapRows(
+  rows: Record<string, unknown>[],
+  deduped: Record<string, string>
+): MappedRow[] {
+  return rows.map((row, i) => {
     const m: Record<string, unknown> = {};
     for (const [csvKey, fieldKey] of Object.entries(deduped)) {
       m[fieldKey] = row[csvKey];
     }
-    const email = m["email"] != null ? String(m["email"]).trim() : null;
-    const phoneRaw = m["phone"] != null ? String(m["phone"]).trim() : null;
+    const email = m.email != null ? String(m.email).trim() || null : null;
+    const phone = m.phone != null ? String(m.phone).trim() || null : null;
+    const name = m.name != null ? String(m.name).trim() || null : null;
+    const company = m.company != null ? String(m.company).trim() || null : null;
     return {
       rowIndex: i,
-      email: email || null,
-      emailKey: email ? email.toLowerCase() : null,
-      phone: phoneRaw || null,
-      name: m["name"] != null ? String(m["name"]).trim() || null : null,
-      company: m["company"] != null ? String(m["company"]).trim() || null : null,
+      email,
+      phone,
+      name,
+      company,
       data: m,
+      lookup: buildLookupKeys({ email, phone, name, company }),
     };
   });
+}
 
-  const emailKeys = Array.from(
-    new Set(mapped.map((r) => r.emailKey).filter((v): v is string => !!v))
-  );
+/**
+ * Build reverse-lookup maps from {normalised key → existing lead id} for each
+ * enabled dedupe strategy. Runs one query per enabled strategy so larger
+ * folders still stay under Supabase row caps.
+ */
+async function fetchExistingByKeys(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  folderId: string,
+  dedupeKeys: DedupeKey[],
+  mapped: MappedRow[]
+): Promise<Record<DedupeKey, Map<string, string>>> {
+  const result: Record<DedupeKey, Map<string, string>> = {
+    email: new Map(),
+    phone: new Map(),
+    name_company: new Map(),
+  };
 
-  // Existing leads keyed by lowercased email (when available)
-  const existingByEmail = new Map<string, string>(); // email_lower → lead_id
-  if (emailKeys.length > 0) {
-    const { data: existing, error: lookupErr } = await sb
-      .from("leads")
-      .select("id, email")
-      .eq("folder_id", folderId)
-      .in("email", emailKeys);
-    if (lookupErr) throw lookupErr;
-    for (const row of existing ?? []) {
-      if (row.email) existingByEmail.set(row.email.toLowerCase(), row.id);
-    }
-    // Some rows may have capitalised emails in the DB — fall back to ilike
-    // for any misses. Batch it too: one query that covers remaining keys.
-    const misses = emailKeys.filter((k) => !existingByEmail.has(k));
-    if (misses.length > 0) {
-      // Supabase `.or()` with ilike for each remaining key. Keep the URL
-      // length in check by chunking 50 keys at a time.
-      for (let i = 0; i < misses.length; i += 50) {
-        const slice = misses.slice(i, i + 50);
-        const orExpr = slice
-          .map((k) => `email.ilike.${k.replace(/,/g, "")}`)
-          .join(",");
-        const { data: more } = await sb
+  // Collect the raw source keys used by mapped rows so we only fetch what
+  // could actually collide. `email` is indexed as a column, the others live
+  // in jsonb `data`, so we fetch all rows once for those.
+  if (dedupeKeys.includes("email")) {
+    const emails = Array.from(
+      new Set(
+        mapped
+          .map((r) => r.lookup.email)
+          .filter((v): v is string => !!v)
+      )
+    );
+    if (emails.length > 0) {
+      for (let i = 0; i < emails.length; i += 200) {
+        const slice = emails.slice(i, i + 200);
+        const { data, error } = await sb
           .from("leads")
           .select("id, email")
           .eq("folder_id", folderId)
-          .or(orExpr);
-        for (const row of more ?? []) {
-          if (row.email) existingByEmail.set(row.email.toLowerCase(), row.id);
+          .in("email", slice);
+        if (error) throw error;
+        for (const row of data ?? []) {
+          if (row.email) result.email.set(row.email.toLowerCase(), row.id);
         }
       }
     }
   }
 
-  // Track emails we've already used *within this chunk* to avoid creating
-  // in-file duplicates (e.g. same email appearing twice in the CSV).
+  // For phone and name_company we need to pull candidate rows from jsonb.
+  // Folder size is bounded in practice; we paginate to be safe.
+  const needsJsonbScan =
+    dedupeKeys.includes("phone") || dedupeKeys.includes("name_company");
+  if (needsJsonbScan) {
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data, error } = await sb
+        .from("leads")
+        .select("id, name, company, data")
+        .eq("folder_id", folderId)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      for (const row of data ?? []) {
+        const phoneRaw =
+          (row.data as Record<string, unknown> | null)?.phone ?? null;
+        const k = buildLookupKeys({
+          email: null,
+          phone: phoneRaw != null ? String(phoneRaw) : null,
+          name: row.name,
+          company: row.company,
+        });
+        if (dedupeKeys.includes("phone") && k.phone)
+          result.phone.set(k.phone, row.id);
+        if (dedupeKeys.includes("name_company") && k.name_company)
+          result.name_company.set(k.name_company, row.id);
+      }
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Create a new import_history row with status=processing.
+ * Returns the row id so subsequent chunks can tag leads with it.
+ */
+export async function createImportBatch(input: {
+  folderId: string;
+  filename: string;
+  totalRows: number;
+  dedupeKeys: DedupeKey[];
+}): Promise<string> {
+  const { folderId, filename, totalRows, dedupeKeys } = input;
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await sb
+    .from("import_history")
+    .insert({
+      folder_id: folderId,
+      filename,
+      total_rows: totalRows,
+      status: "processing",
+      dedupe_keys: dedupeKeys,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+/**
+ * Dry-run an import: compute how many rows are new / updates / skipped
+ * for the folder's current dedupe config, without writing anything.
+ */
+export async function previewImport(input: {
+  folderId: string;
+  rows: Record<string, unknown>[];
+  columnMapping: Record<string, string>;
+  dedupeKeys: DedupeKey[];
+}): Promise<{ new: number; updated: number; skipped: number }> {
+  const { folderId, rows, columnMapping, dedupeKeys } = input;
+  const sb = await createClient();
+  const deduped = dedupeMapping(columnMapping);
+  const mapped = mapRows(rows, deduped);
+  const existing = await fetchExistingByKeys(sb, folderId, dedupeKeys, mapped);
+
+  let isNew = 0;
+  let isUpdate = 0;
+  let isSkip = 0;
+  const seenInChunk = new Set<string>();
+
+  for (const r of mapped) {
+    const matchId = firstDedupeHit(r, dedupeKeys, existing);
+    if (matchId) {
+      isUpdate += 1;
+      continue;
+    }
+    // in-chunk self-dupe detection for preview
+    const selfKey = Object.values(r.lookup)[0];
+    if (selfKey && seenInChunk.has(selfKey)) {
+      isSkip += 1;
+      continue;
+    }
+    if (selfKey) seenInChunk.add(selfKey);
+    // If no usable dedupe key at all, row is still "new" but vulnerable to
+    // being double-imported. The preview does not warn — this is parity with
+    // the old behaviour and keeps the UX simple.
+    isNew += 1;
+  }
+
+  return { new: isNew, updated: isUpdate, skipped: isSkip };
+}
+
+/** Returns the id of the first existing lead that collides with this row. */
+function firstDedupeHit(
+  r: MappedRow,
+  dedupeKeys: DedupeKey[],
+  existing: Record<DedupeKey, Map<string, string>>
+): string | null {
+  for (const key of dedupeKeys) {
+    const lookup = r.lookup[key];
+    if (!lookup) continue;
+    const hit = existing[key].get(lookup);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Finalise an import: update the history row with the true totals and
+ * status=complete. Called once after all chunks succeed.
+ */
+export async function finalizeImport(input: {
+  batchId: string;
+  folderId: string;
+  totals: {
+    totalRows: number;
+    imported: number;
+    newRows: number;
+    updatedRows: number;
+    skipped: number;
+    errors: number;
+  };
+}) {
+  const { batchId, folderId, totals } = input;
+  const sb = await createClient();
+  const { error } = await sb
+    .from("import_history")
+    .update({
+      total_rows: totals.totalRows,
+      imported_rows: totals.imported,
+      new_rows: totals.newRows,
+      updated_rows: totals.updatedRows,
+      skipped_rows: totals.skipped,
+      error_rows: totals.errors,
+      status: totals.errors > 0 && totals.imported === 0 ? "failed" : "complete",
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", batchId);
+  if (error) throw error;
+  revalidatePath(`/folders/${folderId}`);
+}
+
+/**
+ * Return the latest undoable import for a folder (within 24h, not already
+ * undone). Used by the folder UI to show a "Undo last import" button.
+ */
+export async function getUndoableImport(
+  folderId: string
+): Promise<ImportHistory | null> {
+  const sb = await createClient();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await sb
+    .from("import_history")
+    .select("*")
+    .eq("folder_id", folderId)
+    .eq("status", "complete")
+    .is("undone_at", null)
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as ImportHistory | null) ?? null;
+}
+
+/**
+ * Undo an import: delete all leads tagged with this batch id, then mark
+ * the history row as undone. Only the batch's "new" rows get deleted —
+ * "updated" rows stay in place (their import_batch_id was never set).
+ */
+export async function undoImport(input: {
+  batchId: string;
+  folderId: string;
+}): Promise<{ deleted: number }> {
+  const { batchId, folderId } = input;
+  const sb = await createClient();
+
+  // Confirm the row is still undoable server-side (defence in depth).
+  const { data: row, error: rowErr } = await sb
+    .from("import_history")
+    .select("id, folder_id, created_at, undone_at")
+    .eq("id", batchId)
+    .single();
+  if (rowErr) throw rowErr;
+  if (row.folder_id !== folderId) throw new Error("Batch does not belong to folder");
+  if (row.undone_at) throw new Error("Import has already been undone");
+  const ageMs = Date.now() - new Date(row.created_at).getTime();
+  if (ageMs > 24 * 60 * 60 * 1000)
+    throw new Error("Undo window (24h) has expired");
+
+  const { error: delErr, count } = await sb
+    .from("leads")
+    .delete({ count: "exact" })
+    .eq("folder_id", folderId)
+    .eq("import_batch_id", batchId);
+  if (delErr) throw delErr;
+
+  const { error: markErr } = await sb
+    .from("import_history")
+    .update({ undone_at: new Date().toISOString() })
+    .eq("id", batchId);
+  if (markErr) throw markErr;
+
+  revalidatePath(`/folders/${folderId}`);
+  return { deleted: count ?? 0 };
+}
+
+export async function importLeadsChunk(
+  folderId: string,
+  rows: Record<string, unknown>[],
+  columnMapping: Record<string, string>, // csvHeader -> fieldKey
+  duplicateMode: "skip" | "overwrite",
+  rowOffset: number = 0,
+  options?: { importBatchId?: string; dedupeKeys?: DedupeKey[] }
+) {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const dedupeKeys: DedupeKey[] =
+    options?.dedupeKeys && options.dedupeKeys.length > 0
+      ? options.dedupeKeys
+      : ["email"];
+  const importBatchId = options?.importBatchId ?? null;
+
+  let imported = 0;
+  let newRows = 0;
+  let updatedRows = 0;
+  let skipped = 0;
+  const errors: { row: number; reason: string }[] = [];
+
+  const deduped = dedupeMapping(columnMapping);
+
+  // ─── Pre-flight: map rows + batch-fetch collisions per dedupe key ────
+  const mapped = mapRows(rows, deduped);
+  const existing = await fetchExistingByKeys(sb, folderId, dedupeKeys, mapped);
+
+  // Track keys already consumed within this chunk so a duplicate email in
+  // the same CSV doesn't insert twice.
   const seenInChunk = new Set<string>();
 
   // ─── Apply dup logic + write ────────────────────────────────────────
   for (const r of mapped) {
-    const emailKey = r.emailKey;
+    const matchId = firstDedupeHit(r, dedupeKeys, existing);
+    const selfKey = Object.values(r.lookup)[0] ?? null;
 
-    // Duplicate path
-    if (emailKey && (existingByEmail.has(emailKey) || seenInChunk.has(emailKey))) {
+    // Duplicate path: existing DB row OR already seen in this chunk.
+    if (matchId || (selfKey && seenInChunk.has(selfKey))) {
       if (duplicateMode === "skip") {
         skipped++;
         continue;
       }
-      // overwrite — prefer existing DB row over in-chunk dup
-      const existingId = existingByEmail.get(emailKey);
-      if (existingId) {
+      // overwrite — prefer existing DB row over in-chunk dup. In-chunk
+      // dups with no DB match are skipped to keep the first instance.
+      if (matchId) {
         const { error } = await sb
           .from("leads")
-          .update({ name: r.name, company: r.company, data: r.data })
-          .eq("id", existingId);
+          .update({
+            name: r.name,
+            email: r.email,
+            company: r.company,
+            data: r.data,
+          })
+          .eq("id", matchId);
         if (error) {
           errors.push({ row: rowOffset + r.rowIndex + 1, reason: error.message });
         } else {
           imported++;
+          updatedRows++;
         }
       } else {
-        // In-chunk dup + overwrite — skip to keep first instance
         skipped++;
       }
       continue;
@@ -529,6 +828,7 @@ export async function importLeadsChunk(
         name: r.name,
         company: r.company,
         data: r.data,
+        import_batch_id: importBatchId,
         created_by: user.id,
       })
       .select("id")
@@ -537,16 +837,26 @@ export async function importLeadsChunk(
       errors.push({ row: rowOffset + r.rowIndex + 1, reason: error.message });
     } else {
       imported++;
-      if (emailKey) {
-        seenInChunk.add(emailKey);
-        existingByEmail.set(emailKey, inserted.id);
+      newRows++;
+      // Seed in-chunk + existing lookup with every dedupe key this row
+      // carries so subsequent rows in the same chunk collide properly.
+      for (const key of dedupeKeys) {
+        const v = r.lookup[key];
+        if (v) {
+          seenInChunk.add(v);
+          existing[key].set(v, inserted.id);
+        }
       }
     }
   }
 
-  return { imported, skipped, errors: errors.length };
+  return { imported, newRows, updatedRows, skipped, errors: errors.length };
 }
 
+/**
+ * @deprecated use `createImportBatch` + `finalizeImport` instead.
+ * Kept temporarily for any caller still on the old single-shot flow.
+ */
 export async function logImport(
   folderId: string,
   totals: { totalRows: number; imported: number; skipped: number; errors: number }
@@ -569,6 +879,23 @@ export async function logImport(
     completed_at: new Date().toISOString(),
   });
 
+  revalidatePath(`/folders/${folderId}`);
+}
+
+// ─── Folder dedupe config ─────────────────────────────────────────────
+
+export async function updateFolderDedupeKeys(
+  folderId: string,
+  dedupeKeys: DedupeKey[]
+) {
+  if (dedupeKeys.length === 0)
+    throw new Error("At least one dedupe key is required");
+  const sb = await createClient();
+  const { error } = await sb
+    .from("folders")
+    .update({ dedupe_keys: dedupeKeys })
+    .eq("id", folderId);
+  if (error) throw error;
   revalidatePath(`/folders/${folderId}`);
 }
 

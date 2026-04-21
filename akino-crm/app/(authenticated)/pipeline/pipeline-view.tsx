@@ -56,10 +56,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn, relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType } from "@/lib/types";
-import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, type LeadSearchResult } from "./actions";
+import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType, ActivityStatus } from "@/lib/types";
+import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, completeScheduledActivity, type LeadSearchResult } from "./actions";
 import { LossReasonDialog } from "./loss-reason-dialog";
 import { QuickLogPopover } from "./quick-log-popover";
+import { SavedViewPicker } from "../saved-views/saved-view-picker";
 import { downloadCsv, csvCell, timestampedFilename } from "@/lib/csv-export";
 
 // ─────────────────────────────────────────────
@@ -708,20 +709,38 @@ type TimelineEvent = {
   email_subject: string | null;
   call_direction: string | null;
   call_duration_seconds: number | null;
+  status: ActivityStatus;
+  scheduled_at: string | null;
 };
 
-function TimelineCard({ event }: { event: TimelineEvent }) {
+function TimelineCard({
+  event,
+  onMarkDone,
+}: {
+  event: TimelineEvent;
+  onMarkDone?: (id: string) => void;
+}) {
+  const isScheduled = event.status === "scheduled";
   return (
-    <div className="bg-(--color-surface-2)/50 border border-(--color-border)/15 rounded-xl p-3.5 shadow-sm hover:shadow-md hover:border-(--color-border)/30 transition-all">
+    <div
+      className={cn(
+        "bg-(--color-surface-2)/50 border rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all",
+        isScheduled
+          ? "border-(--color-info)/40 hover:border-(--color-info)/60"
+          : "border-(--color-border)/15 hover:border-(--color-border)/30"
+      )}
+    >
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <span className="text-[10px] font-medium text-(--color-fg-subtle) leading-tight">
           {formatTimestamp(event.occurred_at)}
         </span>
         <span className={cn(
           "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 leading-tight",
-          getTimelineBadgeColor(event.type)
+          isScheduled
+            ? "bg-(--color-info)/15 text-(--color-info)"
+            : getTimelineBadgeColor(event.type)
         )}>
-          {getTimelineTitle(event.type)}
+          {isScheduled ? `Scheduled · ${getTimelineTitle(event.type)}` : getTimelineTitle(event.type)}
         </span>
       </div>
       {event.summary && (
@@ -740,6 +759,15 @@ function TimelineCard({ event }: { event: TimelineEvent }) {
         <div className="mt-2 p-2 rounded-lg bg-(--color-surface-3)/30 border border-(--color-border)/10">
           <p className="text-[11px] text-(--color-fg-muted) leading-relaxed">{event.notes}</p>
         </div>
+      )}
+      {isScheduled && onMarkDone && (
+        <button
+          type="button"
+          onClick={() => onMarkDone(event.id)}
+          className="mt-2 text-[11px] font-medium text-(--color-info) hover:underline inline-flex items-center gap-1"
+        >
+          <CheckCircle2 className="h-3 w-3" /> Mark done
+        </button>
       )}
     </div>
   );
@@ -784,6 +812,48 @@ function DealDetail({
   const [editValue, setEditValue] = useState("");
 
   const timelineRef = useRef<HTMLDivElement>(null);
+  const addActivityBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Quick-log popover anchor (Add activity button in header).
+  const [quickLogAnchor, setQuickLogAnchor] = useState<{
+    left: number;
+    top: number;
+    width: number;
+  } | null>(null);
+
+  function openQuickLog() {
+    const btn = addActivityBtnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    setQuickLogAnchor({
+      left: rect.left,
+      top: rect.bottom + 6,
+      width: rect.width,
+    });
+  }
+
+  async function refreshActivities() {
+    const updated = await getDealActivities(deal.id);
+    setActivities(updated);
+  }
+
+  function handleMarkScheduledDone(activityId: string) {
+    // optimistic flip
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.id === activityId
+          ? { ...a, status: "done" as ActivityStatus, occurred_at: new Date().toISOString() }
+          : a
+      )
+    );
+    startTransition(async () => {
+      try {
+        await completeScheduledActivity(activityId);
+      } finally {
+        await refreshActivities();
+      }
+    });
+  }
 
   const currentStage = stages.find((s) => s.id === deal.stage_id);
   const activeStages = stages.filter((s) => !s.is_won && !s.is_lost);
@@ -820,6 +890,8 @@ function DealDetail({
       email_subject: null as string | null,
       call_direction: null as string | null,
       call_duration_seconds: null as number | null,
+      status: "done" as ActivityStatus,
+      scheduled_at: null as string | null,
     };
     const mapped = activities.map((a) => ({
       id: a.id,
@@ -832,6 +904,8 @@ function DealDetail({
       email_subject: a.email_subject,
       call_direction: a.call_direction as string | null,
       call_duration_seconds: a.call_duration_seconds,
+      status: a.status,
+      scheduled_at: a.scheduled_at,
     }));
     const events = [created, ...mapped];
     events.sort(
@@ -939,7 +1013,7 @@ function DealDetail({
                       {/* Left column */}
                       <div className={isLeft ? "pr-3" : ""}>
                         {isLeft && (
-                          <TimelineCard event={event} />
+                          <TimelineCard event={event} onMarkDone={handleMarkScheduledDone} />
                         )}
                       </div>
 
@@ -959,7 +1033,7 @@ function DealDetail({
                       {/* Right column */}
                       <div className={!isLeft ? "pl-3" : ""}>
                         {!isLeft && (
-                          <TimelineCard event={event} />
+                          <TimelineCard event={event} onMarkDone={handleMarkScheduledDone} />
                         )}
                       </div>
                     </div>
@@ -983,13 +1057,23 @@ function DealDetail({
                   {[deal.company, currentStage?.name].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  ref={addActivityBtnRef}
+                  type="button"
+                  onClick={openQuickLog}
+                  className="h-9 px-4 rounded-full bg-(--color-accent) text-(--color-accent-fg) text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Add activity
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-9 h-9 rounded-full bg-(--color-surface-2) flex items-center justify-center text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3) transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Pipeline stage indicator */}
@@ -1427,21 +1511,46 @@ function DealDetail({
                     <p className="text-sm text-(--color-fg-subtle) text-center py-8">No activity logged yet</p>
                   ) : (
                     <div className="space-y-1">
-                      {activities.map((a) => (
-                        <div key={a.id} className="flex items-start gap-3 py-3 border-b border-(--color-border)/10 last:border-b-0">
-                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", getTimelineColor(a.type))}>
-                            {getTimelineIcon(a.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-medium text-(--color-fg)">{getTimelineTitle(a.type)}</p>
-                              <span className="text-[11px] text-(--color-fg-subtle) shrink-0">{relativeTime(a.occurred_at)}</span>
+                      {activities.map((a) => {
+                        const isScheduled = a.status === "scheduled";
+                        return (
+                          <div
+                            key={a.id}
+                            className={cn(
+                              "flex items-start gap-3 py-3 border-b border-(--color-border)/10 last:border-b-0",
+                              isScheduled && "bg-(--color-info)/5 -mx-2 px-2 rounded-lg border-b-transparent"
+                            )}
+                          >
+                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", getTimelineColor(a.type))}>
+                              {getTimelineIcon(a.type)}
                             </div>
-                            {a.summary && <p className="text-sm text-(--color-fg-muted) mt-0.5">{a.summary}</p>}
-                            {a.notes && <p className="text-xs text-(--color-fg-subtle) mt-1">{a.notes}</p>}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <p className="text-sm font-medium text-(--color-fg) truncate">{getTimelineTitle(a.type)}</p>
+                                  {isScheduled && (
+                                    <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-(--color-info)/15 text-(--color-info) shrink-0">
+                                      Scheduled · {relativeTime(a.scheduled_at ?? a.occurred_at)}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[11px] text-(--color-fg-subtle) shrink-0">{relativeTime(a.occurred_at)}</span>
+                              </div>
+                              {a.summary && <p className="text-sm text-(--color-fg-muted) mt-0.5">{a.summary}</p>}
+                              {a.notes && <p className="text-xs text-(--color-fg-subtle) mt-1">{a.notes}</p>}
+                              {isScheduled && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkScheduledDone(a.id)}
+                                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-(--color-info) hover:underline"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> Mark done
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1506,6 +1615,14 @@ function DealDetail({
           </div>
         </div>
       </div>
+      {quickLogAnchor && (
+        <QuickLogPopover
+          dealId={deal.id}
+          anchorRect={quickLogAnchor}
+          onClose={() => setQuickLogAnchor(null)}
+          onLogged={refreshActivities}
+        />
+      )}
     </div>
   );
 }
@@ -1518,11 +1635,15 @@ export function PipelineView({
   stages,
   initialDeals,
   lossReasons,
+  savedViews,
+  currentUserId,
 }: {
   pipelines: Pipeline[];
   stages: PipelineStage[];
   initialDeals: Deal[];
   lossReasons: LossReason[];
+  savedViews: import("../saved-views/actions").SavedView[];
+  currentUserId: string | null;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1551,6 +1672,11 @@ export function PipelineView({
     dealId: string;
     anchorRect: { left: number; top: number; width: number };
   } | null>(null);
+
+  // Saved view — tracks which view's filters are currently applied so the
+  // picker can show a check next to it. Cleared whenever the user tweaks
+  // any filter manually.
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
 
   // Column limit — show N deals per column, rest queued
   const COLUMN_LIMIT = 50;
@@ -1885,6 +2011,41 @@ export function PipelineView({
               Board View
             </button>
           </div>
+
+          {/* Saved views */}
+          <SavedViewPicker
+            scope="pipeline"
+            scopeRef={null}
+            initialViews={savedViews}
+            activeViewId={activeSavedViewId}
+            currentUserId={currentUserId}
+            currentFilters={{
+              activePipelineId,
+              filterStageId,
+              showClosed,
+              view,
+            }}
+            onApply={(v) => {
+              setActiveSavedViewId(v?.id ?? null);
+              if (!v) {
+                setFilterStageId(null);
+                setShowClosed(false);
+                return;
+              }
+              const f = v.filters as {
+                activePipelineId?: string;
+                filterStageId?: string | null;
+                showClosed?: boolean;
+                view?: ViewMode;
+              };
+              if (f.activePipelineId && pipelines.some((p) => p.id === f.activePipelineId)) {
+                setActivePipelineId(f.activePipelineId);
+              }
+              setFilterStageId(f.filterStageId ?? null);
+              setShowClosed(!!f.showClosed);
+              if (f.view === "list" || f.view === "kanban") setView(f.view);
+            }}
+          />
 
           {/* Filter */}
           <div className="relative" ref={filterMenu.ref}>
