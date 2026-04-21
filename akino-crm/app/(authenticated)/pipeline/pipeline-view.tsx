@@ -638,6 +638,7 @@ function getTimelineIcon(type: TimelineEventType) {
     case "follow_up_set": return <CalendarClock className="h-3.5 w-3.5" />;
     case "won": return <CheckCircle2 className="h-3.5 w-3.5" />;
     case "lost": return <XCircle className="h-3.5 w-3.5" />;
+    default: return <StickyNote className="h-3.5 w-3.5" />;
   }
 }
 
@@ -651,6 +652,7 @@ function getTimelineTitle(type: TimelineEventType): string {
     case "follow_up_set": return "Follow-up Set";
     case "won": return "Deal Won";
     case "lost": return "Deal Lost";
+    default: return "Activity";
   }
 }
 
@@ -664,6 +666,7 @@ function getTimelineColor(type: TimelineEventType): string {
     case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
     case "follow_up_set": return "bg-(--color-accent)/15 text-(--color-accent)";
     case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
+    default: return "bg-(--color-surface-3) text-(--color-fg-muted)";
   }
 }
 
@@ -677,6 +680,7 @@ function getTimelineBadgeColor(type: TimelineEventType): string {
     case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
     case "follow_up_set": return "bg-(--color-highlight)/15 text-(--color-highlight)";
     case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
+    default: return "bg-(--color-surface-3) text-(--color-fg-muted)";
   }
 }
 
