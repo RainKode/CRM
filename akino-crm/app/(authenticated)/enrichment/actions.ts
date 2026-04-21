@@ -5,6 +5,23 @@ import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
 import type { Batch, BatchLead, Lead, FieldDefinition } from "@/lib/types";
 import { createPipelineForBatch } from "@/app/(authenticated)/pipeline/actions";
 
+/**
+ * Aggregate batch-level counts from a flat list of batch_leads rows.
+ * Single source of truth so getBatches + getBatchesGroupedByFolder share logic.
+ */
+function aggregateBatchCounts(
+  rows: { batch_id: string; is_completed: boolean | null }[]
+): Map<string, { total: number; completed: number }> {
+  const map = new Map<string, { total: number; completed: number }>();
+  for (const r of rows) {
+    const entry = map.get(r.batch_id) ?? { total: 0, completed: 0 };
+    entry.total += 1;
+    if (r.is_completed) entry.completed += 1;
+    map.set(r.batch_id, entry);
+  }
+  return map;
+}
+
 export async function getBatches(folderId?: string): Promise<(Batch & { total: number; completed: number })[]> {
   const sb = await createClient();
 
@@ -14,23 +31,23 @@ export async function getBatches(folderId?: string): Promise<(Batch & { total: n
   const { data, error } = await q;
   if (error) throw error;
   const batches = data as Batch[];
+  if (batches.length === 0) return [];
 
-  // Attach counts
-  const result: (Batch & { total: number; completed: number })[] = [];
-  for (const b of batches) {
-    const { count: total } = await sb
-      .from("batch_leads")
-      .select("batch_id", { count: "exact", head: true })
-      .eq("batch_id", b.id);
-    const { count: completed } = await sb
-      .from("batch_leads")
-      .select("batch_id", { count: "exact", head: true })
-      .eq("batch_id", b.id)
-      .eq("is_completed", true);
-    result.push({ ...b, total: total ?? 0, completed: completed ?? 0 });
-  }
+  // ONE query to fetch all batch_leads rows for these batches, then aggregate in JS.
+  // Replaces the old N+1 (2 COUNT queries per batch).
+  const batchIds = batches.map((b) => b.id);
+  const { data: blRows, error: blErr } = await sb
+    .from("batch_leads")
+    .select("batch_id, is_completed")
+    .in("batch_id", batchIds);
+  if (blErr) throw blErr;
 
-  return result;
+  const counts = aggregateBatchCounts(blRows ?? []);
+  return batches.map((b) => ({
+    ...b,
+    total: counts.get(b.id)?.total ?? 0,
+    completed: counts.get(b.id)?.completed ?? 0,
+  }));
 }
 
 export async function createBatch(input: {
@@ -198,42 +215,50 @@ export async function completeBatchLead(
   const extractedEmail = pick("email", "Email") ?? lead?.email ?? null;
   const extractedCompany = pick("company", "Company", "company_name") ?? lead?.company ?? null;
 
-  if (lead) {
-    await sb
-      .from("leads")
+  // ─── Parallel pass 1: independent writes + lookups ────────────────
+  // The lead update, the batch_lead completion mark, and the pipeline
+  // lookup are all independent of each other. Fire them in parallel.
+  const nowIso = new Date().toISOString();
+  const [, , pipelineRes] = await Promise.all([
+    // Update lead
+    lead
+      ? sb
+          .from("leads")
+          .update({
+            data: mergedData,
+            email: extractedEmail,
+            company: extractedCompany,
+            status: "enriched",
+            enriched_at: nowIso,
+          })
+          .eq("id", leadId)
+      : Promise.resolve({ error: null }),
+    // Mark batch_lead complete
+    sb
+      .from("batch_leads")
       .update({
-        data: mergedData,
-        email: extractedEmail,
-        company: extractedCompany,
-        status: "enriched",
-        enriched_at: new Date().toISOString(),
+        is_completed: true,
+        completed_at: nowIso,
+        completed_by: user?.id ?? null,
       })
-      .eq("id", leadId);
-  }
-
-  // Mark batch_lead as completed
-  await sb
-    .from("batch_leads")
-    .update({
-      is_completed: true,
-      completed_at: new Date().toISOString(),
-      completed_by: user?.id ?? null,
-    })
-    .eq("batch_id", batchId)
-    .eq("lead_id", leadId);
-
-  // Auto-create deal in the batch's pipeline
-  try {
-    // Find the pipeline linked to this batch
-    const { data: pipeline } = await sb
+      .eq("batch_id", batchId)
+      .eq("lead_id", leadId),
+    // Pipeline lookup for auto-deal-create
+    sb
       .from("pipelines")
       .select("id")
       .eq("batch_id", batchId)
       .eq("is_archived", false)
-      .single();
+      .maybeSingle(),
+  ]);
 
-    if (pipeline) {
-      // Get first stage (lowest position) for this pipeline
+  const pipeline = pipelineRes.data as { id: string } | null;
+
+  // ─── Parallel pass 2: deal creation (depends on pipeline) +
+  //     batch-remaining count (independent). ─────────────────────────
+  const dealCreatePromise = (async () => {
+    if (!pipeline) return;
+    try {
       const { data: firstStage } = await sb
         .from("pipeline_stages")
         .select("id")
@@ -241,51 +266,55 @@ export async function completeBatchLead(
         .eq("is_archived", false)
         .order("position", { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (firstStage) {
-        // Check if a deal already exists for this lead (unique constraint on active lead)
-        const { count: existingDeals } = await sb
-          .from("deals")
-          .select("id", { count: "exact", head: true })
-          .eq("lead_id", leadId)
-          .is("won_at", null)
-          .is("lost_at", null);
+      if (!firstStage) return;
 
-        if ((existingDeals ?? 0) === 0) {
-          await sb.from("deals").insert({
-            lead_id: leadId,
-            source_folder_id: lead?.folder_id ?? null,
-            stage_id: firstStage.id,
-            owner_id: user?.id ?? null,
-            contact_name: lead?.name || extractedEmail || "Unknown",
-            company: extractedCompany,
-            email: extractedEmail,
-            phone: pick("phone", "Phone") ?? null,
-            linkedin_url: pick("linkedin_url", "LinkedIn", "linkedin") ?? null,
-            website: pick("website", "Website", "url") ?? null,
-            decision_maker: pick("decision_maker", "Decision Maker", "decision_maker_name", "contact_person") ?? null,
-            created_by: user?.id ?? null,
-          });
-        }
+      const { count: existingDeals } = await sb
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", leadId)
+        .is("won_at", null)
+        .is("lost_at", null);
+
+      if ((existingDeals ?? 0) === 0) {
+        await sb.from("deals").insert({
+          lead_id: leadId,
+          source_folder_id: lead?.folder_id ?? null,
+          stage_id: firstStage.id,
+          owner_id: user?.id ?? null,
+          contact_name: lead?.name || extractedEmail || "Unknown",
+          company: extractedCompany,
+          email: extractedEmail,
+          phone: pick("phone", "Phone") ?? null,
+          linkedin_url: pick("linkedin_url", "LinkedIn", "linkedin") ?? null,
+          website: pick("website", "Website", "url") ?? null,
+          decision_maker: pick("decision_maker", "Decision Maker", "decision_maker_name", "contact_person") ?? null,
+          created_by: user?.id ?? null,
+        });
       }
+    } catch {
+      // Non-fatal: don't block enrichment if deal creation fails
+      console.error("Auto-create deal failed for lead", leadId);
     }
-  } catch {
-    // Non-fatal: don't block enrichment if deal creation fails
-    console.error("Auto-create deal failed for lead", leadId);
-  }
+  })();
 
-  // Check if all leads in batch are done
-  const { count: remaining } = await sb
+  const remainingPromise = sb
     .from("batch_leads")
     .select("batch_id", { count: "exact", head: true })
     .eq("batch_id", batchId)
     .eq("is_completed", false);
 
+  const [, remainingRes] = await Promise.all([
+    dealCreatePromise,
+    remainingPromise,
+  ]);
+
+  const remaining = remainingRes.count;
   if (remaining === 0) {
     await sb
       .from("batches")
-      .update({ status: "complete", completed_at: new Date().toISOString() })
+      .update({ status: "complete", completed_at: nowIso })
       .eq("id", batchId);
   } else {
     await sb
@@ -372,16 +401,9 @@ export async function updateLeadField(
   revalidatePath("/enrichment");
 }
 
-export async function deleteAllBatches() {
-  const sb = await createClient();
-  // Delete all batch_leads first (FK constraint)
-  const { error: blErr } = await sb.from("batch_leads").delete().neq("batch_id", "00000000-0000-0000-0000-000000000000");
-  if (blErr) throw blErr;
-  // Delete all batches
-  const { error } = await sb.from("batches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-  if (error) throw error;
-  revalidatePath("/enrichment");
-}
+// ⚠️ REMOVED: `deleteAllBatches()` was a non-scoped, non-confirmed mass-delete
+// that could wipe every batch across every company. Replaced by the triple-
+// gate `deleteBatch()` defined at the bottom of this file.
 
 export async function getEnrichmentFields(
   folderId: string
@@ -438,20 +460,23 @@ export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
   // Get unique folder IDs
   const folderIds = [...new Set((batches as Batch[]).map((b) => b.folder_id))];
 
-  // Attach counts
-  const batchesWithCounts: (Batch & { total: number; completed: number })[] = [];
-  for (const b of batches as Batch[]) {
-    const { count: total } = await sb
+  // ONE query for all batch_leads rows across all batches; aggregate in JS.
+  const batchRows = batches as Batch[];
+  const batchIds = batchRows.map((b) => b.id);
+  let counts = new Map<string, { total: number; completed: number }>();
+  if (batchIds.length > 0) {
+    const { data: blRows, error: blErr } = await sb
       .from("batch_leads")
-      .select("batch_id", { count: "exact", head: true })
-      .eq("batch_id", b.id);
-    const { count: completed } = await sb
-      .from("batch_leads")
-      .select("batch_id", { count: "exact", head: true })
-      .eq("batch_id", b.id)
-      .eq("is_completed", true);
-    batchesWithCounts.push({ ...b, total: total ?? 0, completed: completed ?? 0 });
+      .select("batch_id, is_completed")
+      .in("batch_id", batchIds);
+    if (blErr) throw blErr;
+    counts = aggregateBatchCounts(blRows ?? []);
   }
+  const batchesWithCounts: (Batch & { total: number; completed: number })[] = batchRows.map((b) => ({
+    ...b,
+    total: counts.get(b.id)?.total ?? 0,
+    completed: counts.get(b.id)?.completed ?? 0,
+  }));
 
   // Group by folder
   const groups: FolderBatchGroup[] = [];
@@ -474,4 +499,88 @@ export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
   }
 
   return groups;
+}
+
+// ─── Triple-confirm batch deletion ────────────────────────────────────
+// Require three independent gates BEFORE destroying data:
+//   1. The caller must pass `acknowledgements.understandsLeadsAffected = true`
+//   2. The caller must pass `acknowledgements.understandsIrreversible = true`
+//   3. The typed `confirmName` must exactly match the batch's name, AND
+//      the typed `confirmPhrase` must equal "DELETE FOREVER".
+// Any failure throws with a specific reason so the UI can surface it.
+export const BATCH_DELETE_PHRASE = "DELETE FOREVER";
+
+export async function deleteBatch(input: {
+  batchId: string;
+  confirmName: string;
+  confirmPhrase: string;
+  acknowledgements: {
+    understandsLeadsAffected: boolean;
+    understandsIrreversible: boolean;
+  };
+}): Promise<{ ok: true; deletedBatchId: string; affectedLeadCount: number }> {
+  const sb = await createClient();
+
+  // Gate 1 + 2: explicit acknowledgements
+  if (!input.acknowledgements.understandsLeadsAffected) {
+    throw new Error("You must acknowledge that batch leads will be affected.");
+  }
+  if (!input.acknowledgements.understandsIrreversible) {
+    throw new Error("You must acknowledge that this action is irreversible.");
+  }
+
+  // Auth + ownership check (RLS also enforces, but fail fast + clearer error)
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Load the batch and verify name (must be inside company via RLS)
+  const { data: batch, error: loadErr } = await sb
+    .from("batches")
+    .select("id, name, folder_id")
+    .eq("id", input.batchId)
+    .single();
+  if (loadErr || !batch) throw new Error("Batch not found or access denied.");
+
+  // Gate 3a: typed name must match exactly (trim only outer whitespace)
+  if (input.confirmName.trim() !== batch.name) {
+    throw new Error(
+      `Confirmation name does not match. Type "${batch.name}" exactly.`
+    );
+  }
+  // Gate 3b: typed phrase must match the literal constant
+  if (input.confirmPhrase.trim() !== BATCH_DELETE_PHRASE) {
+    throw new Error(`You must type "${BATCH_DELETE_PHRASE}" to confirm.`);
+  }
+
+  // Capture lead count for the response (for UI feedback / audit)
+  const { count: affectedLeadCount } = await sb
+    .from("batch_leads")
+    .select("batch_id", { count: "exact", head: true })
+    .eq("batch_id", batch.id);
+
+  // Delete. batch_leads has `on delete cascade`, so deleting the batch
+  // row is sufficient. We still delete batch_leads first as defence in
+  // depth in case the FK is ever changed.
+  const { error: blErr } = await sb
+    .from("batch_leads")
+    .delete()
+    .eq("batch_id", batch.id);
+  if (blErr) throw blErr;
+
+  const { error: delErr } = await sb
+    .from("batches")
+    .delete()
+    .eq("id", batch.id);
+  if (delErr) throw delErr;
+
+  revalidatePath("/enrichment");
+  revalidatePath(`/folders/${batch.folder_id}`);
+
+  return {
+    ok: true,
+    deletedBatchId: batch.id,
+    affectedLeadCount: affectedLeadCount ?? 0,
+  };
 }

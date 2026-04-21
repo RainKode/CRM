@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Menu, Sun, Moon } from "lucide-react";
+import { Bell, Menu, Sun, Moon, Search } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,6 +11,17 @@ function getInitials(name: string | undefined | null): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return parts[0][0]?.toUpperCase() ?? "?";
+}
+
+/**
+ * Fires a synthetic ⌘K keyboard event so the CommandPalette (which is
+ * already listening globally) toggles open. Keeps Topbar decoupled
+ * from the palette's internal state.
+ */
+function openCommandPalette() {
+  window.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true })
+  );
 }
 
 export function Topbar() {
@@ -36,10 +47,32 @@ export function Topbar() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Spacer - push actions to right */}
-      <div className="flex-1" />
+      {/* Command palette trigger — takes the centre/left space */}
+      <div className="flex-1 flex items-center pl-2 md:pl-0">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="hidden md:inline-flex items-center gap-3 h-9 w-full max-w-md rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) px-4 text-sm text-(--color-fg-subtle) hover:text-(--color-fg) transition-colors"
+          aria-label="Search (⌘K)"
+        >
+          <Search className="h-4 w-4" />
+          <span className="flex-1 text-left">Search folders, deals, batches…</span>
+          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-(--color-bg) text-(--color-fg-subtle) border border-(--color-card-border)">
+            ⌘K
+          </kbd>
+        </button>
+      </div>
 
       <div className="flex items-center gap-3">
+        {/* Mobile search icon */}
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="md:hidden flex h-10 w-10 items-center justify-center rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) transition-colors text-(--color-fg-muted) hover:text-(--color-fg)"
+          aria-label="Search"
+        >
+          <Search className="h-5 w-5" strokeWidth={1.75} />
+        </button>
         {/* Theme toggle */}
         <button
           type="button"

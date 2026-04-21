@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { CommandPalette } from "./command-palette";
+import { KeyboardShortcutsOverlay } from "./keyboard-shortcuts-overlay";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +14,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Topbar />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
+      <CommandPalette />
+      <KeyboardShortcutsOverlay />
     </div>
   );
 }

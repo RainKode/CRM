@@ -20,6 +20,7 @@ type DashboardData = {
   stages: PipelineStage[];
   stageCounts: Record<string, number>;
   followUps: Deal[];
+  upcomingFollowUps: Deal[];
   recentActivities: Activity[];
   folderStats: { id: string; name: string; total: number; enriched: number }[];
   notifications: Notification[];
@@ -62,6 +63,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
     .reduce((sum, s) => sum + (data.stageCounts[s.id] ?? 0), 0);
 
   const topFollowUp = data.followUps[0] ?? null;
+  const dueCount = data.followUps.length;
+  const upcomingCount = data.upcomingFollowUps.length;
 
   return (
     <div className="flex-1 overflow-auto">
@@ -80,14 +83,14 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {topFollowUp && (
           <div className="rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
             <div className="flex items-stretch justify-between gap-6">
-              <div className="flex flex-col gap-6 justify-between flex-[2]">
+              <div className="flex flex-col gap-6 justify-between flex-2">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="h-2 w-2 rounded-full bg-(--color-accent) animate-pulse" />
                     <p className="text-(--color-accent) text-xs font-bold uppercase tracking-wider">
                       {new Date(topFollowUp.follow_up_at!) < new Date()
-                        ? "Overdue"
-                        : "Due Soon"}
+                        ? `${dueCount} Overdue`
+                        : `${dueCount} Due Today`}
                     </p>
                   </div>
                   <p className="text-2xl font-bold text-(--color-fg) leading-tight">
@@ -98,6 +101,11 @@ export function DashboardView({ data }: { data: DashboardData }) {
                     {topFollowUp.company && ` — ${topFollowUp.company}`}
                     {topFollowUp.notes && `. ${topFollowUp.notes}`}
                   </p>
+                  {dueCount > 1 && (
+                    <p className="text-xs text-(--color-fg-subtle) mt-1">
+                      + {dueCount - 1} more waiting for you.
+                    </p>
+                  )}
                 </div>
                 <Link
                   href={`/pipeline?deal=${topFollowUp.id}`}
@@ -107,8 +115,56 @@ export function DashboardView({ data }: { data: DashboardData }) {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
-              {/* Decorative background on large screens */}
-              <div className="hidden sm:block w-1/3 rounded-xl bg-(--color-surface-2)" />
+              {/* Upcoming list (next 7 days, not yet due) */}
+              <div className="hidden sm:flex w-1/3 flex-col rounded-xl bg-(--color-surface-2) p-4 gap-2 min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle)">
+                  Upcoming • {upcomingCount}
+                </p>
+                {data.upcomingFollowUps.length === 0 ? (
+                  <p className="text-xs text-(--color-fg-subtle)">
+                    Nothing scheduled in the next 7 days.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5 overflow-y-auto">
+                    {data.upcomingFollowUps.slice(0, 5).map((d) => (
+                      <Link
+                        key={d.id}
+                        href={`/pipeline?deal=${d.id}`}
+                        className="block rounded-lg px-2.5 py-1.5 hover:bg-(--color-surface-3) transition-colors min-w-0"
+                      >
+                        <div className="text-xs font-medium text-(--color-fg) truncate">
+                          {d.contact_name}
+                        </div>
+                        <div className="text-[10px] text-(--color-fg-subtle)">
+                          {new Date(d.follow_up_at!).toLocaleDateString(
+                            undefined,
+                            { month: "short", day: "numeric" }
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Zero-state card when no follow-ups at all */}
+        {!topFollowUp && upcomingCount === 0 && (
+          <div className="rounded-2xl bg-(--color-surface-1) p-6 border-2 border-(--color-card-border) shadow-(--shadow-card-3d)">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-(--color-accent)/15 flex items-center justify-center">
+                <CalendarClock className="h-5 w-5 text-(--color-accent)" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-(--color-fg)">
+                  All caught up
+                </p>
+                <p className="text-xs text-(--color-fg-muted)">
+                  No follow-ups due today or in the next 7 days.
+                </p>
+              </div>
             </div>
           </div>
         )}

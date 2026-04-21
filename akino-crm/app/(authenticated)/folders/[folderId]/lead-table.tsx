@@ -21,6 +21,8 @@ import {
   Eye,
   EyeOff,
   Columns3,
+  Pencil,
+  Download,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { FieldDefinition, Lead } from "@/lib/types";
 import { updateLead, deleteLeads, deleteAllLeadsInFolder, getLeads, getAllLeadIds } from "./actions";
+import { BulkEditPopover } from "./bulk-edit-popover";
+import { downloadCsv, csvCell, timestampedFilename } from "@/lib/csv-export";
 
 const COL = createColumnHelper<Lead>();
 const PAGE_SIZE = 50;
@@ -58,6 +62,8 @@ export function LeadTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [selectAllMode, setSelectAllMode] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditIds, setBulkEditIds] = useState<string[]>([]);
   const [allLeadIds, setAllLeadIds] = useState<string[] | null>(null);
   const [hiddenFieldIds, setHiddenFieldIds] = useState<Set<string>>(
     () => new Set(fields.filter((f) => f.is_hidden).map((f) => f.id))
@@ -277,20 +283,73 @@ export function LeadTable({
         <div className="text-xs text-(--color-fg-muted)">
           {visibleFields.length} of {fields.length} columns shown
         </div>
-        <div className="relative">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowFieldPanel(!showFieldPanel)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              showFieldPanel
-                ? "bg-(--color-accent) text-(--color-accent-fg)"
-                : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
-            )}
+            onClick={async () => {
+              // Export selected if there's a selection, otherwise the full folder.
+              const ids = selectAllMode
+                ? allLeadIds ?? (await getAllLeadIds(folderId))
+                : selectedIds.length > 0
+                  ? selectedIds
+                  : null;
+
+              // Fetch all leads in pages (one pass), then optionally filter by id.
+              const all: Lead[] = [];
+              const PAGE = 500;
+              let off = 0;
+              while (true) {
+                const batch = await getLeads(folderId, { limit: PAGE, offset: off });
+                all.push(...batch);
+                if (batch.length < PAGE) break;
+                off += PAGE;
+              }
+              const idSet = ids ? new Set(ids) : null;
+              const rows = idSet ? all.filter((l) => idSet.has(l.id)) : all;
+
+              if (rows.length === 0) return;
+
+              const visibleCustom = fields.filter(
+                (f) => !hiddenFieldIds.has(f.id) && !f.is_enrichment
+              );
+              const exportRows = rows.map((l) => {
+                const row: Record<string, string> = {
+                  Name: csvCell(l.name),
+                  Email: csvCell(l.email),
+                  Company: csvCell(l.company),
+                  Status: csvCell(l.status),
+                  Notes: csvCell(l.notes),
+                  Tags: csvCell((l.tags ?? []).join(", ")),
+                  "Created At": csvCell(l.created_at),
+                };
+                for (const f of visibleCustom) {
+                  if (["name", "email", "company", "notes", "status"].includes(f.key)) continue;
+                  row[f.label] = csvCell(l.data?.[f.key]);
+                }
+                return row;
+              });
+              downloadCsv(timestampedFilename("leads"), exportRows);
+            }}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+            title="Export to CSV"
           >
-            <Columns3 className="h-3.5 w-3.5" />
-            Fields
+            <Download className="h-3.5 w-3.5" />
+            Export
           </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFieldPanel(!showFieldPanel)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                showFieldPanel
+                  ? "bg-(--color-accent) text-(--color-accent-fg)"
+                  : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
+              )}
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+              Fields
+            </button>
 
           {showFieldPanel && (
             <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-xl overflow-hidden">
@@ -355,6 +414,7 @@ export function LeadTable({
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -473,6 +533,20 @@ export function LeadTable({
               <span className="rounded-full bg-(--color-accent)/15 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
                 {selectedCount} selected
               </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  const ids = selectAllMode
+                    ? allLeadIds ?? (await getAllLeadIds(folderId))
+                    : selectedIds;
+                  if (selectAllMode && !allLeadIds) setAllLeadIds(ids);
+                  setBulkEditIds(ids);
+                  setBulkEditOpen(true);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit field
+              </Button>
               <Button variant="ghost" size="sm" onClick={handleBulkDelete}>
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
@@ -547,6 +621,27 @@ export function LeadTable({
           </div>
         )}
       </div>
+
+      <BulkEditPopover
+        open={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        folderId={folderId}
+        selectedIds={bulkEditIds}
+        selectedCount={selectedCount}
+        fields={fields}
+        onDone={() => {
+          // Re-fetch current page to reflect the bulk update
+          startTransition(async () => {
+            const fresh = await getLeads(folderId, {
+              limit: PAGE_SIZE,
+              offset: (page - 1) * PAGE_SIZE,
+            });
+            setLeads(fresh);
+            setRowSelection({});
+            setSelectAllMode(false);
+          });
+        }}
+      />
     </div>
   );
 }

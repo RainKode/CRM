@@ -42,6 +42,7 @@ import {
   Square,
   ArrowRight,
   ChevronsRight,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,8 @@ import {
 import { cn, relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType } from "@/lib/types";
 import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, type LeadSearchResult } from "./actions";
+import { LossReasonDialog } from "./loss-reason-dialog";
+import { downloadCsv, csvCell, timestampedFilename } from "@/lib/csv-export";
 
 // ─────────────────────────────────────────────
 // Generic dropdown hook (click-outside to close)
@@ -1492,12 +1495,15 @@ export function PipelineView({
   const searchParams = useSearchParams();
   const router = useRouter();
   const pidFromUrl = searchParams.get("pid");
-  const [view, setView] = useState<ViewMode>("kanban");
+  const stageFromUrl = searchParams.get("stage");
+  const closedFromUrl = searchParams.get("closed") === "1";
+  const viewFromUrl = searchParams.get("view") === "list" ? "list" : "kanban";
+  const [view, setView] = useState<ViewMode>(viewFromUrl);
   const [createOpen, setCreateOpen] = useState(false);
   const [createStageId, setCreateStageId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-  const [showClosed, setShowClosed] = useState(false);
-  const [filterStageId, setFilterStageId] = useState<string | null>(null);
+  const [showClosed, setShowClosed] = useState(closedFromUrl);
+  const [filterStageId, setFilterStageId] = useState<string | null>(stageFromUrl);
   const [, startTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const filterMenu = useDropdown();
@@ -1530,6 +1536,21 @@ export function PipelineView({
     }
   }, [pidFromUrl, pipelines]);
 
+  // Persist filter / view / closed toggle back to the URL so refreshes
+  // and shared links reproduce the same view.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activePipelineId) params.set("pid", activePipelineId);
+    if (filterStageId) params.set("stage", filterStageId);
+    if (showClosed) params.set("closed", "1");
+    if (view === "list") params.set("view", "list");
+    const qs = params.toString();
+    const current = typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+    if (qs !== current) {
+      router.replace(qs ? `/pipeline?${qs}` : "/pipeline", { scroll: false });
+    }
+  }, [activePipelineId, filterStageId, showClosed, view, router]);
+
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const pipelineStages = useMemo(
     () => stages.filter((s) => s.pipeline_id === activePipelineId),
@@ -1542,6 +1563,14 @@ export function PipelineView({
 
   // Optimistic stage overrides: dealId → newStageId (for instant DnD feedback)
   const [optimisticMoves, setOptimisticMoves] = useState<Record<string, string>>({});
+
+  // Pending Lost-stage move — shown in LossReasonDialog until confirmed/cancelled.
+  // For single deal: { dealIds: [id], targetStageId }; for bulk: multiple ids.
+  const [pendingLost, setPendingLost] = useState<{
+    dealIds: string[];
+    targetStageId: string;
+    dealName?: string;
+  } | null>(null);
 
   const deals = useMemo(() => {
     let result = initialDeals.map((d) =>
@@ -1606,6 +1635,12 @@ export function PipelineView({
 
   async function bulkMoveDeals(targetStageId: string) {
     const ids = Array.from(selectedDealIds);
+    const targetStage = pipelineStages.find((s) => s.id === targetStageId);
+    // If moving to Lost stage, require a single shared loss reason for all
+    if (targetStage?.is_lost) {
+      setPendingLost({ dealIds: ids, targetStageId });
+      return;
+    }
     startTransition(async () => {
       for (const id of ids) {
         await moveDeal(id, targetStageId);
@@ -1648,6 +1683,17 @@ export function PipelineView({
     }
 
     if (targetStageId) {
+      const targetStage = pipelineStages.find((s) => s.id === targetStageId);
+      // Block drags into a Lost stage until user picks a loss reason.
+      if (targetStage?.is_lost) {
+        const deal = deals.find((d) => d.id === dealId);
+        setPendingLost({
+          dealIds: [dealId],
+          targetStageId,
+          dealName: deal?.contact_name,
+        });
+        return;
+      }
       // Optimistic: move card instantly in the UI
       setOptimisticMoves((prev) => ({ ...prev, [dealId]: targetStageId }));
       startTransition(async () => {
@@ -1887,6 +1933,46 @@ export function PipelineView({
             <CheckSquare className="h-4 w-4" /> {bulkMode ? "Exit Select" : "Select"}
           </Button>
 
+          {/* Export CSV */}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (deals.length === 0) return;
+              const stageMap = Object.fromEntries(
+                pipelineStages.map((s) => [s.id, s.name])
+              );
+              const rows = deals.map((d) => ({
+                "Contact Name": csvCell(d.contact_name),
+                Company: csvCell(d.company),
+                Email: csvCell(d.email),
+                Phone: csvCell(d.phone),
+                Website: csvCell(d.website),
+                LinkedIn: csvCell(d.linkedin_url),
+                "Decision Maker": csvCell(d.decision_maker),
+                Stage: csvCell(stageMap[d.stage_id] ?? ""),
+                "Deal Value": csvCell(d.deal_value),
+                Currency: csvCell(d.currency),
+                "Follow-up At": csvCell(d.follow_up_at),
+                "Won At": csvCell(d.won_at),
+                "Lost At": csvCell(d.lost_at),
+                "Stage Entered": csvCell(d.stage_entered_at),
+                "Last Activity": csvCell(d.last_activity_at),
+                "Created At": csvCell(d.created_at),
+                Notes: csvCell(d.notes),
+              }));
+              downloadCsv(
+                timestampedFilename(
+                  `pipeline-${activePipeline?.name ?? "deals"}`.replace(/\s+/g, "-").toLowerCase()
+                ),
+                rows
+              );
+            }}
+            className="hidden md:flex"
+          >
+            <Download className="h-4 w-4" /> Export
+          </Button>
+
           {/* Add Deal */}
           <Button
             size="sm"
@@ -2078,6 +2164,38 @@ export function PipelineView({
           onClose={() => setSelectedDeal(null)}
         />
       )}
+
+      {/* Loss-reason gate — required before any deal can enter the Lost stage */}
+      <LossReasonDialog
+        open={!!pendingLost}
+        lossReasons={lossReasons}
+        dealName={pendingLost?.dealName}
+        dealCount={pendingLost?.dealIds.length}
+        onCancel={() => setPendingLost(null)}
+        onConfirm={async (reasonId) => {
+          if (!pendingLost) return;
+          const { dealIds, targetStageId } = pendingLost;
+          // Optimistic UI for single-deal case
+          if (dealIds.length === 1) {
+            setOptimisticMoves((prev) => ({ ...prev, [dealIds[0]]: targetStageId }));
+          }
+          try {
+            for (const id of dealIds) {
+              await moveDeal(id, targetStageId, { lossReasonId: reasonId });
+            }
+          } finally {
+            if (dealIds.length === 1) {
+              setOptimisticMoves((prev) => {
+                const next = { ...prev };
+                delete next[dealIds[0]];
+                return next;
+              });
+            }
+            if (dealIds.length > 1) clearSelection();
+            setPendingLost(null);
+          }
+        }}
+      />
 
       {/* Mobile FAB */}
       <button

@@ -58,6 +58,20 @@ export async function getDashboardData() {
     .is("lost_at", null)
     .order("follow_up_at");
 
+  // Upcoming follow-ups (next 7 days, not yet due)
+  const in7days = new Date();
+  in7days.setDate(in7days.getDate() + 7);
+  const { data: upcoming } = await sb
+    .from("deals")
+    .select("*")
+    .eq("company_id", companyId)
+    .gt("follow_up_at", now)
+    .lte("follow_up_at", in7days.toISOString())
+    .is("won_at", null)
+    .is("lost_at", null)
+    .order("follow_up_at")
+    .limit(10);
+
   // Stage counts
   const stageCounts: Record<string, number> = {};
   for (const d of (deals ?? []) as Deal[]) {
@@ -89,6 +103,7 @@ export async function getDashboardData() {
     stages: (stages ?? []) as PipelineStage[],
     stageCounts,
     followUps: (followUps ?? []) as Deal[],
+    upcomingFollowUps: (upcoming ?? []) as Deal[],
     recentActivities: (activities ?? []) as Activity[],
     folderStats,
     notifications: (notifications ?? []) as Notification[],

@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, relativeTime } from "@/lib/utils";
@@ -30,6 +31,7 @@ import {
   deleteField,
   updateField,
 } from "../folders/[folderId]/actions";
+import { DeleteBatchDialog } from "./delete-batch-dialog";
 
 // ─── Enrichment Fields Modal ──────────────────────────────────────────
 const FIELD_TYPE_OPTIONS: { value: FieldType; label: string }[] = [
@@ -316,6 +318,12 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
   const [filter, setFilter] = useState<"all" | BatchStatus>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [enrichTarget, setEnrichTarget] = useState<{ folderId: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+    total: number;
+    completed: number;
+  } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   function toggleFolder(folderId: string) {
@@ -521,62 +529,82 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                             : 0;
 
                         return (
-                          <Link
-                            key={batch.id}
-                            href={`/enrichment/${batch.id}`}
-                            className="bg-(--color-surface-1) border-2 border-(--color-card-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-all duration-200 shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-1 active:translate-y-0 active:shadow-(--shadow-btn-active)"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="w-9 h-9 rounded-full bg-(--color-surface-4) flex items-center justify-center">
-                                <Sparkles className="h-4 w-4 text-(--color-accent)" />
-                              </div>
-                              <Badge tone={meta.tone}>
-                                <Icon className="h-3 w-3" /> {meta.label}
-                              </Badge>
-                            </div>
-                            <div>
-                              <h4 className="text-base font-bold text-(--color-fg) mb-0.5 wrap-break-word">
-                                {batch.name}
-                              </h4>
-                              <p className="text-xs text-(--color-fg-muted)">
-                                {relativeTime(batch.created_at)}
-                              </p>
-                            </div>
-                            <div className="flex gap-4 text-sm">
-                              <div>
-                                <span className="text-(--color-fg-subtle) text-xs">
-                                  Total
-                                </span>
-                                <p className="font-bold text-(--color-fg)">
-                                  {batch.total}
-                                </p>
+                          <div key={batch.id} className="relative group/card-wrap">
+                            <Link
+                              href={`/enrichment/${batch.id}`}
+                              className="bg-(--color-surface-1) border-2 border-(--color-card-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-all duration-200 shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-1 active:translate-y-0 active:shadow-(--shadow-btn-active)"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="w-9 h-9 rounded-full bg-(--color-surface-4) flex items-center justify-center">
+                                  <Sparkles className="h-4 w-4 text-(--color-accent)" />
+                                </div>
+                                <Badge tone={meta.tone}>
+                                  <Icon className="h-3 w-3" /> {meta.label}
+                                </Badge>
                               </div>
                               <div>
-                                <span className="text-(--color-fg-subtle) text-xs">
-                                  Done
-                                </span>
-                                <p className="font-bold text-(--color-fg)">
-                                  {batch.completed}
+                                <h4 className="text-base font-bold text-(--color-fg) mb-0.5 wrap-break-word">
+                                  {batch.name}
+                                </h4>
+                                <p className="text-xs text-(--color-fg-muted)">
+                                  {relativeTime(batch.created_at)}
                                 </p>
                               </div>
-                            </div>
-                            <div className="mt-auto">
-                              <div className="flex justify-between text-xs text-(--color-fg-subtle) mb-1.5">
-                                <span>{pct}%</span>
+                              <div className="flex gap-4 text-sm">
+                                <div>
+                                  <span className="text-(--color-fg-subtle) text-xs">
+                                    Total
+                                  </span>
+                                  <p className="font-bold text-(--color-fg)">
+                                    {batch.total}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-(--color-fg-subtle) text-xs">
+                                    Done
+                                  </span>
+                                  <p className="font-bold text-(--color-fg)">
+                                    {batch.completed}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="h-1 w-full bg-(--color-surface-4) rounded-full overflow-hidden">
-                                <div
-                                  className={cn(
-                                    "h-full rounded-full transition-all duration-500",
-                                    pct === 100
-                                      ? "bg-(--color-success)"
-                                      : "bg-(--color-accent)"
-                                  )}
-                                  style={{ width: `${pct}%` }}
-                                />
+                              <div className="mt-auto">
+                                <div className="flex justify-between text-xs text-(--color-fg-subtle) mb-1.5">
+                                  <span>{pct}%</span>
+                                </div>
+                                <div className="h-1 w-full bg-(--color-surface-4) rounded-full overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      "h-full rounded-full transition-all duration-500",
+                                      pct === 100
+                                        ? "bg-(--color-success)"
+                                        : "bg-(--color-accent)"
+                                    )}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </Link>
+                            </Link>
+                            {/* Delete button — sits above the <Link>; only shows on hover */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDeleteTarget({
+                                  id: batch.id,
+                                  name: batch.name,
+                                  total: batch.total,
+                                  completed: batch.completed,
+                                });
+                              }}
+                              title="Delete batch"
+                              aria-label={`Delete batch ${batch.name}`}
+                              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-(--color-surface-2) border border-(--color-card-border) opacity-0 group-hover/card-wrap:opacity-100 hover:bg-(--color-danger)/10 hover:border-(--color-danger)/40 hover:text-(--color-danger) text-(--color-fg-subtle) flex items-center justify-center transition-all shadow-(--shadow-btn)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -598,6 +626,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                             <th className="px-4 py-3 font-semibold text-right">
                               Created
                             </th>
+                            <th className="px-4 py-3 font-semibold text-right w-12"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -656,6 +685,24 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                                 <td className="px-4 py-3 text-right text-xs text-(--color-fg-muted)">
                                   {relativeTime(batch.created_at)}
                                 </td>
+                                <td className="px-2 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDeleteTarget({
+                                        id: batch.id,
+                                        name: batch.name,
+                                        total: batch.total,
+                                        completed: batch.completed,
+                                      })
+                                    }
+                                    title="Delete batch"
+                                    aria-label={`Delete batch ${batch.name}`}
+                                    className="h-7 w-7 rounded-full hover:bg-(--color-danger)/10 hover:text-(--color-danger) text-(--color-fg-subtle) inline-flex items-center justify-center transition-colors"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </td>
                               </tr>
                             );
                           })}
@@ -674,6 +721,13 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
           folderId={enrichTarget.folderId}
           open
           onOpenChange={(v) => !v && setEnrichTarget(null)}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteBatchDialog
+          open
+          onOpenChange={(v) => !v && setDeleteTarget(null)}
+          batch={deleteTarget}
         />
       )}
     </div>

@@ -161,7 +161,11 @@ export async function createDeal(input: {
   return data as Deal;
 }
 
-export async function moveDeal(dealId: string, newStageId: string) {
+export async function moveDeal(
+  dealId: string,
+  newStageId: string,
+  options?: { lossReasonId?: string | null }
+) {
   const sb = await createClient();
   const {
     data: { user },
@@ -191,12 +195,20 @@ export async function moveDeal(dealId: string, newStageId: string) {
     .eq("id", newStageId)
     .single();
 
+  // Loss reason is REQUIRED when moving to a Lost stage
+  if (newStage?.is_lost && !options?.lossReasonId) {
+    throw new Error("LOSS_REASON_REQUIRED");
+  }
+
   const updates: Record<string, unknown> = {
     stage_id: newStageId,
     stage_entered_at: new Date().toISOString(),
   };
   if (newStage?.is_won) updates.won_at = new Date().toISOString();
-  if (newStage?.is_lost) updates.lost_at = new Date().toISOString();
+  if (newStage?.is_lost) {
+    updates.lost_at = new Date().toISOString();
+    updates.loss_reason_id = options?.lossReasonId ?? null;
+  }
 
   const { error } = await sb.from("deals").update(updates).eq("id", dealId);
   if (error) throw error;

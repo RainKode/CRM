@@ -228,6 +228,82 @@ export async function deleteAllLeadsInFolder(folderId: string) {
   revalidatePath(`/folders/${folderId}`);
 }
 
+/**
+ * Bulk-update a single field across many leads in a folder.
+ *
+ * - Top-level columns (name/email/company/notes/status/tags) are updated
+ *   with a single query per chunk via `.in(id, chunk)`.
+ * - Custom jsonb fields (stored in `data`) require fetch→merge→write per
+ *   lead because supabase-js can't do a partial jsonb merge in a single
+ *   update. We parallelise the merges in chunks to keep it fast.
+ *
+ * Throws if no leads match. Revalidates the folder path once at the end.
+ */
+export async function bulkUpdateLeads(input: {
+  folderId: string;
+  leadIds: string[];
+  fieldKey: string;
+  value: string | number | boolean | null;
+}): Promise<{ updated: number }> {
+  const { folderId, leadIds, fieldKey, value } = input;
+  if (leadIds.length === 0) return { updated: 0 };
+
+  const sb = await createClient();
+  const TOP_LEVEL = new Set(["name", "email", "company", "notes", "status"]);
+
+  let updated = 0;
+
+  if (TOP_LEVEL.has(fieldKey)) {
+    // Fast path: single UPDATE per chunk
+    for (let i = 0; i < leadIds.length; i += 200) {
+      const chunk = leadIds.slice(i, i + 200);
+      const { error, count } = await sb
+        .from("leads")
+        .update({ [fieldKey]: value }, { count: "exact" })
+        .in("id", chunk)
+        .eq("folder_id", folderId); // defence-in-depth company scoping
+      if (error) throw error;
+      updated += count ?? 0;
+    }
+  } else {
+    // JSONB merge path: fetch current `data`, merge key, write back.
+    // Parallelise within chunks of 50 to avoid overwhelming the DB.
+    const CHUNK = 50;
+    for (let i = 0; i < leadIds.length; i += CHUNK) {
+      const chunk = leadIds.slice(i, i + CHUNK);
+      const { data: rows, error: readErr } = await sb
+        .from("leads")
+        .select("id, data")
+        .in("id", chunk)
+        .eq("folder_id", folderId);
+      if (readErr) throw readErr;
+
+      await Promise.all(
+        (rows ?? []).map(async (row) => {
+          const current = (row.data as Record<string, unknown>) ?? {};
+          const next =
+            value === null
+              ? (() => {
+                  const copy = { ...current };
+                  delete copy[fieldKey];
+                  return copy;
+                })()
+              : { ...current, [fieldKey]: value };
+          const { error } = await sb
+            .from("leads")
+            .update({ data: next })
+            .eq("id", row.id);
+          if (error) throw error;
+          updated += 1;
+        })
+      );
+    }
+  }
+
+  revalidatePath(`/folders/${folderId}`);
+  return { updated };
+}
+
 // ─── Filtered lead queries for batch creation ─────────────────────────
 
 export async function getFilteredLeadIds(
@@ -340,59 +416,131 @@ export async function importLeadsChunk(
     deduped[csvKey] = fieldKey;
   }
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const mapped: Record<string, unknown> = {};
+  // ─── Pre-flight: map all rows, then batch-check dupes in ONE query ───
+  // Previously this did a per-row `.ilike("email", email)` which is O(N)
+  // round-trips and crawled for 1k+ row imports. Now: normalise all emails
+  // from the chunk, fetch existing id/email/phone for them in a single
+  // `.in()` query, and route each row through the cached map.
+  type MappedRow = {
+    rowIndex: number;
+    email: string | null;
+    emailKey: string | null; // lowercased for matching
+    phone: string | null;
+    name: string | null;
+    company: string | null;
+    data: Record<string, unknown>;
+  };
 
+  const mapped: MappedRow[] = rows.map((row, i) => {
+    const m: Record<string, unknown> = {};
     for (const [csvKey, fieldKey] of Object.entries(deduped)) {
-      mapped[fieldKey] = row[csvKey];
+      m[fieldKey] = row[csvKey];
     }
+    const email = m["email"] != null ? String(m["email"]).trim() : null;
+    const phoneRaw = m["phone"] != null ? String(m["phone"]).trim() : null;
+    return {
+      rowIndex: i,
+      email: email || null,
+      emailKey: email ? email.toLowerCase() : null,
+      phone: phoneRaw || null,
+      name: m["name"] != null ? String(m["name"]).trim() || null : null,
+      company: m["company"] != null ? String(m["company"]).trim() || null : null,
+      data: m,
+    };
+  });
 
-    // Extract top-level columns if matching keys exist in the mapped data
-    const email = (mapped["email"] as string) ?? null;
-    const name = (mapped["name"] as string) ?? null;
-    const company = (mapped["company"] as string) ?? null;
+  const emailKeys = Array.from(
+    new Set(mapped.map((r) => r.emailKey).filter((v): v is string => !!v))
+  );
 
-    // Duplicate check by email
-    if (email) {
-      const { data: existing } = await sb
-        .from("leads")
-        .select("id")
-        .eq("folder_id", folderId)
-        .ilike("email", email)
-        .maybeSingle();
-
-      if (existing) {
-        if (duplicateMode === "skip") {
-          skipped++;
-          continue;
+  // Existing leads keyed by lowercased email (when available)
+  const existingByEmail = new Map<string, string>(); // email_lower → lead_id
+  if (emailKeys.length > 0) {
+    const { data: existing, error: lookupErr } = await sb
+      .from("leads")
+      .select("id, email")
+      .eq("folder_id", folderId)
+      .in("email", emailKeys);
+    if (lookupErr) throw lookupErr;
+    for (const row of existing ?? []) {
+      if (row.email) existingByEmail.set(row.email.toLowerCase(), row.id);
+    }
+    // Some rows may have capitalised emails in the DB — fall back to ilike
+    // for any misses. Batch it too: one query that covers remaining keys.
+    const misses = emailKeys.filter((k) => !existingByEmail.has(k));
+    if (misses.length > 0) {
+      // Supabase `.or()` with ilike for each remaining key. Keep the URL
+      // length in check by chunking 50 keys at a time.
+      for (let i = 0; i < misses.length; i += 50) {
+        const slice = misses.slice(i, i + 50);
+        const orExpr = slice
+          .map((k) => `email.ilike.${k.replace(/,/g, "")}`)
+          .join(",");
+        const { data: more } = await sb
+          .from("leads")
+          .select("id, email")
+          .eq("folder_id", folderId)
+          .or(orExpr);
+        for (const row of more ?? []) {
+          if (row.email) existingByEmail.set(row.email.toLowerCase(), row.id);
         }
-        // overwrite
+      }
+    }
+  }
+
+  // Track emails we've already used *within this chunk* to avoid creating
+  // in-file duplicates (e.g. same email appearing twice in the CSV).
+  const seenInChunk = new Set<string>();
+
+  // ─── Apply dup logic + write ────────────────────────────────────────
+  for (const r of mapped) {
+    const emailKey = r.emailKey;
+
+    // Duplicate path
+    if (emailKey && (existingByEmail.has(emailKey) || seenInChunk.has(emailKey))) {
+      if (duplicateMode === "skip") {
+        skipped++;
+        continue;
+      }
+      // overwrite — prefer existing DB row over in-chunk dup
+      const existingId = existingByEmail.get(emailKey);
+      if (existingId) {
         const { error } = await sb
           .from("leads")
-          .update({ name, company, data: mapped })
-          .eq("id", existing.id);
+          .update({ name: r.name, company: r.company, data: r.data })
+          .eq("id", existingId);
         if (error) {
-          errors.push({ row: rowOffset + i + 1, reason: error.message });
+          errors.push({ row: rowOffset + r.rowIndex + 1, reason: error.message });
         } else {
           imported++;
         }
-        continue;
+      } else {
+        // In-chunk dup + overwrite — skip to keep first instance
+        skipped++;
       }
+      continue;
     }
 
-    const { error } = await sb.from("leads").insert({
-      folder_id: folderId,
-      email,
-      name,
-      company,
-      data: mapped,
-      created_by: user.id,
-    });
+    const { data: inserted, error } = await sb
+      .from("leads")
+      .insert({
+        folder_id: folderId,
+        email: r.email,
+        name: r.name,
+        company: r.company,
+        data: r.data,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
     if (error) {
-      errors.push({ row: rowOffset + i + 1, reason: error.message });
+      errors.push({ row: rowOffset + r.rowIndex + 1, reason: error.message });
     } else {
       imported++;
+      if (emailKey) {
+        seenInChunk.add(emailKey);
+        existingByEmail.set(emailKey, inserted.id);
+      }
     }
   }
 
