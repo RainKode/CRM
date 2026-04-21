@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { Deal, PipelineStage, Activity, Notification } from "@/lib/types";
+import type { Deal, PipelineStage, Activity, Notification, Task } from "@/lib/types";
 
 export async function getDashboardData() {
   const sb = await createClient();
@@ -72,6 +72,15 @@ export async function getDashboardData() {
     .order("follow_up_at")
     .limit(10);
 
+  // Tasks: open tasks sorted by due date (overdue first).
+  const { data: openTasks } = await sb
+    .from("tasks")
+    .select("*")
+    .eq("company_id", companyId)
+    .is("completed_at", null)
+    .order("due_at", { ascending: true, nullsFirst: false })
+    .limit(10);
+
   // Stage counts
   const stageCounts: Record<string, number> = {};
   for (const d of (deals ?? []) as Deal[]) {
@@ -107,5 +116,6 @@ export async function getDashboardData() {
     recentActivities: (activities ?? []) as Activity[],
     folderStats,
     notifications: (notifications ?? []) as Notification[],
+    openTasks: (openTasks ?? []) as Task[],
   };
 }

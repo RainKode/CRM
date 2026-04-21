@@ -12,9 +12,10 @@ import {
   ArrowRight,
   MoreHorizontal,
   CheckCircle,
+  CheckSquare,
 } from "lucide-react";
 import { relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, Activity, Notification } from "@/lib/types";
+import type { Deal, PipelineStage, Activity, Notification, Task } from "@/lib/types";
 
 type DashboardData = {
   stages: PipelineStage[];
@@ -24,6 +25,7 @@ type DashboardData = {
   recentActivities: Activity[];
   folderStats: { id: string; name: string; total: number; enriched: number }[];
   notifications: Notification[];
+  openTasks: Task[];
 };
 
 const ACTIVITY_ICON: Record<string, React.ElementType> = {
@@ -264,6 +266,74 @@ export function DashboardView({ data }: { data: DashboardData }) {
                 })
               )}
             </div>
+          </div>
+
+          {/* Tasks */}
+          <div className="flex flex-col gap-4 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-(--color-accent)" />
+                <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
+                  Tasks
+                </h3>
+                {data.openTasks.length > 0 && (
+                  <span className="ml-1 text-xs font-medium px-2 py-0.5 rounded-full bg-(--color-surface-3) text-(--color-fg-muted)">
+                    {data.openTasks.length}
+                  </span>
+                )}
+              </div>
+              <Link
+                href="/tasks"
+                className="text-(--color-fg-muted) hover:text-(--color-fg) transition-colors text-sm font-medium"
+              >
+                View all
+              </Link>
+            </div>
+            {data.openTasks.length === 0 ? (
+              <p className="text-sm text-(--color-fg-subtle)">
+                No open tasks.{" "}
+                <Link href="/tasks" className="text-(--color-accent) hover:underline">
+                  Create one →
+                </Link>
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {data.openTasks.slice(0, 5).map((t) => {
+                  const due = t.due_at ? new Date(t.due_at) : null;
+                  const overdue = due ? due.getTime() < Date.now() : false;
+                  return (
+                    <li
+                      key={t.id}
+                      className="flex items-start gap-3 rounded-xl bg-(--color-surface-2) px-3 py-2.5"
+                    >
+                      <div className="mt-0.5 h-4 w-4 rounded-full border-2 border-(--color-fg-subtle) shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-(--color-fg) truncate">
+                          {t.title}
+                        </div>
+                        {due && (
+                          <div
+                            className={
+                              overdue
+                                ? "text-[11px] font-medium text-(--color-danger)"
+                                : "text-[11px] text-(--color-fg-muted)"
+                            }
+                          >
+                            {overdue ? "Overdue • " : ""}
+                            {due.toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {/* Recent Activity */}

@@ -22,7 +22,9 @@ export type ActivityType =
   | "stage_change"
   | "follow_up_set"
   | "won"
-  | "lost";
+  | "lost"
+  | "meeting";
+export type ActivityStatus = "done" | "scheduled";
 export type CallDirection = "inbound" | "outbound";
 export type NotificationType =
   | "follow_up_due"
@@ -205,8 +207,25 @@ export interface Activity {
   stage_from: string | null;
   stage_to: string | null;
   occurred_at: string;
+  status: ActivityStatus;
+  scheduled_at: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface Task {
+  id: string;
+  company_id: string;
+  title: string;
+  notes: string | null;
+  due_at: string | null;
+  completed_at: string | null;
+  deal_id: string | null;
+  lead_id: string | null;
+  assigned_to: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ImportHistory {

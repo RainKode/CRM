@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Star,
   Settings,
+  CheckSquare,
   CornerDownLeft,
   ArrowUp,
   ArrowDown,
@@ -69,6 +70,14 @@ const NAV_COMMANDS: NavCommand[] = [
     href: "/enriched",
     icon: Star,
     keywords: ["enriched", "clients"],
+  },
+  {
+    id: "nav-tasks",
+    title: "Go to Tasks",
+    subtitle: "Standalone to-dos",
+    href: "/tasks",
+    icon: CheckSquare,
+    keywords: ["tasks", "todo", "to do", "to-do", "due"],
   },
   {
     id: "nav-settings",

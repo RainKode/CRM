@@ -243,16 +243,41 @@ export async function logActivity(input: {
   call_duration_seconds?: number;
   call_outcome?: string;
   email_subject?: string;
+  /**
+   * When set, the activity is recorded as scheduled (future-dated) rather
+   * than logged as already-done. Pair with status="scheduled".
+   */
+  scheduled_at?: string | null;
+  status?: Activity["status"];
 }) {
   const sb = await createClient();
   const {
     data: { user },
   } = await sb.auth.getUser();
 
+  const scheduled = input.status === "scheduled";
   const { error } = await sb.from("activities").insert({
     ...input,
+    status: input.status ?? "done",
+    // For scheduled activities we set occurred_at to the scheduled time so
+    // it can appear on timelines in the correct relative position.
+    occurred_at: scheduled && input.scheduled_at ? input.scheduled_at : undefined,
     created_by: user?.id ?? null,
   });
+  if (error) throw error;
+  bustPipelineCache();
+}
+
+/**
+ * Mark a previously-scheduled activity as completed. Flips status to "done"
+ * and stamps occurred_at to now so it lands at the top of the timeline.
+ */
+export async function completeScheduledActivity(id: string) {
+  const sb = await createClient();
+  const { error } = await sb
+    .from("activities")
+    .update({ status: "done", occurred_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
   bustPipelineCache();
 }

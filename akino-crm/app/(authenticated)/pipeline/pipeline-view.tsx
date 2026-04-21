@@ -59,6 +59,7 @@ import { cn, relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType } from "@/lib/types";
 import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, type LeadSearchResult } from "./actions";
 import { LossReasonDialog } from "./loss-reason-dialog";
+import { QuickLogPopover } from "./quick-log-popover";
 import { downloadCsv, csvCell, timestampedFilename } from "@/lib/csv-export";
 
 // ─────────────────────────────────────────────
@@ -108,12 +109,14 @@ function DealCard({
   bulkMode,
   isSelected,
   onToggleSelect,
+  onQuickLog,
 }: {
   deal: Deal;
   onClick: () => void;
   bulkMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  onQuickLog?: (dealId: string, anchor: DOMRect) => void;
 }) {
   const {
     attributes,
@@ -138,7 +141,7 @@ function DealCard({
       {...listeners}
       onClick={bulkMode ? onToggleSelect : onClick}
       className={cn(
-        "bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2",
+        "bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 group/card",
         isSelected
           ? "border-(--color-accent) ring-1 ring-(--color-accent)/30"
           : "border-(--color-card-border)"
@@ -187,6 +190,28 @@ function DealCard({
           </div>
         )}
       </div>
+
+      {/* Quick-log row — shows on hover; opens popover anchored to the button */}
+      {!bulkMode && onQuickLog && (
+        <div className="mt-2 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              onQuickLog(deal.id, rect);
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-(--color-surface-2) hover:bg-(--color-surface-3) py-1.5 text-[11px] font-medium text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
+            title="Log or schedule an activity"
+          >
+            <Phone className="h-3 w-3" />
+            <Mail className="h-3 w-3" />
+            <StickyNote className="h-3 w-3" />
+            <span className="ml-1">Log</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -206,6 +231,7 @@ function KanbanColumn({
   selectedDealIds,
   onToggleSelect,
   onSelectAll,
+  onQuickLog,
 }: {
   stage: PipelineStage;
   deals: Deal[];
@@ -218,6 +244,7 @@ function KanbanColumn({
   selectedDealIds?: Set<string>;
   onToggleSelect?: (dealId: string) => void;
   onSelectAll?: () => void;
+  onQuickLog?: (dealId: string, anchor: DOMRect) => void;
 }) {
   const isWon = stage.is_won;
   const menu = useDropdown();
@@ -311,6 +338,7 @@ function KanbanColumn({
               bulkMode={bulkMode}
               isSelected={selectedDealIds?.has(deal.id)}
               onToggleSelect={() => onToggleSelect?.(deal.id)}
+              onQuickLog={onQuickLog}
             />
           ))}
         </div>
@@ -1514,6 +1542,12 @@ export function PipelineView({
   const [bulkMode, setBulkMode] = useState(false);
   const bulkActionsMenu = useDropdown();
 
+  // Quick-log popover (anchored to the trigger button on a DealCard)
+  const [quickLogFor, setQuickLogFor] = useState<{
+    dealId: string;
+    anchorRect: { left: number; top: number; width: number };
+  } | null>(null);
+
   // Column limit — show N deals per column, rest queued
   const COLUMN_LIMIT = 50;
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
@@ -2064,6 +2098,16 @@ export function PipelineView({
                   selectedDealIds={selectedDealIds}
                   onToggleSelect={toggleDealSelection}
                   onSelectAll={() => selectAllInStage(stage.id)}
+                  onQuickLog={(dealId, rect) =>
+                    setQuickLogFor({
+                      dealId,
+                      anchorRect: {
+                        left: rect.left,
+                        top: rect.bottom + 6,
+                        width: rect.width,
+                      },
+                    })
+                  }
                 />
               ))}
             </div>
@@ -2196,6 +2240,16 @@ export function PipelineView({
           }
         }}
       />
+
+      {/* Inline quick-log popover */}
+      {quickLogFor && (
+        <QuickLogPopover
+          dealId={quickLogFor.dealId}
+          anchorRect={quickLogFor.anchorRect}
+          onClose={() => setQuickLogFor(null)}
+          onLogged={() => router.refresh()}
+        />
+      )}
 
       {/* Mobile FAB */}
       <button
