@@ -673,57 +673,196 @@ export async function createPipelineForBatch(
   } = await sb.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Check if folder already has a pipeline (to copy stages from)
-  const { data: existingPipelines } = await sb
+  // ── Idempotency: reuse an existing pipeline for this (folder, batch) pair ──
+  const { data: existingForBatch } = await sb
+    .from("pipelines")
+    .select("*")
+    .eq("folder_id", folderId)
+    .eq("batch_id", batchId)
+    .eq("is_archived", false)
+    .maybeSingle();
+
+  if (existingForBatch) {
+    // Pipeline row already exists. If it already has stages we're done.
+    const { data: alreadyHasStages } = await sb
+      .from("pipeline_stages")
+      .select("id")
+      .eq("pipeline_id", existingForBatch.id)
+      .eq("is_archived", false)
+      .limit(1);
+    if (alreadyHasStages && alreadyHasStages.length > 0) {
+      return existingForBatch as Pipeline;
+    }
+    // Pipeline exists but has no stages — fall through to stage-creation below.
+  }
+
+  // ── Find a sibling pipeline in the same folder that has stages to copy ──
+  // Look for any pipeline in the folder (including non-batch ones) that has stages.
+  // Query up to 10 candidates so we can skip any that are also orphaned.
+  const { data: siblingCandidates } = await sb
     .from("pipelines")
     .select("id")
     .eq("folder_id", folderId)
     .eq("is_archived", false)
-    .limit(1);
+    .not("id", "eq", existingForBatch?.id ?? "00000000-0000-0000-0000-000000000000")
+    .limit(10);
 
-  const { data: pipeline, error } = await sb
-    .from("pipelines")
-    .insert({
-      name: batchName,
-      folder_id: folderId,
-      batch_id: batchId,
-      company_id: await getActiveCompanyId(),
-      created_by: user.id,
-    })
-    .select()
-    .single();
-  if (error) throw error;
+  let templatePipelineId: string | null = null;
+  for (const candidate of siblingCandidates ?? []) {
+    const { data: candidateStages } = await sb
+      .from("pipeline_stages")
+      .select("id")
+      .eq("pipeline_id", candidate.id)
+      .eq("is_archived", false)
+      .limit(1);
+    if (candidateStages && candidateStages.length > 0) {
+      templatePipelineId = candidate.id;
+      break;
+    }
+  }
 
-  if (existingPipelines && existingPipelines.length > 0) {
-    // Copy stages from existing folder pipeline
-    const { data: templateStages } = await sb
+  // ── Create the pipeline row (if not already present) ──
+  let pipeline: Pipeline;
+  if (existingForBatch) {
+    pipeline = existingForBatch as Pipeline;
+  } else {
+    const { data: newPipeline, error } = await sb
+      .from("pipelines")
+      .insert({
+        name: batchName,
+        folder_id: folderId,
+        batch_id: batchId,
+        company_id: await getActiveCompanyId(),
+        created_by: user.id,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    pipeline = newPipeline as Pipeline;
+  }
+
+  // ── Insert stages ──
+  let stageInsertError: unknown = null;
+
+  if (templatePipelineId) {
+    const { data: templateStages, error: tErr } = await sb
       .from("pipeline_stages")
       .select("name, position, is_won, is_lost")
-      .eq("pipeline_id", existingPipelines[0].id)
+      .eq("pipeline_id", templatePipelineId)
       .eq("is_archived", false)
       .order("position");
-
-    if (templateStages && templateStages.length > 0) {
-      await sb.from("pipeline_stages").insert(
-        templateStages.map((s) => ({
-          ...s,
-          pipeline_id: pipeline.id,
-        }))
+    if (tErr) {
+      stageInsertError = tErr;
+    } else if (templateStages && templateStages.length > 0) {
+      const { error } = await sb.from("pipeline_stages").insert(
+        templateStages.map((s) => ({ ...s, pipeline_id: pipeline.id }))
       );
+      stageInsertError = error;
     }
-  } else {
-    // First pipeline for this folder — create default stages
-    const defaultStages = [
-      { name: "Lead", position: 0, pipeline_id: pipeline.id },
+  }
+
+  // Fall back to defaults if no template was found or template had no stages
+  if (!templatePipelineId || stageInsertError) {
+    stageInsertError = null;
+    const { error } = await sb.from("pipeline_stages").insert([
+      { name: "Lead",      position: 0, pipeline_id: pipeline.id },
       { name: "Contacted", position: 1, pipeline_id: pipeline.id },
       { name: "Qualified", position: 2, pipeline_id: pipeline.id },
-      { name: "Proposal", position: 3, pipeline_id: pipeline.id },
-      { name: "Won", position: 4, pipeline_id: pipeline.id, is_won: true },
-      { name: "Lost", position: 5, pipeline_id: pipeline.id, is_lost: true },
-    ];
-    await sb.from("pipeline_stages").insert(defaultStages);
+      { name: "Proposal",  position: 3, pipeline_id: pipeline.id },
+      { name: "Won",       position: 4, pipeline_id: pipeline.id, is_won: true },
+      { name: "Lost",      position: 5, pipeline_id: pipeline.id, is_lost: true },
+    ]);
+    stageInsertError = error;
+  }
+
+  if (stageInsertError) {
+    // Roll back: delete the pipeline row only if we just created it (not pre-existing).
+    if (!existingForBatch) {
+      await sb.from("pipelines").delete().eq("id", pipeline.id);
+    }
+    const pg = stageInsertError as { code?: string; message?: string; details?: string };
+    const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
+    throw new Error(`Failed to create pipeline stages for "${batchName}": ${msg}`);
   }
 
   await bustPipelineCache();
   return pipeline as Pipeline;
+}
+
+// ── Repair a pipeline that has no stages (self-serve from the UI) ──────────────
+export async function repairPipelineStages(pipelineId: string): Promise<void> {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: pipeline, error: pipelineErr } = await sb
+    .from("pipelines")
+    .select("id, folder_id, name")
+    .eq("id", pipelineId)
+    .eq("is_archived", false)
+    .single();
+  if (pipelineErr || !pipeline) throw new Error("Pipeline not found");
+
+  // Idempotent: already has stages → nothing to do.
+  const { data: existingStages } = await sb
+    .from("pipeline_stages")
+    .select("id")
+    .eq("pipeline_id", pipelineId)
+    .eq("is_archived", false)
+    .limit(1);
+  if (existingStages && existingStages.length > 0) {
+    await bustPipelineCache();
+    return;
+  }
+
+  // Find a donor pipeline in the same folder that has stages.
+  const { data: donorCandidates } = await sb
+    .from("pipelines")
+    .select("id")
+    .eq("folder_id", pipeline.folder_id)
+    .eq("is_archived", false)
+    .neq("id", pipelineId)
+    .limit(10);
+
+  let donorId: string | null = null;
+  for (const candidate of donorCandidates ?? []) {
+    const { data: cStages } = await sb
+      .from("pipeline_stages")
+      .select("id")
+      .eq("pipeline_id", candidate.id)
+      .eq("is_archived", false)
+      .limit(1);
+    if (cStages && cStages.length > 0) {
+      donorId = candidate.id;
+      break;
+    }
+  }
+
+  if (donorId) {
+    const { data: templateStages, error: tErr } = await sb
+      .from("pipeline_stages")
+      .select("name, position, is_won, is_lost")
+      .eq("pipeline_id", donorId)
+      .eq("is_archived", false)
+      .order("position");
+    if (tErr) throw tErr;
+    const { error } = await sb
+      .from("pipeline_stages")
+      .insert((templateStages ?? []).map((s) => ({ ...s, pipeline_id: pipelineId })));
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("pipeline_stages").insert([
+      { name: "Lead",      position: 0, pipeline_id: pipelineId },
+      { name: "Contacted", position: 1, pipeline_id: pipelineId },
+      { name: "Qualified", position: 2, pipeline_id: pipelineId },
+      { name: "Proposal",  position: 3, pipeline_id: pipelineId },
+      { name: "Won",       position: 4, pipeline_id: pipelineId, is_won: true },
+      { name: "Lost",      position: 5, pipeline_id: pipelineId, is_lost: true },
+    ]);
+    if (error) throw error;
+  }
+
+  await bustPipelineCache();
 }

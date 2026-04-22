@@ -46,6 +46,7 @@ import {
   MailCheck,
   MailQuestion,
   Moon,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn, relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, LossReason, Pipeline, Activity, ActivityType, ActivityStatus } from "@/lib/types";
-import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, completeScheduledActivity, type LeadSearchResult } from "./actions";
+import { createDeal, moveDeal, logActivity, setFollowUp, deleteDeal, searchLeads, createPipeline, renamePipeline, deletePipeline, getDealActivities, markDealLost, updateDeal, completeScheduledActivity, repairPipelineStages, type LeadSearchResult } from "./actions";
 import { LossReasonDialog } from "./loss-reason-dialog";
 import { QuickLogPopover } from "./quick-log-popover";
 import { SavedViewPicker } from "../saved-views/saved-view-picker";
@@ -1722,6 +1723,7 @@ export function PipelineView({
   const [showClosed, setShowClosed] = useState(closedFromUrl);
   const [filterStageId, setFilterStageId] = useState<string | null>(stageFromUrl);
   const [, startTransition] = useTransition();
+  const [isRepairing, startRepairTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const filterMenu = useDropdown();
   const pipelineMenu = useDropdown();
@@ -2292,7 +2294,31 @@ export function PipelineView({
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {view === "kanban" ? (
+        {activePipelineId && pipelineStages.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center space-y-4 max-w-xs">
+              <div className="w-16 h-16 rounded-2xl bg-(--color-surface-2) flex items-center justify-center mx-auto">
+                <Wrench className="h-8 w-8 text-(--color-fg-muted)" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-(--color-fg) mb-1">This pipeline has no stages yet</h3>
+                <p className="text-sm text-(--color-fg-muted)">Stages are needed before you can add or view deals.</p>
+              </div>
+              <Button
+                size="sm"
+                disabled={isRepairing}
+                onClick={() => {
+                  startRepairTransition(async () => {
+                    await repairPipelineStages(activePipelineId);
+                    router.refresh();
+                  });
+                }}
+              >
+                {isRepairing ? "Repairing\u2026" : "Repair stages"}
+              </Button>
+            </div>
+          </div>
+        ) : view === "kanban" ? (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}

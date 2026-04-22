@@ -345,8 +345,25 @@ export function FolderPipelineView({
         </div>
       </header>
 
+      {/* Empty stage state – shown when no pipeline in this folder has stages yet */}
+      {stages.length === 0 && (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-center space-y-3 max-w-xs">
+            <div className="w-16 h-16 rounded-2xl bg-(--color-surface-2) flex items-center justify-center mx-auto">
+              <LayoutGrid className="h-8 w-8 text-(--color-fg-muted)" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-(--color-fg) mb-1">No stages found</h3>
+              <p className="text-sm text-(--color-fg-muted)">
+                None of the pipelines in this folder have stages yet. Visit each pipeline to repair them.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Kanban */}
-      {view === "kanban" && (
+      {stages.length > 0 && view === "kanban" && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -384,7 +401,7 @@ export function FolderPipelineView({
       )}
 
       {/* List view */}
-      {view === "list" && (
+      {stages.length > 0 && view === "list" && (
         <div className="flex-1 overflow-y-auto px-8 md:px-12 pb-8">
           <div className="bg-(--color-surface-1) rounded-2xl border-2 border-(--color-card-border) overflow-hidden">
             <table className="w-full">

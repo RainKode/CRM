@@ -149,7 +149,7 @@ export async function createMultipleBatches(input: {
   batch_size: number;
   sort_by_field?: string;
   filter_by_field?: string;
-}): Promise<{ created: Batch[]; skippedLeadCount: number }> {
+}): Promise<{ created: Batch[]; skippedLeadCount: number; pipelineCreationErrors: string[] }> {
   const sb = await createClient();
   const {
     data: { user },
@@ -178,11 +178,12 @@ export async function createMultipleBatches(input: {
 
   if (freeIds.length === 0) {
     revalidatePath("/enrichment");
-    return { created: [], skippedLeadCount };
+    return { created: [], skippedLeadCount, pipelineCreationErrors: [] };
   }
 
   const totalBatches = Math.ceil(freeIds.length / batch_size);
   const created: Batch[] = [];
+  const pipelineCreationErrors: string[] = [];
 
   for (let i = 0; i < totalBatches; i++) {
     const chunk = freeIds.slice(i * batch_size, (i + 1) * batch_size);
@@ -232,14 +233,17 @@ export async function createMultipleBatches(input: {
     // Auto-create a pipeline for this batch
     try {
       await createPipelineForBatch(folder_id, batch.id, batchName);
-    } catch {
-      // Non-fatal: pipeline creation failure shouldn't block batch creation
-      console.error(`Failed to auto-create pipeline for batch ${batch.id}`);
+    } catch (err) {
+      // Non-fatal: pipeline creation failure shouldn't block batch creation.
+      // Collect the error so the caller can surface a warning to the user.
+      const msg = err instanceof Error ? err.message : `Failed to create pipeline for batch ${batch.id}`;
+      console.error(`createMultipleBatches: pipeline creation failed for batch ${batch.id}:`, err);
+      pipelineCreationErrors.push(msg);
     }
   }
 
   revalidatePath("/enrichment");
-  return { created, skippedLeadCount };
+  return { created, skippedLeadCount, pipelineCreationErrors };
 }
 
 export async function getBatchLeads(

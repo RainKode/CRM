@@ -128,7 +128,15 @@ export function BatchCreationWizard({
           sort_by_field: sortField || undefined,
           filter_by_field: filterField || undefined,
         });
-        if (result.skippedLeadCount > 0) {
+        if (result.pipelineCreationErrors && result.pipelineCreationErrors.length > 0) {
+          console.warn("Some batch pipelines could not be auto-created:", result.pipelineCreationErrors);
+          setCreateError(
+            `Batches created, but ${result.pipelineCreationErrors.length} pipeline(s) failed to auto-create. ` +
+            `You can repair them from the Pipeline view.`
+          );
+          setIsCreating(false);
+          router.push("/enrichment");
+        } else if (result.skippedLeadCount > 0) {
           // Stay open so the user can see the skip notice before closing.
           setSkippedCount(result.skippedLeadCount);
           setIsCreating(false);
