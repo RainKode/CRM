@@ -200,6 +200,47 @@ create table if not exists pipelines (
 
 create index if not exists idx_pipelines_company on pipelines(company_id);
 
+-- =====================================================================
+-- 6b. Pipeline templates (reusable blueprints, company-scoped)
+-- =====================================================================
+create table if not exists pipeline_templates (
+  id          uuid        primary key default gen_random_uuid(),
+  company_id  uuid        not null references companies(id) on delete cascade,
+  name        text        not null,
+  is_default  boolean     not null default false,
+  is_archived boolean     not null default false,
+  created_by  uuid        references profiles(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_pipeline_templates_company
+  on pipeline_templates(company_id);
+
+create table if not exists pipeline_template_stages (
+  id          uuid        primary key default gen_random_uuid(),
+  template_id uuid        not null references pipeline_templates(id) on delete cascade,
+  name        text        not null,
+  position    integer     not null,
+  is_won      boolean     not null default false,
+  is_lost     boolean     not null default false,
+  is_archived boolean     not null default false,
+  created_at  timestamptz not null default now()
+);
+
+create unique index if not exists uniq_template_stage_position
+  on pipeline_template_stages(template_id, position) where is_archived = false;
+
+create index if not exists idx_pipeline_template_stages_template
+  on pipeline_template_stages(template_id, position);
+
+-- pipelines now carry a reference back to their blueprint
+alter table pipelines
+  add column if not exists template_id uuid
+    references pipeline_templates(id) on delete set null;
+
+create unique index if not exists uniq_pipeline_company_batch
+  on pipelines(company_id, batch_id) where batch_id is not null;
+
 create table if not exists pipeline_stages (
   id uuid primary key default gen_random_uuid(),
   pipeline_id uuid not null references pipelines(id) on delete cascade,
@@ -423,6 +464,8 @@ alter table field_definitions enable row level security;
 alter table leads enable row level security;
 alter table batches enable row level security;
 alter table batch_leads enable row level security;
+alter table pipeline_templates       enable row level security;
+alter table pipeline_template_stages enable row level security;
 alter table pipeline_stages enable row level security;
 alter table loss_reasons enable row level security;
 alter table deals enable row level security;
@@ -450,6 +493,11 @@ returns uuid language sql stable security definer as $$
   select company_id from pipelines where id = p_pipeline_id;
 $$;
 
+create or replace function public.get_template_company(p_template_id uuid)
+returns uuid language sql stable security definer as $$
+  select company_id from pipeline_templates where id = p_template_id;
+$$;
+
 create or replace function public.get_deal_company(p_deal_id uuid)
 returns uuid language sql stable security definer as $$
   select company_id from deals where id = p_deal_id;
@@ -470,6 +518,14 @@ create policy folders_company_rls on folders for all
 create policy pipelines_company_rls on pipelines for all
   using (public.is_member_of_company(company_id))
   with check (public.is_member_of_company(company_id));
+
+create policy pipeline_templates_company_rls on pipeline_templates for all
+  using (public.is_member_of_company(company_id))
+  with check (public.is_member_of_company(company_id));
+
+create policy pipeline_template_stages_company_rls on pipeline_template_stages for all
+  using (public.is_member_of_company(public.get_template_company(template_id)))
+  with check (public.is_member_of_company(public.get_template_company(template_id)));
 
 create policy deals_company_rls on deals for all
   using (public.is_member_of_company(company_id))

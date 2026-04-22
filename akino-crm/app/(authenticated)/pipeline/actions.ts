@@ -344,13 +344,31 @@ export async function setFollowUp(
 export async function markDealLost(dealId: string, lossReasonId: string) {
   const sb = await createClient();
 
-  // Find the Lost stage
+  // Fetch the deal's current stage to identify which pipeline it belongs to,
+  // then find the Lost stage within that same pipeline.
+  const { data: deal } = await sb
+    .from("deals")
+    .select("stage_id")
+    .eq("id", dealId)
+    .single();
+  if (!deal) throw new Error("Deal not found");
+
+  const { data: currentStage } = await sb
+    .from("pipeline_stages")
+    .select("pipeline_id")
+    .eq("id", deal.stage_id)
+    .single();
+  if (!currentStage) throw new Error("Stage not found");
+
   const { data: lostStage } = await sb
     .from("pipeline_stages")
     .select("id")
+    .eq("pipeline_id", currentStage.pipeline_id)
     .eq("is_lost", true)
-    .single();
-  if (!lostStage) throw new Error("No Lost stage configured");
+    .eq("is_archived", false)
+    .limit(1)
+    .maybeSingle();
+  if (!lostStage) throw new Error("No Lost stage configured for this pipeline");
 
   const { error } = await sb
     .from("deals")
@@ -667,24 +685,26 @@ export async function createPipelineForBatch(
   batchId: string,
   batchName: string
 ): Promise<Pipeline> {
+  const companyId = await getActiveCompanyId();
   const sb = await createClient();
   const {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // ── Idempotency: reuse an existing pipeline for this (folder, batch) pair ──
-  const { data: existingForBatch } = await sb
+  const admin = createAdminClient();
+
+  // ── Idempotency: reuse an existing pipeline for this (company, batch) pair ──
+  const { data: existingForBatch } = await admin
     .from("pipelines")
     .select("*")
-    .eq("folder_id", folderId)
+    .eq("company_id", companyId)
     .eq("batch_id", batchId)
     .eq("is_archived", false)
     .maybeSingle();
 
   if (existingForBatch) {
-    // Pipeline row already exists. If it already has stages we're done.
-    const { data: alreadyHasStages } = await sb
+    const { data: alreadyHasStages } = await admin
       .from("pipeline_stages")
       .select("id")
       .eq("pipeline_id", existingForBatch.id)
@@ -693,32 +713,30 @@ export async function createPipelineForBatch(
     if (alreadyHasStages && alreadyHasStages.length > 0) {
       return existingForBatch as Pipeline;
     }
-    // Pipeline exists but has no stages — fall through to stage-creation below.
+    // Has pipeline but no stages — fall through to stage-creation below.
   }
 
-  // ── Find a sibling pipeline in the same folder that has stages to copy ──
-  // Look for any pipeline in the folder (including non-batch ones) that has stages.
-  // Query up to 10 candidates so we can skip any that are also orphaned.
-  const { data: siblingCandidates } = await sb
-    .from("pipelines")
+  // ── Fetch the company's default template (guaranteed to exist after migration) ──
+  const { data: defaultTemplate, error: tmplErr } = await admin
+    .from("pipeline_templates")
     .select("id")
-    .eq("folder_id", folderId)
+    .eq("company_id", companyId)
+    .eq("is_default", true)
     .eq("is_archived", false)
-    .not("id", "eq", existingForBatch?.id ?? "00000000-0000-0000-0000-000000000000")
-    .limit(10);
+    .limit(1)
+    .maybeSingle();
+  if (tmplErr) throw tmplErr;
+  if (!defaultTemplate) throw new Error(`No default pipeline template found for company ${companyId}`);
 
-  let templatePipelineId: string | null = null;
-  for (const candidate of siblingCandidates ?? []) {
-    const { data: candidateStages } = await sb
-      .from("pipeline_stages")
-      .select("id")
-      .eq("pipeline_id", candidate.id)
-      .eq("is_archived", false)
-      .limit(1);
-    if (candidateStages && candidateStages.length > 0) {
-      templatePipelineId = candidate.id;
-      break;
-    }
+  const { data: templateStages, error: tsErr } = await admin
+    .from("pipeline_template_stages")
+    .select("name, position, is_won, is_lost")
+    .eq("template_id", defaultTemplate.id)
+    .eq("is_archived", false)
+    .order("position");
+  if (tsErr) throw tsErr;
+  if (!templateStages || templateStages.length === 0) {
+    throw new Error("Default template has no stages. Please configure the template first.");
   }
 
   // ── Create the pipeline row (if not already present) ──
@@ -726,13 +744,14 @@ export async function createPipelineForBatch(
   if (existingForBatch) {
     pipeline = existingForBatch as Pipeline;
   } else {
-    const { data: newPipeline, error } = await sb
+    const { data: newPipeline, error } = await admin
       .from("pipelines")
       .insert({
         name: batchName,
         folder_id: folderId,
         batch_id: batchId,
-        company_id: await getActiveCompanyId(),
+        company_id: companyId,
+        template_id: defaultTemplate.id,
         created_by: user.id,
       })
       .select()
@@ -741,46 +760,17 @@ export async function createPipelineForBatch(
     pipeline = newPipeline as Pipeline;
   }
 
-  // ── Insert stages ──
-  let stageInsertError: unknown = null;
+  // ── Insert stages from template ──
+  const { error: stageErr } = await admin.from("pipeline_stages").insert(
+    templateStages.map((s) => ({ ...s, pipeline_id: pipeline.id }))
+  );
 
-  if (templatePipelineId) {
-    const { data: templateStages, error: tErr } = await sb
-      .from("pipeline_stages")
-      .select("name, position, is_won, is_lost")
-      .eq("pipeline_id", templatePipelineId)
-      .eq("is_archived", false)
-      .order("position");
-    if (tErr) {
-      stageInsertError = tErr;
-    } else if (templateStages && templateStages.length > 0) {
-      const { error } = await sb.from("pipeline_stages").insert(
-        templateStages.map((s) => ({ ...s, pipeline_id: pipeline.id }))
-      );
-      stageInsertError = error;
-    }
-  }
-
-  // Fall back to defaults if no template was found or template had no stages
-  if (!templatePipelineId || stageInsertError) {
-    stageInsertError = null;
-    const { error } = await sb.from("pipeline_stages").insert([
-      { name: "Lead",      position: 0, pipeline_id: pipeline.id },
-      { name: "Contacted", position: 1, pipeline_id: pipeline.id },
-      { name: "Qualified", position: 2, pipeline_id: pipeline.id },
-      { name: "Proposal",  position: 3, pipeline_id: pipeline.id },
-      { name: "Won",       position: 4, pipeline_id: pipeline.id, is_won: true },
-      { name: "Lost",      position: 5, pipeline_id: pipeline.id, is_lost: true },
-    ]);
-    stageInsertError = error;
-  }
-
-  if (stageInsertError) {
-    // Roll back: delete the pipeline row only if we just created it (not pre-existing).
+  if (stageErr) {
+    // Roll back: delete the pipeline row only if we just created it.
     if (!existingForBatch) {
-      await sb.from("pipelines").delete().eq("id", pipeline.id);
+      await admin.from("pipelines").delete().eq("id", pipeline.id);
     }
-    const pg = stageInsertError as { code?: string; message?: string; details?: string };
+    const pg = stageErr as { code?: string; message?: string; details?: string };
     const msg = [pg.code, pg.message, pg.details].filter(Boolean).join(" | ");
     throw new Error(`Failed to create pipeline stages for "${batchName}": ${msg}`);
   }
@@ -797,16 +787,18 @@ export async function repairPipelineStages(pipelineId: string): Promise<void> {
   } = await sb.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data: pipeline, error: pipelineErr } = await sb
+  const admin = createAdminClient();
+
+  const { data: pipeline, error: pipelineErr } = await admin
     .from("pipelines")
-    .select("id, folder_id, name")
+    .select("id, company_id, template_id, name")
     .eq("id", pipelineId)
     .eq("is_archived", false)
     .single();
   if (pipelineErr || !pipeline) throw new Error("Pipeline not found");
 
   // Idempotent: already has stages → nothing to do.
-  const { data: existingStages } = await sb
+  const { data: existingStages } = await admin
     .from("pipeline_stages")
     .select("id")
     .eq("pipeline_id", pipelineId)
@@ -817,52 +809,39 @@ export async function repairPipelineStages(pipelineId: string): Promise<void> {
     return;
   }
 
-  // Find a donor pipeline in the same folder that has stages.
-  const { data: donorCandidates } = await sb
-    .from("pipelines")
-    .select("id")
-    .eq("folder_id", pipeline.folder_id)
-    .eq("is_archived", false)
-    .neq("id", pipelineId)
-    .limit(10);
-
-  let donorId: string | null = null;
-  for (const candidate of donorCandidates ?? []) {
-    const { data: cStages } = await sb
-      .from("pipeline_stages")
+  // Resolve template: prefer pipeline's own, else company default.
+  let templateId: string | null = pipeline.template_id ?? null;
+  if (!templateId) {
+    const { data: defaultTmpl } = await admin
+      .from("pipeline_templates")
       .select("id")
-      .eq("pipeline_id", candidate.id)
+      .eq("company_id", pipeline.company_id)
+      .eq("is_default", true)
       .eq("is_archived", false)
-      .limit(1);
-    if (cStages && cStages.length > 0) {
-      donorId = candidate.id;
-      break;
-    }
+      .limit(1)
+      .maybeSingle();
+    templateId = defaultTmpl?.id ?? null;
   }
 
-  if (donorId) {
-    const { data: templateStages, error: tErr } = await sb
-      .from("pipeline_stages")
-      .select("name, position, is_won, is_lost")
-      .eq("pipeline_id", donorId)
-      .eq("is_archived", false)
-      .order("position");
-    if (tErr) throw tErr;
-    const { error } = await sb
-      .from("pipeline_stages")
-      .insert((templateStages ?? []).map((s) => ({ ...s, pipeline_id: pipelineId })));
-    if (error) throw error;
-  } else {
-    const { error } = await sb.from("pipeline_stages").insert([
-      { name: "Lead",      position: 0, pipeline_id: pipelineId },
-      { name: "Contacted", position: 1, pipeline_id: pipelineId },
-      { name: "Qualified", position: 2, pipeline_id: pipelineId },
-      { name: "Proposal",  position: 3, pipeline_id: pipelineId },
-      { name: "Won",       position: 4, pipeline_id: pipelineId, is_won: true },
-      { name: "Lost",      position: 5, pipeline_id: pipelineId, is_lost: true },
-    ]);
-    if (error) throw error;
+  if (!templateId) {
+    throw new Error("No pipeline template found for this company. Please set up a template first.");
   }
+
+  const { data: templateStages, error: tsErr } = await admin
+    .from("pipeline_template_stages")
+    .select("name, position, is_won, is_lost")
+    .eq("template_id", templateId)
+    .eq("is_archived", false)
+    .order("position");
+  if (tsErr) throw tsErr;
+  if (!templateStages || templateStages.length === 0) {
+    throw new Error("Template has no stages. Please configure the template first.");
+  }
+
+  const { error } = await admin
+    .from("pipeline_stages")
+    .insert(templateStages.map((s) => ({ ...s, pipeline_id: pipelineId })));
+  if (error) throw error;
 
   await bustPipelineCache();
 }

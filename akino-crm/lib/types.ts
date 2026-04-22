@@ -141,6 +141,31 @@ export interface BatchLead {
   added_at: string;
 }
 
+export interface PipelineTemplateStage {
+  id: string;
+  template_id: string;
+  name: string;
+  position: number;
+  is_won: boolean;
+  is_lost: boolean;
+  is_archived: boolean;
+  created_at: string;
+}
+
+export interface PipelineTemplate {
+  id: string;
+  company_id: string;
+  name: string;
+  is_default: boolean;
+  is_archived: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface PipelineTemplateWithStages extends PipelineTemplate {
+  stages: PipelineTemplateStage[];
+}
+
 export interface PipelineStage {
   id: string;
   name: string;
@@ -155,6 +180,7 @@ export interface PipelineStage {
 export interface Pipeline {
   id: string;
   company_id: string;
+  template_id: string | null;
   name: string;
   description: string | null;
   is_default: boolean;

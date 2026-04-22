@@ -126,12 +126,35 @@ export async function createCompany(name: string): Promise<Company> {
     { name: "Lost", position: 7, is_won: false, is_lost: true },
   ];
 
-  // Create a default pipeline
+  // 1. Create the company-scoped template
+  const { data: template, error: templateError } = await admin
+    .from("pipeline_templates")
+    .insert({
+      company_id: company.id,
+      name: "Default",
+      is_default: true,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+  if (templateError) throw templateError;
+
+  const templateStageRows = defaultStages.map((s) => ({
+    ...s,
+    template_id: template.id,
+  }));
+  const { error: templateStagesError } = await admin
+    .from("pipeline_template_stages")
+    .insert(templateStageRows);
+  if (templateStagesError) throw templateStagesError;
+
+  // 2. Clone template into the initial "Default" pipeline instance
   const { data: pipeline, error: pipelineError } = await admin
     .from("pipelines")
     .insert({
       name: "Default",
       company_id: company.id,
+      template_id: template.id,
       is_default: true,
       created_by: user.id,
     })
