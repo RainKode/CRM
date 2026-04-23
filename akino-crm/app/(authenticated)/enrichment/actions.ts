@@ -7,18 +7,27 @@ import { createPipelineForBatch } from "@/app/(authenticated)/pipeline/actions";
 import { BATCH_DELETE_PHRASE } from "./constants";
 
 /**
- * Aggregate batch-level counts from a flat list of batch_leads rows.
- * Single source of truth so getBatches + getBatchesGroupedByFolder share logic.
+ * Fetch total + completed counts for a set of batch IDs via the
+ * `batch_counts(uuid[])` Postgres RPC. Replaces the previous approach of
+ * pulling every `batch_leads` row with `.in("batch_id", ids)` and aggregating
+ * in JS — PostgREST caps that response near 1000 rows, so large batches
+ * silently showed total 0 / done 0 on the enrichment dashboard.
+ *
+ * See: supabase/migrations/20260423000001_batch_counts_rpc.sql
  */
-function aggregateBatchCounts(
-  rows: { batch_id: string; is_completed: boolean | null }[]
-): Map<string, { total: number; completed: number }> {
+async function fetchBatchCounts(
+  sb: Awaited<ReturnType<typeof createClient>>,
+  batchIds: string[]
+): Promise<Map<string, { total: number; completed: number }>> {
   const map = new Map<string, { total: number; completed: number }>();
-  for (const r of rows) {
-    const entry = map.get(r.batch_id) ?? { total: 0, completed: 0 };
-    entry.total += 1;
-    if (r.is_completed) entry.completed += 1;
-    map.set(r.batch_id, entry);
+  if (batchIds.length === 0) return map;
+  const { data, error } = await sb.rpc("batch_counts", { batch_ids: batchIds });
+  if (error) throw error;
+  for (const r of (data ?? []) as { batch_id: string; total: number; completed: number }[]) {
+    map.set(r.batch_id, {
+      total: Number(r.total ?? 0),
+      completed: Number(r.completed ?? 0),
+    });
   }
   return map;
 }
@@ -34,16 +43,7 @@ export async function getBatches(folderId?: string): Promise<(Batch & { total: n
   const batches = data as Batch[];
   if (batches.length === 0) return [];
 
-  // ONE query to fetch all batch_leads rows for these batches, then aggregate in JS.
-  // Replaces the old N+1 (2 COUNT queries per batch).
-  const batchIds = batches.map((b) => b.id);
-  const { data: blRows, error: blErr } = await sb
-    .from("batch_leads")
-    .select("batch_id, is_completed")
-    .in("batch_id", batchIds);
-  if (blErr) throw blErr;
-
-  const counts = aggregateBatchCounts(blRows ?? []);
+  const counts = await fetchBatchCounts(sb, batches.map((b) => b.id));
   return batches.map((b) => ({
     ...b,
     total: counts.get(b.id)?.total ?? 0,
@@ -539,18 +539,9 @@ export async function getBatchesGroupedByFolder(): Promise<FolderBatchGroup[]> {
   // Get unique folder IDs
   const folderIds = [...new Set((batches as Batch[]).map((b) => b.folder_id))];
 
-  // ONE query for all batch_leads rows across all batches; aggregate in JS.
+  // Aggregate counts server-side via RPC (see fetchBatchCounts).
   const batchRows = batches as Batch[];
-  const batchIds = batchRows.map((b) => b.id);
-  let counts = new Map<string, { total: number; completed: number }>();
-  if (batchIds.length > 0) {
-    const { data: blRows, error: blErr } = await sb
-      .from("batch_leads")
-      .select("batch_id, is_completed")
-      .in("batch_id", batchIds);
-    if (blErr) throw blErr;
-    counts = aggregateBatchCounts(blRows ?? []);
-  }
+  const counts = await fetchBatchCounts(sb, batchRows.map((b) => b.id));
   const batchesWithCounts: (Batch & { total: number; completed: number })[] = batchRows.map((b) => ({
     ...b,
     total: counts.get(b.id)?.total ?? 0,

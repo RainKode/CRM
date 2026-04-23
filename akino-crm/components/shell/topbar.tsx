@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Menu, Sun, Moon, Search } from "lucide-react";
+import { Menu, Sun, Moon, Search } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,7 +24,7 @@ function openCommandPalette() {
   );
 }
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { theme, toggle } = useTheme();
   const [initials, setInitials] = useState("?");
 
@@ -41,8 +41,9 @@ export function Topbar() {
       {/* Mobile menu button */}
       <button
         type="button"
+        onClick={onMenuClick}
         className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
-        aria-label="Menu"
+        aria-label="Open navigation menu"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -86,13 +87,8 @@ export function Topbar() {
             <Moon className="h-5 w-5" strokeWidth={1.75} />
           )}
         </button>
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) transition-colors text-(--color-fg)"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" strokeWidth={1.75} />
-        </button>
+        {/* Notifications bell hidden until a real notifications panel is built.
+            Previously rendered as a dead button with no handler. */}
         <Link
           href="/settings"
           className="h-10 w-10 rounded-full bg-(--color-surface-3) ring-2 ring-(--color-bg) ring-offset-2 ring-offset-(--color-surface-3) flex items-center justify-center text-sm font-medium text-(--color-fg) hover:ring-(--color-accent) transition-all"

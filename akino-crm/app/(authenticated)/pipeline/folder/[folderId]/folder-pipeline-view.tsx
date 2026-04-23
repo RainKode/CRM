@@ -197,21 +197,16 @@ export function FolderPipelineView({
     let result = initialDeals;
     if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
     if (filterBatchId) {
-      // Find the pipeline for this batch, then filter by its stages
-      const batchPipeline = pipelines.find((p) => p.batch_id === filterBatchId);
-      if (batchPipeline) {
-        // We need stage IDs for this pipeline, but we only have shared stages
-        // In the aggregated model, deals from different batch pipelines share the same stage names
-        // For now, filter by source_folder_id match is not enough — we use pipeline-based filtering
-        // Actually, since stages are shared (copied from template), each batch pipeline has its own stages
-        // But in the aggregated view, we only load one set of stages (from the first pipeline)
-        // So filtering by batch pipeline stages isn't possible in the aggregated view
-        // Instead, we'll need a different approach — checking which pipeline a deal's stage belongs to
-        result = result; // TODO: needs per-deal pipeline association
-      }
+      // TODO(SLICE-4-PLAN.md): per-deal pipeline association.
+      // The aggregated folder view shares a single set of stages across all
+      // batch pipelines, so we cannot currently filter by `filterBatchId`
+      // alone. When `deals.source_pipeline_id` (or similar) lands, filter
+      // here via: result = result.filter(d => d.source_pipeline_id === batchPipeline.id).
+      // For now the batch filter is a no-op to avoid silently hiding deals.
+      void filterBatchId;
     }
     return result;
-  }, [initialDeals, showClosed, filterBatchId, pipelines]);
+  }, [initialDeals, showClosed, filterBatchId]);
 
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};

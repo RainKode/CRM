@@ -8,7 +8,6 @@ import {
   FolderOpen,
   Workflow,
   Sparkles,
-  Users,
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -26,6 +25,7 @@ import {
   Mail,
   Trash2,
   BarChart3,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -106,13 +106,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Mail,
     matchPrefix: "/inbox",
   },
-  {
-    href: "/tasks",
-    label: "Tasks",
-    icon: CheckSquare,
-    matchPrefix: "/tasks",
-  },
-  { href: "/team", label: "Team", icon: Users, disabled: true },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare, matchPrefix: "/tasks" },
   {
     href: "/trash",
     label: "Recycle Bin",
@@ -360,7 +354,13 @@ function NavLink({
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────────
-export function Sidebar() {
+export function Sidebar({
+  mobileOpen = false,
+  onMobileOpenChange,
+}: {
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+} = {}) {
   const pathname = usePathname();
   const sidebarSearchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
@@ -414,13 +414,34 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile backdrop — clicking closes the drawer */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-40 bg-black/50 transition-opacity duration-200",
+          mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => onMobileOpenChange?.(false)}
+        aria-hidden
+      />
       <aside
         className={cn(
-          "hidden md:flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 transition-all duration-300 rounded-r-2xl",
+          "fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 rounded-r-2xl",
+          "transition-transform duration-300 md:transition-all",
+          "md:static md:translate-x-0 md:flex",
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           collapsed ? "w-20 px-3" : "w-80 px-6"
         )}
         style={{ boxShadow: "var(--shadow-sidebar)" }}
       >
+        {/* Mobile close button */}
+        <button
+          type="button"
+          onClick={() => onMobileOpenChange?.(false)}
+          className="md:hidden absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors"
+          aria-label="Close navigation menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Brand */}
         <div
           className={cn(
