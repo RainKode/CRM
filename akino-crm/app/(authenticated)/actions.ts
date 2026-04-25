@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { PipelineStage, Activity, Notification, Task, Deal } from "@/lib/types";
+import type { PipelineStage, Activity, Notification, Task, Deal, FolderSummary, ActivityLogEntry } from "@/lib/types";
 
 export async function getDashboardData() {
   const sb = await createClient();
@@ -130,13 +130,46 @@ export async function getDashboardData() {
       enriched: f.enriched_count ?? 0,
     }));
 
+  // Folder summary stats (Phase 1)
+  const { data: folderSummaryRpc } = await sb.rpc("get_folder_summary_stats", {
+    p_company_id: companyId,
+  });
+  const folderSummaries: FolderSummary[] = ((folderSummaryRpc ?? []) as {
+    folder_id: string;
+    folder_name: string;
+    total_leads: string | number;
+    enriched_leads: string | number;
+    active_deals: string | number;
+    stage_breakdown: Record<string, number> | null;
+    last_activity: string | null;
+  }[]).map((r) => ({
+    folder_id: r.folder_id,
+    folder_name: r.folder_name,
+    total_leads: Number(r.total_leads ?? 0),
+    enriched_leads: Number(r.enriched_leads ?? 0),
+    active_deals: Number(r.active_deals ?? 0),
+    stage_breakdown: (r.stage_breakdown as Record<string, number>) ?? {},
+    last_activity: r.last_activity ?? null,
+  }));
+
+  // Recent activity log (Phase 3)
+  const { data: activityLogRaw } = await sb
+    .from("activity_log")
+    .select("*")
+    .eq("company_id", companyId)
+    .order("occurred_at", { ascending: false })
+    .limit(20);
+  const recentActivityLog = (activityLogRaw ?? []) as ActivityLogEntry[];
+
   return {
     stages: (stages ?? []) as PipelineStage[],
     stageCounts,
     followUps: (followUps ?? []) as Deal[],
     upcomingFollowUps: (upcoming ?? []) as Deal[],
     recentActivities: (activities ?? []) as Activity[],
+    recentActivityLog,
     folderStats,
+    folderSummaries,
     notifications: (notifications ?? []) as Notification[],
     openTasks: (openTasks ?? []) as Task[],
     queueCount,

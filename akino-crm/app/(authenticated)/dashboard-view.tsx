@@ -2,21 +2,15 @@
 
 import Link from "next/link";
 import {
-  Phone,
-  Mail,
-  StickyNote,
-  ArrowRightLeft,
-  CalendarClock,
-  Trophy,
-  XCircle,
   ArrowRight,
-  MoreHorizontal,
-  CheckCircle,
+  CalendarClock,
   CheckSquare,
   Inbox,
 } from "lucide-react";
 import { relativeTime } from "@/lib/utils";
-import type { Deal, PipelineStage, Activity, Notification, Task } from "@/lib/types";
+import type { Deal, PipelineStage, Activity, Notification, Task, FolderSummary, ActivityLogEntry } from "@/lib/types";
+import { FolderSummaryCard } from "@/components/dashboard/folder-summary-card";
+import { RecentActivityCard } from "@/components/dashboard/recent-activity-card";
 
 type DashboardData = {
   stages: PipelineStage[];
@@ -24,20 +18,12 @@ type DashboardData = {
   followUps: Deal[];
   upcomingFollowUps: Deal[];
   recentActivities: Activity[];
+  recentActivityLog: ActivityLogEntry[];
   folderStats: { id: string; name: string; total: number; enriched: number }[];
+  folderSummaries: FolderSummary[];
   notifications: Notification[];
   openTasks: Task[];
   queueCount: number;
-};
-
-const ACTIVITY_ICON: Record<string, React.ElementType> = {
-  call: Phone,
-  email: Mail,
-  note: StickyNote,
-  stage_change: ArrowRightLeft,
-  follow_up_set: CalendarClock,
-  won: Trophy,
-  lost: XCircle,
 };
 
 function getGreeting() {
@@ -246,58 +232,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {/* Two Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           {/* Folder Summary */}
-          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
-                Folder Summary
-              </h3>
-              <Link
-                href="/folders"
-                className="text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </Link>
-            </div>
-            <div className="flex flex-col gap-6">
-              {data.folderStats.length === 0 ? (
-                <p className="text-sm text-(--color-fg-subtle)">
-                  No folders yet. Create one to start.
-                </p>
-              ) : (
-                data.folderStats.slice(0, 5).map((f) => {
-                  const pct =
-                    f.total > 0
-                      ? Math.round((f.enriched / f.total) * 100)
-                      : 0;
-                  return (
-                    <Link
-                      key={f.id}
-                      href={`/folders/${f.id}`}
-                      className="flex flex-col gap-3 group"
-                    >
-                      <div className="flex justify-between items-end">
-                        <p className="text-base font-medium text-(--color-fg) group-hover:text-(--color-accent-text) transition-colors">
-                          {f.name}
-                        </p>
-                        <p className="text-sm text-(--color-fg-muted)">
-                          <span className="text-(--color-fg) font-semibold">
-                            {f.enriched}
-                          </span>{" "}
-                          / {f.total}
-                        </p>
-                      </div>
-                      <div className="h-1.5 w-full bg-(--color-surface-4) rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-(--color-accent) rounded-full shadow-(--shadow-glow) transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </Link>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <FolderSummaryCard summaries={data.folderSummaries} />
 
           {/* Tasks */}
           <div className="flex flex-col gap-4 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
@@ -368,53 +303,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
           </div>
 
           {/* Recent Activity */}
-          <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
-                Recent Activity
-              </h3>
-              <button className="text-(--color-fg-muted) hover:text-(--color-fg) transition-colors text-sm font-medium">
-                View All
-              </button>
-            </div>
-            <div className="flex flex-col gap-5">
-              {data.recentActivities.length === 0 ? (
-                <p className="text-sm text-(--color-fg-subtle)">
-                  No activity yet
-                </p>
-              ) : (
-                data.recentActivities.slice(0, 6).map((a) => {
-                  const Icon = ACTIVITY_ICON[a.type] ?? StickyNote;
-                  const isWon = a.type === "won";
-                  return (
-                    <div key={a.id} className="flex items-start gap-4">
-                      <div
-                        className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
-                          isWon
-                            ? "bg-(--color-accent)/20"
-                            : "bg-(--color-surface-4)"
-                        }`}
-                      >
-                        {isWon ? (
-                          <CheckCircle className="h-[18px] w-[18px] text-(--color-accent)" />
-                        ) : (
-                          <Icon className="h-[18px] w-[18px] text-(--color-fg)" />
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1 pt-0.5">
-                        <p className="text-sm font-medium text-(--color-fg) leading-snug">
-                          {a.summary ?? a.type.replace(/_/g, " ")}
-                        </p>
-                        <p className="text-xs text-(--color-fg-muted)">
-                          {relativeTime(a.occurred_at)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <RecentActivityCard activities={data.recentActivityLog} />
         </div>
       </div>
     </div>
