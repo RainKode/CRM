@@ -381,11 +381,11 @@ export function FolderList({
               <div className="absolute inset-0 bg-gradient-to-br from-(--color-accent)/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
               {/* Top row: icon + menu */}
-              <div className="flex justify-between items-start relative z-10">
+              <div className="flex justify-between items-start relative z-30">
                 <div className="w-12 h-12 rounded-full bg-(--color-surface-4) flex items-center justify-center">
                   <FolderOpen className="h-5 w-5 text-(--color-accent)" />
                 </div>
-                <div onClick={(e) => e.stopPropagation()}>
+                <div className="relative z-40" onClick={(e) => e.stopPropagation()}>
                   <FolderMenu
                     folder={folder}
                     onRename={() => setRenameTarget(folder)}
@@ -472,12 +472,14 @@ export function FolderList({
                     {folder.name}
                   </span>
                 </div>
-                <FolderMenu
-                  folder={folder}
-                  onRename={() => setRenameTarget(folder)}
-                  onDelete={() => setDeleteTarget(folder)}
-                  onArchive={() => handleArchive(folder)}
-                />
+                <div className="relative z-40" onClick={(e) => e.stopPropagation()}>
+                  <FolderMenu
+                    folder={folder}
+                    onRename={() => setRenameTarget(folder)}
+                    onDelete={() => setDeleteTarget(folder)}
+                    onArchive={() => handleArchive(folder)}
+                  />
+                </div>
               </div>
             ))}
           </div>
