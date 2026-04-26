@@ -410,6 +410,97 @@ export async function updateDeal(
   await bustPipelineCache();
 }
 
+// ─── Reassignment ──────────────────────────────────────────────────────
+//
+// Owner_id is intentionally NOT in the `updateDeal` Pick above so that
+// generic edits never mutate ownership by accident. Reassignment is its
+// own server action with explicit authorization rules.
+//
+// Authorization:
+//   - The current owner can hand off their own deal.
+//   - A manager (per `is_company_manager`) can reassign anyone's deal.
+//   - Other executives are rejected.
+//
+// Side effects: writes assigned_at/assigned_by audit fields. Does NOT
+// reassign related tasks or email threads — those are separate domains
+// (see plan: out-of-scope).
+
+export async function reassignDeal(
+  dealId: string,
+  newOwnerId: string | null
+): Promise<void> {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: deal, error: fetchError } = await sb
+    .from("deals")
+    .select("id, company_id, owner_id")
+    .eq("id", dealId)
+    .single();
+  if (fetchError || !deal) throw fetchError ?? new Error("Deal not found");
+
+  const isCurrentOwner = deal.owner_id === user.id;
+  let allowed = isCurrentOwner;
+  if (!allowed) {
+    const { isManager } = await import("@/lib/auth/roles");
+    allowed = await isManager(deal.company_id, sb);
+  }
+  if (!allowed) {
+    const { RoleError } = await import("@/lib/auth/roles");
+    throw new RoleError(
+      "Only the current owner or a manager can reassign this deal"
+    );
+  }
+
+  const { error } = await sb
+    .from("deals")
+    .update({
+      owner_id: newOwnerId,
+      assigned_at: new Date().toISOString(),
+      assigned_by: user.id,
+    })
+    .eq("id", dealId);
+  if (error) throw error;
+  await bustPipelineCache();
+  revalidatePath("/team");
+}
+
+/**
+ * Manager-only. Bulk reassign multiple deals at once. Validates that
+ * every deal belongs to the active company before issuing the update.
+ */
+export async function bulkReassignDeals(
+  dealIds: string[],
+  newOwnerId: string | null
+): Promise<{ updated: number }> {
+  if (dealIds.length === 0) return { updated: 0 };
+  const companyId = await getActiveCompanyId();
+  if (!companyId) throw new Error("No active company");
+  const { requireManager } = await import("@/lib/auth/roles");
+  const { userId } = await requireManager(companyId);
+
+  const sb = await createClient();
+  const { error, count } = await sb
+    .from("deals")
+    .update(
+      {
+        owner_id: newOwnerId,
+        assigned_at: new Date().toISOString(),
+        assigned_by: userId,
+      },
+      { count: "exact" }
+    )
+    .in("id", dealIds)
+    .eq("company_id", companyId);
+  if (error) throw error;
+  await bustPipelineCache();
+  revalidatePath("/team");
+  return { updated: count ?? 0 };
+}
+
 // ─── Stage CRUD ────────────────────────────────────────────────────────
 
 export async function createStage(name: string, pipelineId?: string) {

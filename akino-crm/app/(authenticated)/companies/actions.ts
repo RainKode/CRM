@@ -3,7 +3,17 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { Company } from "@/lib/types";
+import { requireManager, RoleError } from "@/lib/auth/roles";
+import type { Company, CompanyMemberRole } from "@/lib/types";
+
+export interface CompanyMemberWithProfile {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  role: CompanyMemberRole;
+  is_default: boolean;
+  joined_at: string;
+}
 
 export async function getMyCompanies(): Promise<Company[]> {
   const sb = await createClient();
@@ -92,11 +102,12 @@ export async function createCompany(name: string): Promise<Company> {
     .single();
   if (error) throw error;
 
-  // Add creator as member
+  // Add creator as member (manager — this is the master of the new company)
   const { error: memberError } = await admin.from("company_members").insert({
     company_id: company.id,
     user_id: user.id,
     is_default: false,
+    role: "manager",
   });
   if (memberError) throw memberError;
 
@@ -189,4 +200,138 @@ export async function createCompany(name: string): Promise<Company> {
 
   revalidatePath("/");
   return company as Company;
+}
+
+// =====================================================================
+// Member management (collaborative pipelines feature)
+// =====================================================================
+
+/**
+ * Returns all members of the given company joined to their profile,
+ * with managers listed first, then executives. Uses the user (RLS)
+ * client — `is_member_of_company` policy gates visibility.
+ */
+export async function listCompanyMembers(
+  companyId?: string
+): Promise<CompanyMemberWithProfile[]> {
+  const sb = await createClient();
+  const cid = companyId ?? (await getActiveCompanyId());
+  if (!cid) return [];
+
+  const { data, error } = await sb
+    .from("company_members")
+    .select(
+      "company_id, user_id, role, is_default, joined_at, profiles!inner(full_name, email)"
+    )
+    .eq("company_id", cid);
+  if (error) throw error;
+
+  type Row = {
+    user_id: string;
+    role: CompanyMemberRole;
+    is_default: boolean;
+    joined_at: string;
+    profiles: { full_name: string | null; email: string } | { full_name: string | null; email: string }[];
+  };
+
+  const rows = (data as Row[]).map((r) => {
+    const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    return {
+      user_id: r.user_id,
+      full_name: p?.full_name ?? null,
+      email: p?.email ?? "",
+      role: r.role,
+      is_default: r.is_default,
+      joined_at: r.joined_at,
+    } satisfies CompanyMemberWithProfile;
+  });
+
+  rows.sort((a, b) => {
+    if (a.role !== b.role) return a.role === "manager" ? -1 : 1;
+    return (a.full_name ?? a.email).localeCompare(b.full_name ?? b.email);
+  });
+
+  return rows;
+}
+
+/**
+ * Manager-only. Promote/demote a member. Forbids demoting the last
+ * manager so a company never ends up role-less.
+ */
+export async function setMemberRole(
+  companyId: string,
+  userId: string,
+  role: CompanyMemberRole
+): Promise<void> {
+  await requireManager(companyId);
+  const sb = await createClient();
+
+  // Last-manager guard
+  if (role === "executive") {
+    const { count } = await sb
+      .from("company_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("role", "manager");
+    if ((count ?? 0) <= 1) {
+      throw new RoleError(
+        "Cannot demote the last manager. Promote someone else first."
+      );
+    }
+  }
+
+  const { error } = await sb
+    .from("company_members")
+    .update({ role })
+    .eq("company_id", companyId)
+    .eq("user_id", userId);
+  if (error) throw error;
+
+  revalidatePath("/team");
+}
+
+/**
+ * Self-healing: if the company has zero managers (e.g. the original
+ * creator was deleted, or roles drifted), allow a member to bootstrap
+ * themselves into the manager role. Only succeeds when:
+ *  - the caller is currently a member, AND
+ *  - either `companies.created_by` is the caller, OR `created_by` is null.
+ * Idempotent: noop if a manager already exists.
+ */
+export async function bootstrapManager(companyId: string): Promise<{ promoted: boolean }> {
+  const sb = await createClient();
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: existing } = await sb
+    .from("company_members")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .eq("role", "manager")
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { promoted: false };
+
+  const { data: company } = await sb
+    .from("companies")
+    .select("created_by")
+    .eq("id", companyId)
+    .single();
+  if (!company) throw new Error("Company not found");
+
+  const allowed =
+    company.created_by === user.id || company.created_by === null;
+  if (!allowed) throw new RoleError("Not eligible to bootstrap manager");
+
+  const { error } = await sb
+    .from("company_members")
+    .update({ role: "manager" })
+    .eq("company_id", companyId)
+    .eq("user_id", user.id);
+  if (error) throw error;
+
+  revalidatePath("/team");
+  return { promoted: true };
 }

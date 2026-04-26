@@ -299,3 +299,280 @@ export async function getAnalytics(pipelineId: string): Promise<AnalyticsSummary
     top_loss_reasons,
   };
 }
+
+// =====================================================================
+// Per-owner team analytics (collaborative pipelines feature)
+// =====================================================================
+
+export type TeamMemberStageCount = {
+  stage_id: string;
+  stage_name: string;
+  pipeline_id: string;
+  count: number;
+  total_value: number;
+};
+
+export type TeamMemberSummary = {
+  user_id: string | null; // null = "Unassigned" bucket
+  full_name: string | null;
+  email: string | null;
+  role: "manager" | "executive" | null;
+  batches_owned: number;
+  leads_owned: number;       // distinct lead_ids across owned deals
+  deals_open: number;
+  deals_won: number;
+  deals_lost: number;
+  deals_total: number;
+  open_value: number;
+  in_closing_count: number;  // deals on the highest non-terminal stage of any pipeline
+  by_stage: TeamMemberStageCount[];
+  last_activity_at: string | null;
+};
+
+export type TeamAnalytics = {
+  members: TeamMemberSummary[];
+  unassigned: TeamMemberSummary;
+};
+
+/**
+ * Aggregate deals + batches by owner across all of the active company's
+ * pipelines. Mirrors the structure of `getAnalytics`: one round-trip,
+ * grouped client-side via Maps. Null owners are aggregated into the
+ * `unassigned` bucket so they always appear on the team view.
+ */
+export async function getTeamAnalytics(): Promise<TeamAnalytics> {
+  const sb = await createClient();
+  const companyId = await getActiveCompanyId();
+  if (!companyId) return { members: [], unassigned: emptySummary(null) };
+
+  // Pull everything we need in parallel.
+  const [membersRes, pipelinesRes, stagesRes, dealsRes, batchesRes, foldersRes] =
+    await Promise.all([
+      sb
+        .from("company_members")
+        .select(
+          "user_id, role, profiles!inner(full_name, email)"
+        )
+        .eq("company_id", companyId),
+      sb
+        .from("pipelines")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("is_archived", false),
+      sb
+        .from("pipeline_stages")
+        .select("id, name, pipeline_id, position, is_won, is_lost")
+        .eq("is_archived", false),
+      sb
+        .from("deals")
+        .select(
+          "id, owner_id, lead_id, stage_id, deal_value, won_at, lost_at, last_activity_at"
+        )
+        .eq("company_id", companyId)
+        .is("deleted_at", null),
+      sb
+        .from("batches")
+        .select("id, assignee_id, folder_id"),
+      sb
+        .from("folders")
+        .select("id")
+        .eq("company_id", companyId),
+    ]);
+
+  if (membersRes.error) throw new Error(membersRes.error.message);
+  if (stagesRes.error) throw new Error(stagesRes.error.message);
+  if (dealsRes.error) throw new Error(dealsRes.error.message);
+  if (batchesRes.error) throw new Error(batchesRes.error.message);
+  if (foldersRes.error) throw new Error(foldersRes.error.message);
+
+  type StageRow = {
+    id: string;
+    name: string;
+    pipeline_id: string;
+    position: number;
+    is_won: boolean;
+    is_lost: boolean;
+  };
+  type DealRow = {
+    id: string;
+    owner_id: string | null;
+    lead_id: string | null;
+    stage_id: string;
+    deal_value: number | null;
+    won_at: string | null;
+    lost_at: string | null;
+    last_activity_at: string | null;
+  };
+  type BatchRow = { id: string; assignee_id: string | null; folder_id: string };
+
+  const stages = (stagesRes.data ?? []) as StageRow[];
+  const deals = (dealsRes.data ?? []) as DealRow[];
+  const batches = (batchesRes.data ?? []) as BatchRow[];
+  const companyFolderIds = new Set((foldersRes.data ?? []).map((f) => f.id));
+  const pipelineIds = new Set((pipelinesRes.data ?? []).map((p) => p.id));
+
+  // Restrict batches to those that live in this company's folders.
+  const companyBatches = batches.filter((b) => companyFolderIds.has(b.folder_id));
+
+  // Pre-compute per-pipeline highest non-terminal position.
+  const closingStageIds = new Set<string>();
+  const stageById = new Map<string, StageRow>();
+  for (const s of stages) stageById.set(s.id, s);
+  for (const pid of pipelineIds) {
+    const pipelineStages = stages.filter(
+      (s) => s.pipeline_id === pid && !s.is_won && !s.is_lost
+    );
+    if (pipelineStages.length === 0) continue;
+    const max = pipelineStages.reduce((acc, s) =>
+      s.position > acc.position ? s : acc
+    );
+    closingStageIds.add(max.id);
+  }
+
+  // Build a member directory.
+  type MemberRow = {
+    user_id: string;
+    role: "manager" | "executive";
+    profiles:
+      | { full_name: string | null; email: string }
+      | { full_name: string | null; email: string }[];
+  };
+  const memberRows = (membersRes.data ?? []) as MemberRow[];
+  const summaryByOwner = new Map<string, TeamMemberSummary>();
+  for (const m of memberRows) {
+    const p = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+    summaryByOwner.set(m.user_id, {
+      user_id: m.user_id,
+      full_name: p?.full_name ?? null,
+      email: p?.email ?? null,
+      role: m.role,
+      batches_owned: 0,
+      leads_owned: 0,
+      deals_open: 0,
+      deals_won: 0,
+      deals_lost: 0,
+      deals_total: 0,
+      open_value: 0,
+      in_closing_count: 0,
+      by_stage: [],
+      last_activity_at: null,
+    });
+  }
+  const unassigned = emptySummary(null);
+
+  // Bucket batches by assignee.
+  for (const b of companyBatches) {
+    const target =
+      b.assignee_id != null ? summaryByOwner.get(b.assignee_id) : unassigned;
+    if (target) target.batches_owned += 1;
+  }
+
+  // Bucket deals by owner.
+  const leadsByOwner = new Map<string | null, Set<string>>();
+  const stageBucket = new Map<string, Map<string, TeamMemberStageCount>>();
+  const recordStage = (key: string, stage: StageRow, value: number) => {
+    let m = stageBucket.get(key);
+    if (!m) {
+      m = new Map();
+      stageBucket.set(key, m);
+    }
+    const existing = m.get(stage.id);
+    if (existing) {
+      existing.count += 1;
+      existing.total_value += value;
+    } else {
+      m.set(stage.id, {
+        stage_id: stage.id,
+        stage_name: stage.name,
+        pipeline_id: stage.pipeline_id,
+        count: 1,
+        total_value: value,
+      });
+    }
+  };
+
+  for (const d of deals) {
+    const ownerKey = d.owner_id ?? "__unassigned__";
+    const summary =
+      d.owner_id == null
+        ? unassigned
+        : summaryByOwner.get(d.owner_id) ??
+          (() => {
+            // owner_id refers to a profile that is no longer a member of
+            // this company (rare, but possible). Surface them as a ghost
+            // bucket so totals reconcile.
+            const ghost = emptySummary(d.owner_id);
+            summaryByOwner.set(d.owner_id, ghost);
+            return ghost;
+          })();
+
+    const stage = stageById.get(d.stage_id);
+    summary.deals_total += 1;
+    if (d.won_at) summary.deals_won += 1;
+    else if (d.lost_at) summary.deals_lost += 1;
+    else {
+      summary.deals_open += 1;
+      summary.open_value += Number(d.deal_value ?? 0);
+      if (closingStageIds.has(d.stage_id)) summary.in_closing_count += 1;
+    }
+    if (
+      d.last_activity_at &&
+      (!summary.last_activity_at ||
+        d.last_activity_at > summary.last_activity_at)
+    ) {
+      summary.last_activity_at = d.last_activity_at;
+    }
+    if (d.lead_id) {
+      let set = leadsByOwner.get(d.owner_id);
+      if (!set) {
+        set = new Set();
+        leadsByOwner.set(d.owner_id, set);
+      }
+      set.add(d.lead_id);
+    }
+    if (stage) recordStage(ownerKey, stage, Number(d.deal_value ?? 0));
+  }
+
+  // Finalise lead counts + stage breakdown.
+  for (const [ownerId, set] of leadsByOwner) {
+    const target =
+      ownerId == null ? unassigned : summaryByOwner.get(ownerId);
+    if (target) target.leads_owned = set.size;
+  }
+  for (const [key, m] of stageBucket) {
+    const target =
+      key === "__unassigned__" ? unassigned : summaryByOwner.get(key);
+    if (target) target.by_stage = Array.from(m.values());
+  }
+
+  const members = Array.from(summaryByOwner.values()).sort((a, b) => {
+    if ((a.role ?? "executive") !== (b.role ?? "executive")) {
+      return (a.role ?? "executive") === "manager" ? -1 : 1;
+    }
+    return (a.full_name ?? a.email ?? "").localeCompare(
+      b.full_name ?? b.email ?? ""
+    );
+  });
+
+  return { members, unassigned };
+}
+
+function emptySummary(userId: string | null): TeamMemberSummary {
+  return {
+    user_id: userId,
+    full_name: userId == null ? "Unassigned" : null,
+    email: null,
+    role: null,
+    batches_owned: 0,
+    leads_owned: 0,
+    deals_open: 0,
+    deals_won: 0,
+    deals_lost: 0,
+    deals_total: 0,
+    open_value: 0,
+    in_closing_count: 0,
+    by_stage: [],
+    last_activity_at: null,
+  };
+}
+

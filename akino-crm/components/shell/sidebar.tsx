@@ -25,6 +25,7 @@ import {
   Mail,
   Trash2,
   BarChart3,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -107,6 +108,12 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/inbox",
   },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, matchPrefix: "/tasks" },
+  {
+    href: "/team",
+    label: "Team",
+    icon: Users,
+    matchPrefix: "/team",
+  },
   {
     href: "/trash",
     label: "Recycle Bin",

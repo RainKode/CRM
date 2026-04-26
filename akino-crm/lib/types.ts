@@ -26,6 +26,7 @@ export type ActivityType =
   | "meeting";
 export type ActivityStatus = "done" | "scheduled";
 export type CallDirection = "inbound" | "outbound";
+export type CompanyMemberRole = "manager" | "executive";
 export type NotificationType =
   | "follow_up_due"
   | "follow_up_overdue"
@@ -57,6 +58,7 @@ export interface CompanyMember {
   user_id: string;
   is_default: boolean;
   joined_at: string;
+  role: CompanyMemberRole;
 }
 
 export type DedupeKey = "email" | "phone" | "name_company";
@@ -126,6 +128,8 @@ export interface Batch {
   completed_at: string | null;
   sort_by_field: string | null;
   filter_by_field: string | null;
+  assigned_at: string | null;
+  assigned_by: string | null;
 }
 
 export interface BatchLead {
@@ -232,6 +236,8 @@ export interface Deal {
   last_inbound_at?: string | null;
   last_outbound_at?: string | null;
   auto_advance_on_reply?: boolean;
+  assigned_at: string | null;
+  assigned_by: string | null;
 }
 
 export interface Activity {

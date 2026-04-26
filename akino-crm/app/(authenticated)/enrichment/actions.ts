@@ -682,3 +682,88 @@ export async function deleteBatch(input: {
     affectedLeadCount: affectedLeadCount ?? 0,
   };
 }
+
+// =====================================================================
+// Batch reassignment (collaborative pipelines feature)
+// =====================================================================
+//
+// Manager-only. Reassigning a batch optionally cascades to the deals
+// whose lead is currently in that batch's `batch_leads`. The cascade
+// CANNOT be a SQL trigger because a lead can move between batches over
+// time (only one active batch per lead is enforced, but historical batch
+// membership is mutable). The rule is: "at the moment you reassign a
+// batch, every deal whose lead is currently linked to that batch flips
+// owner". A deal whose lead has since been moved to another batch is
+// NOT affected — the user can reassign that deal individually via
+// `reassignDeal`.
+
+export async function reassignBatch(
+  batchId: string,
+  newAssigneeId: string | null,
+  opts?: { cascadeDeals?: boolean }
+): Promise<{ batchUpdated: boolean; dealsUpdated: number }> {
+  const cascade = opts?.cascadeDeals ?? true;
+  const companyId = await getActiveCompanyId();
+  if (!companyId) throw new Error("No active company");
+  const { requireManager } = await import("@/lib/auth/roles");
+  const { userId } = await requireManager(companyId);
+
+  const sb = await createClient();
+  const now = new Date().toISOString();
+
+  const { error: bErr } = await sb
+    .from("batches")
+    .update({ assignee_id: newAssigneeId, assigned_at: now, assigned_by: userId })
+    .eq("id", batchId);
+  if (bErr) throw bErr;
+
+  let dealsUpdated = 0;
+  if (cascade) {
+    // Resolve lead_ids for this batch.
+    const { data: links } = await sb
+      .from("batch_leads")
+      .select("lead_id")
+      .eq("batch_id", batchId);
+    const leadIds = (links ?? []).map((l) => l.lead_id);
+    if (leadIds.length > 0) {
+      const { error: dErr, count } = await sb
+        .from("deals")
+        .update(
+          {
+            owner_id: newAssigneeId,
+            assigned_at: now,
+            assigned_by: userId,
+          },
+          { count: "exact" }
+        )
+        .in("lead_id", leadIds)
+        .eq("company_id", companyId)
+        .is("deleted_at", null);
+      if (dErr) throw dErr;
+      dealsUpdated = count ?? 0;
+    }
+  }
+
+  revalidatePath("/enrichment");
+  revalidatePath("/pipeline");
+  revalidatePath("/team");
+  return { batchUpdated: true, dealsUpdated };
+}
+
+/**
+ * Manager-only. Reassign multiple batches in a single call. Cascade
+ * applies to each batch independently.
+ */
+export async function bulkReassignBatches(
+  batchIds: string[],
+  newAssigneeId: string | null,
+  opts?: { cascadeDeals?: boolean }
+): Promise<{ batchesUpdated: number; dealsUpdated: number }> {
+  if (batchIds.length === 0) return { batchesUpdated: 0, dealsUpdated: 0 };
+  let dealsUpdated = 0;
+  for (const id of batchIds) {
+    const r = await reassignBatch(id, newAssigneeId, opts);
+    dealsUpdated += r.dealsUpdated;
+  }
+  return { batchesUpdated: batchIds.length, dealsUpdated };
+}

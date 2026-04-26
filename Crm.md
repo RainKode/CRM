@@ -31,34 +31,71 @@ The one thing this must do brilliantly: **let a small outbound team process thou
 
 ### 2.1 User Types
 
+The CRM is multi-tenant: every user belongs to one or more **companies**, and
+roles are scoped to the membership (`company_members.role`), not to the user
+globally. A single user can be a Manager in company A and an Executive in
+company B.
+
 | Role | Description | Key Abilities |
 |------|-------------|---------------|
-| Admin | Owner/founder (RainKode) | Full access to everything — create folders, define fields, manage pipeline, configure system |
-| Sales Rep | Future outreach staff | Can view and work leads in assigned folders, log pipeline activity, cannot change field schema or delete folders |
-| Viewer | Read-only observer | Can view leads, folders, and pipeline — no edits |
+| Manager | CEO / team lead — auto-assigned to the user that creates the company | Everything an Executive can do, plus: invite/promote/demote members, reassign batches and deals across the team, see the master Team view |
+| Executive | Sales executive who actually works batches and deals | View/work all leads, batches and deals in the company; reassign deals they personally own; cannot change roles or bulk-reassign other people's work |
+
+> Authorization model: RLS in Supabase is intentionally flat — any company
+> member can read/write company-scoped rows. Manager-only operations are
+> gated **app-side** by `requireManager()` (see `lib/auth/roles.ts`), which
+> calls the SECURITY DEFINER `is_company_manager` RPC. This keeps the
+> policy surface small while still preventing executives from invoking
+> manager-only server actions.
 
 ### 2.2 Access Control Summary
 
-| Action | Admin | Sales Rep | Viewer |
-|--------|-------|-----------|--------|
-| Create / delete lead folders | ✅ | ❌ | ❌ |
-| Define / edit column schema | ✅ | ❌ | ❌ |
-| Upload CSV | ✅ | ✅ | ❌ |
-| View leads | ✅ | ✅ | ✅ |
-| Edit lead fields | ✅ | ✅ | ❌ |
-| Create enrichment batches | ✅ | ✅ | ❌ |
-| Fill enrichment forms | ✅ | ✅ | ❌ |
-| Add leads to pipeline | ✅ | ✅ | ❌ |
-| Move pipeline stages | ✅ | ✅ | ❌ |
-| Log calls / emails / notes | ✅ | ✅ | ❌ |
-| Delete pipeline records | ✅ | ❌ | ❌ |
-| Invite / manage users | ✅ | ❌ | ❌ |
+| Action | Manager | Executive |
+|--------|---------|-----------|
+| Create / delete lead folders | ✅ | ✅ |
+| Define / edit column schema | ✅ | ✅ |
+| Upload CSV | ✅ | ✅ |
+| View leads / batches / deals | ✅ | ✅ |
+| Edit lead fields | ✅ | ✅ |
+| Create enrichment batches | ✅ | ✅ |
+| Fill enrichment forms | ✅ | ✅ |
+| Move pipeline stages | ✅ | ✅ |
+| Log calls / emails / notes | ✅ | ✅ |
+| Reassign a deal **they own** | ✅ | ✅ |
+| Reassign **any** deal in the company | ✅ | ❌ |
+| Reassign / bulk-reassign batches (cascades to deals) | ✅ | ❌ |
+| Promote / demote members | ✅ | ❌ |
+| Access the master `/team` view | ✅ | ✅ (read-only) |
 
-### 2.3 User Lifecycle
-- Admin account is created at setup — no public sign-up
-- Admin invites team members via email link
-- Departing user's leads and activity remain; account is deactivated (not deleted)
-- Deactivated users lose access but their data and history stays intact
+Every company must keep at least one Manager — the last Manager cannot be
+demoted. If a legacy company predating roles loads with zero Managers, the
+company creator is offered a one-time self-promotion via `bootstrapManager`.
+
+### 2.3 Collaborative Pipelines (master Team view)
+
+The `/team` page is the manager's master view across the whole company.
+For every member (and an "Unassigned" bucket) it shows:
+
+- Open / In-closing / Won / Lost deal counts
+- Open value, leads owned, batches owned
+- Per-stage breakdown across every active pipeline
+- Last-activity timestamp
+
+Updates are pushed live via Supabase Realtime (`use-team-channel.ts`)
+whenever a deal, batch, or membership changes. Reassignment is two-tiered:
+
+- `reassignDeal(dealId, ownerId)` — owner-self or any manager
+- `reassignBatch(batchId, assigneeId, { cascadeDeals: true })` — manager-only;
+  cascades the new owner onto every deal whose lead is currently in that
+  batch's `batch_leads` (deals whose leads have since moved to a different
+  batch are intentionally NOT touched, to preserve historical ownership).
+
+Both writes record `assigned_at` / `assigned_by` for audit.
+
+### 2.4 User Lifecycle
+- The first user to create a company is automatically that company's first Manager
+- Managers invite team members via the company switcher → "Manage members"
+- Departing users keep their historical activity; their `owner_id` references stay intact even after they leave a company (rendered as a "ghost" bucket in `/team`)
 
 ---
 
