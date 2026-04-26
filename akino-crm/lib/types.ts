@@ -317,3 +317,46 @@ export interface EmailTemplate {
   created_at: string;
   updated_at: string;
 }
+
+// ----- Phase 2: Deleted Folder (returned from list_deleted_folders RPC) -----
+export interface DeletedFolder {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  is_archived: boolean;
+  dedupe_keys: DedupeKey[];
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  lead_count: number;
+}
+
+// ----- Phase 1: Folder Summary Stats (from get_folder_summary_stats RPC) -----
+export interface FolderSummary {
+  folder_id: string;
+  folder_name: string;
+  total_leads: number;
+  enriched_leads: number;
+  active_deals: number;
+  stage_breakdown: Record<string, number>;
+  last_activity: string | null;
+}
+
+// ----- Phase 3: Activity Log Entry -----
+export interface ActivityLogEntry {
+  id: string;
+  company_id: string;
+  actor_id: string | null;
+  category: "pipeline" | "enrichment" | "batch";
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  entity_label: string | null;
+  metadata: Record<string, unknown> | null;
+  summary: string;
+  occurred_at: string;
+}
+

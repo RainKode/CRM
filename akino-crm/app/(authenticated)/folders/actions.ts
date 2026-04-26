@@ -95,7 +95,28 @@ export async function renameFolder(id: string, name: string) {
 
 export async function deleteFolder(id: string) {
   const sb = await createClient();
-  const { error } = await sb.from("folders").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const { error } = await sb
+    .from("folders")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+    .eq("id", id);
+  if (error) throw error;
+  await bustFoldersCache();
+}
+
+export async function restoreFolder(id: string) {
+  const sb = await createClient();
+  const { error } = await sb.rpc("restore_folder", { p_id: id });
+  if (error) throw error;
+  await bustFoldersCache();
+}
+
+export async function purgeFolder(id: string) {
+  const sb = await createClient();
+  const { error } = await sb.rpc("purge_deleted_folder", { p_id: id });
   if (error) throw error;
   await bustFoldersCache();
 }

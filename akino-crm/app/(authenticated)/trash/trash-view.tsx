@@ -5,19 +5,22 @@ import { Trash2, Undo2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { Deal } from "@/lib/types";
+import type { Deal, DeletedFolder } from "@/lib/types";
 import {
   emptyTrash,
+  getDeletedFolders,
   getTrashedDeals,
   getTrashedLeads,
+  purgeDeletedFolder,
   purgeDeal,
   purgeLead,
+  restoreDeletedFolder,
   restoreDeal,
   restoreLead,
   type TrashedLead,
 } from "./actions";
 
-type Tab = "deals" | "leads";
+type Tab = "deals" | "leads" | "folders";
 
 function relative(iso: string | null): string {
   if (!iso) return "—";
@@ -39,22 +42,26 @@ function daysUntilPurge(deletedAt: string | null): number {
 export function TrashView({
   initialDeals,
   initialLeads,
+  initialFolders,
 }: {
   initialDeals: Deal[];
   initialLeads: TrashedLead[];
+  initialFolders: DeletedFolder[];
 }) {
   const [tab, setTab] = useState<Tab>("deals");
   const [deals, setDeals] = useState<Deal[]>(initialDeals);
   const [leads, setLeads] = useState<TrashedLead[]>(initialLeads);
+  const [folders, setFolders] = useState<DeletedFolder[]>(initialFolders);
   const [isPending, startTransition] = useTransition();
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function refetch() {
     startTransition(async () => {
-      const [d, l] = await Promise.all([getTrashedDeals(), getTrashedLeads()]);
+      const [d, l, f] = await Promise.all([getTrashedDeals(), getTrashedLeads(), getDeletedFolders()]);
       setDeals(d);
       setLeads(l);
+      setFolders(f);
     });
   }
 
@@ -108,10 +115,36 @@ export function TrashView({
     });
   }
 
+  function handleRestoreFolder(id: string) {
+    setFolders((prev) => prev.filter((f) => f.id !== id));
+    startTransition(async () => {
+      try {
+        await restoreDeletedFolder(id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to restore");
+        refetch();
+      }
+    });
+  }
+
+  function handlePurgeFolder(id: string) {
+    if (!confirm("Permanently delete this folder? All its contents will also be permanently removed. This cannot be undone.")) return;
+    setFolders((prev) => prev.filter((f) => f.id !== id));
+    startTransition(async () => {
+      try {
+        await purgeDeletedFolder(id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to purge");
+        refetch();
+      }
+    });
+  }
+
   function handleEmptyTrash() {
     setConfirmEmpty(false);
     setDeals([]);
     setLeads([]);
+    setFolders([]);
     startTransition(async () => {
       try {
         await emptyTrash();
@@ -122,8 +155,7 @@ export function TrashView({
     });
   }
 
-  const totalCount = deals.length + leads.length;
-  const rows = tab === "deals" ? deals : leads;
+  const totalCount = deals.length + leads.length + folders.length;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -151,7 +183,7 @@ export function TrashView({
 
       {/* Tabs */}
       <div className="px-8 md:px-12 border-b border-(--color-border)/15 flex gap-6 shrink-0">
-        {(["deals", "leads"] as const).map((t) => (
+        {(["deals", "leads", "folders"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -165,7 +197,7 @@ export function TrashView({
           >
             {t}
             <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-(--color-surface-3) text-[11px] font-semibold text-(--color-fg-muted)">
-              {t === "deals" ? deals.length : leads.length}
+              {t === "deals" ? deals.length : t === "leads" ? leads.length : folders.length}
             </span>
           </button>
         ))}
@@ -187,7 +219,7 @@ export function TrashView({
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-8 md:px-12 py-6">
-        {rows.length === 0 ? (
+        {(tab === "deals" ? deals : tab === "leads" ? leads : folders).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-full bg-(--color-surface-2) flex items-center justify-center mb-4">
               <Trash2 className="h-7 w-7 text-(--color-fg-subtle)" />
@@ -205,7 +237,7 @@ export function TrashView({
               <tr>
                 {[
                   "Name",
-                  tab === "deals" ? "Company" : "Folder",
+                  tab === "deals" ? "Company" : tab === "leads" ? "Folder" : "Lead count",
                   "Deleted",
                   "Purges in",
                   "",
@@ -266,7 +298,8 @@ export function TrashView({
                       </tr>
                     );
                   })
-                : leads.map((l) => {
+                : tab === "leads"
+                ? leads.map((l) => {
                     const days = daysUntilPurge(l.deleted_at);
                     return (
                       <tr
@@ -301,6 +334,49 @@ export function TrashView({
                               size="sm"
                               variant="ghost"
                               onClick={() => handlePurgeLead(l.id)}
+                              disabled={isPending}
+                              className="text-(--color-danger) hover:bg-(--color-danger)/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : folders.map((f) => {
+                    const days = daysUntilPurge(f.deleted_at);
+                    return (
+                      <tr
+                        key={f.id}
+                        className="border-b border-(--color-grid-line)"
+                      >
+                        <td className="px-4 py-2.5 font-medium">{f.name}</td>
+                        <td className="px-4 py-2.5 text-(--color-fg-muted)">
+                          {f.lead_count}
+                        </td>
+                        <td className="px-4 py-2.5 text-(--color-fg-subtle)">
+                          {relative(f.deleted_at)}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Badge tone={days <= 3 ? "danger" : "neutral"}>
+                            {days}d
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRestoreFolder(f.id)}
+                              disabled={isPending}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" /> Restore
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePurgeFolder(f.id)}
                               disabled={isPending}
                               className="text-(--color-danger) hover:bg-(--color-danger)/10"
                             >

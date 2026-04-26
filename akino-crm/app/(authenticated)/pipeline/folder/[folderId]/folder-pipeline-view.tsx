@@ -17,13 +17,10 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   LayoutGrid,
   List,
-  Plus,
-  ChevronRight,
-  Filter,
+  Rows,
   ChevronDown,
   Calendar,
-  X,
-  Search,
+  ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
@@ -33,7 +30,7 @@ import { cn, relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, LossReason, Pipeline } from "@/lib/types";
 import { moveDeal, createDeal, searchLeads, type LeadSearchResult } from "../../actions";
 
-type ViewMode = "kanban" | "list";
+type ViewMode = "kanban" | "list" | "compact";
 
 function formatDealValue(value: number | null, currency: string): string {
   if (value == null) return "";
@@ -179,12 +176,56 @@ export function FolderPipelineView({
   initialDeals: Deal[];
   lossReasons: LossReason[];
 }) {
-  const [view, setView] = useState<ViewMode>("kanban");
+  const HIDE_EMPTY_KEY = `akino:pipeline:hide-empty:${folderId}`;
+  const [view, setView] = useState<ViewMode>("compact");
   const [, startTransition] = useTransition();
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showClosed, setShowClosed] = useState(false);
   const [filterBatchId, setFilterBatchId] = useState<string | null>(null);
+  const [hideEmpty, setHideEmpty] = useState(true);
+  const [compactExpandedBatch, setCompactExpandedBatch] = useState<string | null>(null);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+  const kanbanRef = useRef<HTMLDivElement>(null);
+  const [kanbanScrolled, setKanbanScrolled] = useState(false);
+
+  // Load hideEmpty preference from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(HIDE_EMPTY_KEY);
+      if (stored !== null) setHideEmpty(stored === "true");
+    } catch { /* ignore */ }
+  }, [HIDE_EMPTY_KEY]);
+
+  function toggleHideEmpty() {
+    setHideEmpty((v) => {
+      const next = !v;
+      try { localStorage.setItem(HIDE_EMPTY_KEY, String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    if (!overflowOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [overflowOpen]);
+
+  // Track kanban horizontal scroll for sticky shadow
+  useEffect(() => {
+    const el = kanbanRef.current;
+    if (!el) return;
+    function handleScroll() { setKanbanScrolled(el!.scrollLeft > 0); }
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -193,17 +234,19 @@ export function FolderPipelineView({
   // Build a set of batch IDs from pipelines for filtering
   const batchPipelines = pipelines.filter((p) => p.batch_id);
 
+  // Short label derivation for batch chips
+  function batchShortLabel(p: Pipeline, i: number): string {
+    const match = p.name.match(/batch\s*#?\s*(\d+)/i);
+    if (match) return `Batch #${match[1]}`;
+    if (p.name.length <= 12) return p.name;
+    return `Batch #${i + 1}`;
+  }
+
   const deals = useMemo(() => {
     let result = initialDeals;
     if (!showClosed) result = result.filter((d) => !d.won_at && !d.lost_at);
     if (filterBatchId) {
-      // TODO(SLICE-4-PLAN.md): per-deal pipeline association.
-      // The aggregated folder view shares a single set of stages across all
-      // batch pipelines, so we cannot currently filter by `filterBatchId`
-      // alone. When `deals.source_pipeline_id` (or similar) lands, filter
-      // here via: result = result.filter(d => d.source_pipeline_id === batchPipeline.id).
-      // For now the batch filter is a no-op to avoid silently hiding deals.
-      void filterBatchId;
+      void filterBatchId; // filter not yet supported without per-deal pipeline_id
     }
     return result;
   }, [initialDeals, showClosed, filterBatchId]);
@@ -216,6 +259,18 @@ export function FolderPipelineView({
     }
     return map;
   }, [stages, deals]);
+
+  // Visible stages (excluding closed unless toggled, excluding empty unless toggled off)
+  const visibleStages = useMemo(() => {
+    let result = showClosed ? stages : stages.filter((s) => !s.is_won && !s.is_lost);
+    if (hideEmpty) result = result.filter((s) => (dealsByStage[s.id]?.length ?? 0) > 0);
+    return result;
+  }, [stages, showClosed, hideEmpty, dealsByStage]);
+
+  const hiddenEmptyCount = useMemo(() => {
+    const base = showClosed ? stages : stages.filter((s) => !s.is_won && !s.is_lost);
+    return base.filter((s) => (dealsByStage[s.id]?.length ?? 0) === 0).length;
+  }, [stages, showClosed, dealsByStage]);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -245,102 +300,172 @@ export function FolderPipelineView({
   const draggedDeal = activeDragId ? deals.find((d) => d.id === activeDragId) : null;
 
   const totalValue = deals.reduce((s, d) => s + (d.deal_value ?? 0), 0);
-  const openStages = stages.filter((s) => !s.is_won && !s.is_lost);
+
+  // Chip overflow: first 5 inline, rest in dropdown
+  const CHIP_LIMIT = 5;
+  const visibleChips = batchPipelines.slice(0, CHIP_LIMIT);
+  const overflowChips = batchPipelines.slice(CHIP_LIMIT);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex justify-between items-center px-8 md:px-12 h-24 shrink-0">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/pipeline"
-            className="flex items-center gap-1 text-sm text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
-          <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
-            {folderName}
-          </h1>
-          <span className="text-sm text-(--color-fg-muted)">
-            {deals.length} deals &middot; {formatDealValue(totalValue, "GBP")}
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Batch filter badges */}
-          {batchPipelines.length > 1 && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setFilterBatchId(null)}
-                className={cn(
-                  "text-xs px-3 py-1.5 rounded-full font-medium transition-colors",
-                  filterBatchId === null
-                    ? "bg-(--color-accent) text-(--color-accent-fg)"
-                    : "bg-(--color-surface-1) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
-                )}
-              >
-                All
-              </button>
-              {batchPipelines.map((p) => (
+      <header className="px-8 md:px-12 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Left: back + title */}
+          <div className="flex items-center gap-4 min-w-0">
+            <Link
+              href="/pipeline"
+              className="flex items-center gap-1 text-sm text-(--color-fg-muted) hover:text-(--color-fg) transition-colors shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+            <h1 className="font-semibold text-2xl tracking-tight text-(--color-fg) truncate">
+              {folderName}
+            </h1>
+            <span className="text-sm text-(--color-fg-muted) shrink-0">
+              {deals.length} deals &middot; {formatDealValue(totalValue, "GBP")}
+            </span>
+          </div>
+
+          {/* Right: controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Batch filter chips */}
+            {batchPipelines.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap max-h-9 overflow-hidden">
                 <button
-                  key={p.id}
                   type="button"
-                  onClick={() => setFilterBatchId(filterBatchId === p.batch_id ? null : p.batch_id!)}
+                  onClick={() => setFilterBatchId(null)}
                   className={cn(
-                    "text-xs px-3 py-1.5 rounded-full font-medium transition-colors",
-                    filterBatchId === p.batch_id
+                    "text-xs px-3 py-1.5 rounded-full font-medium transition-colors shrink-0",
+                    filterBatchId === null
                       ? "bg-(--color-accent) text-(--color-accent-fg)"
                       : "bg-(--color-surface-1) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
                   )}
                 >
-                  {p.name}
+                  All
                 </button>
-              ))}
-            </div>
-          )}
+                {visibleChips.map((p, i) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    title={p.name}
+                    onClick={() => setFilterBatchId(filterBatchId === p.batch_id ? null : p.batch_id!)}
+                    className={cn(
+                      "text-xs px-3 py-1.5 rounded-full font-medium transition-colors shrink-0",
+                      filterBatchId === p.batch_id
+                        ? "bg-(--color-accent) text-(--color-accent-fg)"
+                        : "bg-(--color-surface-1) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
+                    )}
+                  >
+                    {batchShortLabel(p, i)}
+                  </button>
+                ))}
+                {overflowChips.length > 0 && (
+                  <div className="relative shrink-0" ref={overflowRef}>
+                    <button
+                      type="button"
+                      onClick={() => setOverflowOpen((v) => !v)}
+                      className="text-xs px-3 py-1.5 rounded-full font-medium bg-(--color-surface-1) text-(--color-fg-muted) hover:bg-(--color-surface-2) flex items-center gap-1"
+                    >
+                      +{overflowChips.length} more
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                    {overflowOpen && (
+                      <div className="absolute right-0 top-9 z-50 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1">
+                        {overflowChips.map((p, i) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            title={p.name}
+                            onClick={() => {
+                              setFilterBatchId(filterBatchId === p.batch_id ? null : p.batch_id!);
+                              setOverflowOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left text-sm px-3 py-2 hover:bg-(--color-surface-2) transition-colors",
+                              filterBatchId === p.batch_id ? "text-(--color-accent)" : "text-(--color-fg)"
+                            )}
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* View toggle */}
-          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
+            {/* View toggle */}
+            <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
+              <button
+                type="button"
+                title="Compact summary"
+                onClick={() => setView("compact")}
+                className={cn(
+                  "p-2 rounded-full transition-colors",
+                  view === "compact" ? "bg-(--color-accent) text-(--color-accent-fg)" : "text-(--color-fg-muted)"
+                )}
+              >
+                <Rows className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                title="Kanban"
+                onClick={() => setView("kanban")}
+                className={cn(
+                  "p-2 rounded-full transition-colors",
+                  view === "kanban" ? "bg-(--color-accent) text-(--color-accent-fg)" : "text-(--color-fg-muted)"
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                title="List"
+                onClick={() => setView("list")}
+                className={cn(
+                  "p-2 rounded-full transition-colors",
+                  view === "list" ? "bg-(--color-accent) text-(--color-accent-fg)" : "text-(--color-fg-muted)"
+                )}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Show closed toggle */}
             <button
               type="button"
-              onClick={() => setView("kanban")}
+              onClick={() => setShowClosed(!showClosed)}
               className={cn(
-                "p-2 rounded-full transition-colors",
-                view === "kanban" ? "bg-(--color-accent) text-(--color-accent-fg)" : "text-(--color-fg-muted)"
+                "text-xs px-4 py-2 rounded-full font-medium border transition-colors",
+                showClosed
+                  ? "border-(--color-accent) text-(--color-accent) bg-(--color-accent)/10"
+                  : "border-(--color-card-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
               )}
             >
-              <LayoutGrid className="h-4 w-4" />
+              {showClosed ? "Hide Closed" : "Show Closed"}
             </button>
+
+            {/* Hide empty toggle */}
             <button
               type="button"
-              onClick={() => setView("list")}
+              onClick={toggleHideEmpty}
               className={cn(
-                "p-2 rounded-full transition-colors",
-                view === "list" ? "bg-(--color-accent) text-(--color-accent-fg)" : "text-(--color-fg-muted)"
+                "text-xs px-4 py-2 rounded-full font-medium border transition-colors",
+                hideEmpty
+                  ? "border-(--color-accent) text-(--color-accent) bg-(--color-accent)/10"
+                  : "border-(--color-card-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
               )}
             >
-              <List className="h-4 w-4" />
+              {hideEmpty ? "Show Empty" : "Hide Empty"}
             </button>
           </div>
-
-          {/* Show closed toggle */}
-          <button
-            type="button"
-            onClick={() => setShowClosed(!showClosed)}
-            className={cn(
-              "text-xs px-4 py-2 rounded-full font-medium border transition-colors",
-              showClosed
-                ? "border-(--color-accent) text-(--color-accent) bg-(--color-accent)/10"
-                : "border-(--color-card-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
-            )}
-          >
-            {showClosed ? "Hide Closed" : "Show Closed"}
-          </button>
         </div>
       </header>
 
-      {/* Empty stage state – shown when no pipeline in this folder has stages yet */}
+      {/* Empty stage state */}
       {stages.length === 0 && (
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3 max-w-xs">
@@ -357,6 +482,20 @@ export function FolderPipelineView({
         </div>
       )}
 
+      {/* Compact view */}
+      {stages.length > 0 && view === "compact" && (
+        <div className="flex-1 overflow-y-auto px-8 md:px-12 pb-8">
+          <CompactView
+            stages={stages}
+            pipelines={batchPipelines}
+            dealsByStage={dealsByStage}
+            expandedBatch={compactExpandedBatch}
+            onExpandBatch={setCompactExpandedBatch}
+            onSwitchToKanban={() => setView("kanban")}
+          />
+        </div>
+      )}
+
       {/* Kanban */}
       {stages.length > 0 && view === "kanban" && (
         <DndContext
@@ -365,22 +504,44 @@ export function FolderPipelineView({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex-1 overflow-x-auto px-8 md:px-12 pb-8">
+          <div
+            ref={kanbanRef}
+            className="flex-1 overflow-x-auto scroll-smooth px-8 md:px-12 pb-8"
+          >
             <div className="flex gap-6 h-full">
-              {(showClosed ? stages : openStages).map((stage) => {
+              {visibleStages.map((stage, idx) => {
                 const stageDeals = dealsByStage[stage.id] ?? [];
                 const stageTotal = stageDeals.reduce((s, d) => s + (d.deal_value ?? 0), 0);
+                const isFirst = idx === 0;
                 return (
-                  <KanbanColumn
+                  <div
                     key={stage.id}
-                    stage={stage}
-                    deals={stageDeals}
-                    total={stageTotal}
-                    pipelines={pipelines}
-                    onCardClick={setSelectedDeal}
-                  />
+                    className={cn(
+                      isFirst && "sticky left-0 z-10 bg-(--color-bg)",
+                      isFirst && kanbanScrolled && "[box-shadow:8px_0_12px_-8px_rgba(0,0,0,0.2)]"
+                    )}
+                  >
+                    <KanbanColumn
+                      stage={stage}
+                      deals={stageDeals}
+                      total={stageTotal}
+                      pipelines={pipelines}
+                      onCardClick={setSelectedDeal}
+                    />
+                  </div>
                 );
               })}
+              {hideEmpty && hiddenEmptyCount > 0 && (
+                <div className="flex items-start pt-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={toggleHideEmpty}
+                    className="text-xs px-3 py-1.5 rounded-full font-medium bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+                  >
+                    +{hiddenEmptyCount} empty stage{hiddenEmptyCount !== 1 ? "s" : ""}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <DragOverlay>
@@ -468,6 +629,116 @@ export function FolderPipelineView({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CompactView: matrix of batches × stages showing deal counts + values
+// ────────────────────────────────────────────────────────────────────────────
+function CompactView({
+  stages,
+  pipelines,
+  dealsByStage,
+  expandedBatch,
+  onExpandBatch,
+  onSwitchToKanban,
+}: {
+  stages: PipelineStage[];
+  pipelines: Pipeline[];
+  dealsByStage: Record<string, Deal[]>;
+  expandedBatch: string | null;
+  onExpandBatch: (id: string | null) => void;
+  onSwitchToKanban: () => void;
+}) {
+  const openStages = stages.filter((s) => !s.is_won && !s.is_lost);
+  const allDeals = Object.values(dealsByStage).flat();
+
+  if (pipelines.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-(--color-fg-muted)">
+        No batch pipelines in this folder yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pt-2">
+      {/* Column headers */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-(--color-fg-muted)">
+              <th className="text-left font-medium pb-2 pr-4 whitespace-nowrap w-40">Batch</th>
+              {openStages.map((s) => (
+                <th key={s.id} className="text-center font-medium pb-2 px-2 whitespace-nowrap min-w-[80px]" title={s.name}>
+                  {s.name.length > 10 ? s.name.slice(0, 9) + "…" : s.name}
+                </th>
+              ))}
+              <th className="text-right font-medium pb-2 pl-4 whitespace-nowrap">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pipelines.map((p, i) => {
+              const batchDeals = allDeals; // TODO: filter by pipeline when source_pipeline_id lands
+              const batchLabel = (() => {
+                const m = p.name.match(/batch\s*#?\s*(\d+)/i);
+                if (m) return `Batch #${m[1]}`;
+                if (p.name.length <= 14) return p.name;
+                return `Batch #${i + 1}`;
+              })();
+              const batchTotal = batchDeals.reduce((s, d) => s + (d.deal_value ?? 0), 0);
+              return (
+                <tr
+                  key={p.id}
+                  className="border-t border-(--color-border)/40 hover:bg-(--color-surface-1) transition-colors"
+                >
+                  <td className="py-3 pr-4 font-medium text-(--color-fg) whitespace-nowrap">
+                    <button
+                      type="button"
+                      title={p.name}
+                      onClick={() => onExpandBatch(expandedBatch === p.id ? null : p.id)}
+                      className="flex items-center gap-1.5 text-left hover:text-(--color-accent) transition-colors"
+                    >
+                      <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expandedBatch === p.id && "rotate-90")} />
+                      {batchLabel}
+                    </button>
+                  </td>
+                  {openStages.map((s) => {
+                    const count = (dealsByStage[s.id] ?? []).length;
+                    return (
+                      <td key={s.id} className="py-3 px-2 text-center">
+                        {count > 0 ? (
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-(--color-accent)/10 text-(--color-accent) text-xs font-semibold">
+                            {count}
+                          </span>
+                        ) : (
+                          <span className="text-(--color-fg-subtle) text-xs">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="py-3 pl-4 text-right font-semibold text-(--color-fg) whitespace-nowrap">
+                    {batchTotal > 0 ? formatDealValue(batchTotal, "GBP") : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* CTA to switch to full kanban */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={onSwitchToKanban}
+          className="text-xs text-(--color-fg-muted) hover:text-(--color-fg) transition-colors flex items-center gap-1"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          Switch to full kanban view
+        </button>
+      </div>
     </div>
   );
 }

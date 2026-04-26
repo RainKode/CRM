@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient, getActiveCompanyId } from "@/lib/supabase/server";
-import type { Deal, Lead } from "@/lib/types";
+import type { Deal, Lead, DeletedFolder } from "@/lib/types";
 
 function bust() {
   revalidatePath("/trash");
@@ -43,6 +43,16 @@ export async function getTrashedLeads(): Promise<TrashedLead[]> {
   return leads.map((l) => ({ ...l, folder_name: nameById.get(l.folder_id) ?? null }));
 }
 
+export async function getDeletedFolders(): Promise<DeletedFolder[]> {
+  const sb = await createClient();
+  const companyId = await getActiveCompanyId();
+  const { data, error } = await sb.rpc("list_deleted_folders", {
+    p_company_id: companyId,
+  });
+  if (error) throw error;
+  return (data ?? []) as DeletedFolder[];
+}
+
 export async function restoreDeal(id: string) {
   const sb = await createClient();
   const { error } = await sb.rpc("restore_deal", { p_id: id });
@@ -57,6 +67,13 @@ export async function restoreLead(id: string) {
   bust();
 }
 
+export async function restoreDeletedFolder(id: string) {
+  const sb = await createClient();
+  const { error } = await sb.rpc("restore_folder", { p_id: id });
+  if (error) throw error;
+  bust();
+}
+
 export async function purgeDeal(id: string) {
   const sb = await createClient();
   const { error } = await sb.rpc("purge_deleted_deal", { p_id: id });
@@ -67,6 +84,13 @@ export async function purgeDeal(id: string) {
 export async function purgeLead(id: string) {
   const sb = await createClient();
   const { error } = await sb.rpc("purge_deleted_lead", { p_id: id });
+  if (error) throw error;
+  bust();
+}
+
+export async function purgeDeletedFolder(id: string) {
+  const sb = await createClient();
+  const { error } = await sb.rpc("purge_deleted_folder", { p_id: id });
   if (error) throw error;
   bust();
 }

@@ -116,6 +116,23 @@ export async function createBatch(input: {
   }
 
   revalidatePath("/enrichment");
+
+  // Log activity (best-effort)
+  try {
+    const companyId = await getActiveCompanyId();
+    await sb.rpc("log_activity", {
+      p_company_id: companyId,
+      p_category: "batch",
+      p_action: "batch_created",
+      p_summary: `Batch "${input.name}" created with ${freeIds.length} lead${freeIds.length !== 1 ? "s" : ""}`,
+      p_entity_type: "batch",
+      p_entity_id: batch.id,
+      p_entity_label: input.name,
+    });
+  } catch {
+    // non-fatal
+  }
+
   return batch as Batch;
 }
 
@@ -675,6 +692,22 @@ export async function deleteBatch(input: {
   revalidatePath("/enrichment");
   revalidatePath("/pipeline");
   revalidatePath(`/folders/${batch.folder_id}`);
+
+  // Log activity (best-effort)
+  try {
+    const companyId = await getActiveCompanyId();
+    await sb.rpc("log_activity", {
+      p_company_id: companyId,
+      p_category: "batch",
+      p_action: "batch_deleted",
+      p_summary: `Batch "${batch.name}" permanently deleted`,
+      p_entity_type: "batch",
+      p_entity_id: batch.id,
+      p_entity_label: batch.name,
+    });
+  } catch {
+    // non-fatal
+  }
 
   return {
     ok: true,

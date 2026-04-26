@@ -26,6 +26,7 @@ import {
   Trash2,
   BarChart3,
   Users,
+  Activity,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -113,6 +114,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Team",
     icon: Users,
     matchPrefix: "/team",
+  },
+  {
+    href: "/activity",
+    label: "Activity",
+    icon: Activity,
+    matchPrefix: "/activity",
   },
   {
     href: "/trash",
