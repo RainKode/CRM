@@ -110,13 +110,13 @@ export function AvatarStack({ members, max = 3, size = "sm", className, ...props
           name={m.name}
           email={m.email}
           size={size}
-          className="ring-2 ring-(--color-surface-1)"
+          className="border-2 border-(--color-bg)"
         />
       ))}
       {overflow > 0 && (
         <span
           className={cn(
-            "inline-flex items-center justify-center rounded-full bg-(--color-surface-3) text-(--color-fg-muted) font-semibold ring-2 ring-(--color-surface-1)",
+            "inline-flex items-center justify-center rounded-full border-2 border-(--color-bg) bg-(--color-surface-3) text-(--color-fg-muted) font-semibold",
             SIZES[size]
           )}
         >

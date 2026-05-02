@@ -80,7 +80,7 @@ function EditableField({
               onBlur={() => commitEdit(fieldKey)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit(fieldKey); } if (e.key === "Escape") { setEditValue(value); commitEdit(fieldKey); } }}
               rows={3}
-              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1.5 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-accent) outline-none resize-none"
+              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1.5 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-blue) outline-none resize-none"
             />
           ) : (
             <input
@@ -90,7 +90,7 @@ function EditableField({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={() => commitEdit(fieldKey)}
               onKeyDown={(e) => { if (e.key === "Enter") commitEdit(fieldKey); if (e.key === "Escape") { setEditValue(value); commitEdit(fieldKey); } }}
-              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-accent) outline-none"
+              className="flex-1 bg-(--color-surface-3) rounded-lg px-2 py-1 text-sm text-(--color-fg) border-none focus:ring-1 focus:ring-(--color-blue) outline-none"
             />
           )}
           <button type="button" onClick={() => commitEdit(fieldKey)} className="mt-1 shrink-0 text-(--color-success) hover:opacity-75 transition-opacity">
@@ -104,11 +104,11 @@ function EditableField({
           className="w-full text-left group/val flex items-start gap-1.5"
         >
           {isUrl ? (
-            <span className="text-sm text-(--color-accent) break-all underline underline-offset-4 decoration-(--color-accent)/30">
+            <span className="text-sm text-(--color-blue) break-all underline underline-offset-4 decoration-(--color-accent)/30">
               {value}
             </span>
           ) : isEmail ? (
-            <span className="text-sm text-(--color-accent) break-all">{value}</span>
+            <span className="text-sm text-(--color-blue) break-all">{value}</span>
           ) : (
             <span className="text-sm text-(--color-fg) break-words">{value || <span className="text-(--color-fg-subtle) italic">empty</span>}</span>
           )}
@@ -345,7 +345,7 @@ export function EnrichmentQueue({
     <div className="flex h-full overflow-hidden bg-(--color-bg)">
       {/* ── Pane 1: Lead Queue List ── */}
       <section
-        className="shrink-0 flex flex-col bg-(--color-bg) border-r-2 border-(--color-card-border) overflow-hidden"
+        className="shrink-0 flex flex-col bg-white border-r border-(--color-border) overflow-hidden"
         style={{ width: 300, minWidth: 220, maxWidth: 440, resize: "horizontal", overflow: "hidden" }}
       >
         <header className="p-6 pb-4 shrink-0">
@@ -374,8 +374,8 @@ export function EnrichmentQueue({
                 className={cn(
                   "w-full text-left p-4 rounded-lg flex items-start gap-3 transition-all",
                   isActive
-                    ? "bg-(--color-surface-3) shadow-[0_4px_24px_rgba(0,0,0,0.2)]"
-                    : "bg-transparent hover:bg-(--color-surface-2) hover:scale-[1.02]",
+                    ? "bg-(--color-surface-2)"
+                    : "bg-transparent hover:bg-(--color-surface-2)",
                   bl.is_completed && "opacity-50"
                 )}
               >
@@ -422,7 +422,7 @@ export function EnrichmentQueue({
           <p className="text-sm text-(--color-fg-muted) mt-2">Existing Data — click any field to edit</p>
         </header>
         <div className="flex-1 overflow-y-auto p-8 pt-4">
-          <div className="rounded-2xl border-2 border-(--color-card-border) shadow-(--shadow-card-3d) bg-(--color-surface-1) p-6">
+          <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-6">
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
               {/* Top-level lead fields — editable */}
               {(lead.company || lead.name) && (
@@ -484,21 +484,21 @@ export function EnrichmentQueue({
       {/* When popped out → show placeholder; on snap-back → animate in */}
       {pipWindow ? (
         <section
-          className="shrink-0 flex flex-col items-center justify-center bg-(--color-bg) border-l-2 border-(--color-card-border)"
+          className="shrink-0 flex flex-col items-center justify-center bg-[#191c1f] text-white border-l border-(--color-border)"
           style={{ width: 420, minWidth: 320, maxWidth: 600 }}
         >
           <div className="flex flex-col items-center gap-4 text-center p-8">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-(--color-accent-muted) animate-pulse">
-              <PictureInPicture2 className="h-6 w-6 text-(--color-accent)" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 animate-pulse">
+              <PictureInPicture2 className="h-6 w-6 text-white" />
             </div>
-            <p className="text-sm font-semibold text-(--color-fg)">Form is floating</p>
-            <p className="text-xs text-(--color-fg-muted) max-w-[200px] leading-relaxed">
+            <p className="text-sm font-semibold text-white">Form is floating</p>
+            <p className="text-xs text-white/60 max-w-[200px] leading-relaxed">
               Fill in the floating window. Close it or click below to snap back.
             </p>
             <button
               type="button"
               onClick={closePip}
-              className="mt-1 text-xs font-medium text-(--color-accent) hover:underline underline-offset-4 transition-colors"
+              className="mt-1 text-xs font-medium text-white hover:underline underline-offset-4 transition-colors"
             >
               ↩ Snap back
             </button>
@@ -507,7 +507,7 @@ export function EnrichmentQueue({
       ) : (
       <section
         className={cn(
-          "shrink-0 flex flex-col bg-(--color-bg) border-l-2 border-(--color-card-border) overflow-hidden shadow-[-8px_0_32px_rgba(0,0,0,0.15)]",
+          "shrink-0 flex flex-col bg-[#191c1f] text-white border-l border-(--color-border) overflow-hidden",
           snapBack && "animate-snap-back",
           isPopping && "animate-pip-fly-out"
         )}
@@ -515,7 +515,7 @@ export function EnrichmentQueue({
       >
         <header className="p-8 pb-4 shrink-0 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-semibold text-(--color-fg) tracking-tight">Fill in what you find</h2>
+            <h2 className="text-xl font-semibold text-white tracking-tight">Fill in what you find</h2>
             {current.is_completed && (
               <Badge tone="success" className="mt-2">Already enriched</Badge>
             )}
@@ -536,7 +536,7 @@ export function EnrichmentQueue({
                 setTimeout(() => setIsPopping(false), 320);
               }}
               disabled={isOpening}
-              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-(--color-surface-3) text-(--color-fg-muted) hover:bg-(--color-surface-4) hover:text-(--color-accent) transition-all disabled:opacity-50"
+              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/16 hover:text-white transition-all disabled:opacity-50"
             >
               <PictureInPicture2 className="h-4 w-4" />
             </button>
@@ -545,7 +545,7 @@ export function EnrichmentQueue({
 
         <div className="flex-1 overflow-y-auto p-8 pt-4">
           {enrichmentFields.length === 0 ? (
-            <div className="rounded-xl bg-(--color-surface-2) p-8 text-center text-sm text-(--color-fg-subtle)">
+            <div className="rounded-xl bg-white/8 p-8 text-center text-sm text-white/60">
               No enrichment fields defined. Configure fields from the folder settings.
             </div>
           ) : (
@@ -559,7 +559,7 @@ export function EnrichmentQueue({
 
                 return (
                   <div key={field.id} className="space-y-1.5">
-                    <label className="block text-sm font-medium text-(--color-fg)">
+                    <label className="block text-sm font-medium text-white/78">
                       {field.label}
                       {field.is_required && (
                         <span className="text-(--color-danger)"> *</span>
@@ -569,7 +569,7 @@ export function EnrichmentQueue({
                       <select
                         value={String(val)}
                         onChange={(e) => updateField(field.key, e.target.value)}
-                        className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
+                        className="w-full min-h-12 bg-transparent border-0 border-b border-white/24 rounded-none py-3 px-0 text-white placeholder:text-white/35 focus:border-white focus:ring-0 outline-none transition-colors"
                       >
                         <option value="">Select…</option>
                         {(field.options ?? []).map((opt) => (
@@ -577,19 +577,19 @@ export function EnrichmentQueue({
                         ))}
                       </select>
                     ) : field.type === "checkbox" ? (
-                      <div className="flex items-center gap-3 bg-(--color-surface-3) rounded-lg py-3 px-4">
+                      <div className="flex items-center gap-3 border-b border-white/24 py-3">
                         <input
                           type="checkbox"
                           checked={!!val}
                           onChange={(e) => updateField(field.key, e.target.checked)}
-                          className="accent-(--color-accent) h-4 w-4"
+                          className="accent-white h-4 w-4"
                         />
-                        <span className="text-sm text-(--color-fg-muted)">Yes</span>
+                        <span className="text-sm text-white/62">Yes</span>
                       </div>
                     ) : (
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Icon className="h-4 w-4 text-(--color-fg-subtle)" />
+                          <Icon className="h-4 w-4 text-white/38" />
                         </div>
                         <input
                           type={
@@ -603,7 +603,7 @@ export function EnrichmentQueue({
                           value={String(val)}
                           onChange={(e) => updateField(field.key, e.target.value)}
                           placeholder={field.description || field.label}
-                          className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all"
+                          className="w-full min-h-12 bg-transparent border-0 border-b border-white/24 rounded-none py-3 pl-10 pr-0 text-white placeholder:text-white/35 focus:border-white focus:ring-0 outline-none transition-colors"
                         />
                       </div>
                     )}
@@ -612,8 +612,8 @@ export function EnrichmentQueue({
               })}
 
               {/* Notes / Comments — resizable */}
-              <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
-                <label className="block text-sm font-medium text-(--color-fg)">
+              <div className="space-y-1.5 pt-2 border-t border-white/14">
+                <label className="block text-sm font-medium text-white/78">
                   Notes / Comments
                 </label>
                 <textarea
@@ -621,14 +621,14 @@ export function EnrichmentQueue({
                   onChange={(e) => updateField("__notes", e.target.value)}
                   placeholder="Add any notes or comments about this lead…"
                   rows={3}
-                  className="w-full bg-(--color-surface-3) border-none rounded-lg py-3 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
+                  className="w-full bg-transparent border-0 border-b border-white/24 rounded-none py-3 px-0 text-white placeholder:text-white/35 focus:border-white focus:ring-0 outline-none transition-colors text-sm leading-relaxed"
                   style={{ resize: "vertical", minHeight: 80 }}
                 />
               </div>
 
               {/* Quality Rating */}
-              <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
-                <label className="block text-sm font-medium text-(--color-fg)">
+              <div className="space-y-1.5 pt-2 border-t border-white/14">
+                <label className="block text-sm font-medium text-white/78">
                   Lead Quality
                 </label>
                 <div className="flex items-center gap-3">
@@ -648,9 +648,9 @@ export function EnrichmentQueue({
                       });
                     }}
                     placeholder="—"
-                    className="h-10 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-lg font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    className="h-10 w-20 rounded-none border-0 border-b border-white/24 bg-transparent px-3 text-center text-lg font-bold text-white focus:border-white focus:ring-0 focus:outline-none"
                   />
-                  <span className="text-sm font-medium text-(--color-fg-muted)">/ 10</span>
+                  <span className="text-sm font-medium text-white/60">/ 10</span>
                 </div>
               </div>
             </form>
@@ -667,12 +667,12 @@ export function EnrichmentQueue({
         </div>
 
         {/* Footer */}
-        <footer className="p-8 pt-4 border-t border-(--color-card-border) shrink-0 space-y-3">
+        <footer className="p-8 pt-4 border-t border-white/14 shrink-0 space-y-3">
           <button
             type="button"
             onClick={handleComplete}
             disabled={isPending || current.is_completed || current.is_disqualified}
-            className="w-full bg-(--color-accent) text-(--color-accent-fg) py-4 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,113,227,0.3)] disabled:opacity-50"
+            className="w-full bg-white text-[#191c1f] py-4 rounded-full font-semibold text-sm hover:opacity-85 transition-opacity disabled:opacity-50"
           >
             {isPending ? "Saving…" : "Mark as Enriched"}
           </button>
@@ -683,7 +683,7 @@ export function EnrichmentQueue({
               type="button"
               onClick={handleSkip}
               disabled={isPending}
-              className="flex-1 text-(--color-fg-muted) py-2.5 rounded-full font-medium text-sm hover:text-(--color-fg) hover:bg-(--color-surface-2) transition-colors"
+              className="flex-1 text-white/62 py-2.5 rounded-full font-medium text-sm hover:text-white hover:bg-white/10 transition-colors"
             >
               Skip
             </button>
@@ -701,7 +701,7 @@ export function EnrichmentQueue({
                   "w-full py-2.5 rounded-full font-medium text-sm transition-colors flex items-center justify-center gap-1.5",
                   current.is_flagged
                     ? "bg-(--color-warn)/15 text-(--color-warn) hover:bg-(--color-warn)/25"
-                    : "text-(--color-fg-muted) hover:text-(--color-warn) hover:bg-(--color-surface-2)"
+                    : "text-white/62 hover:text-(--color-warning) hover:bg-white/10"
                 )}
               >
                 <Flag className="h-3.5 w-3.5" />
@@ -710,7 +710,7 @@ export function EnrichmentQueue({
               {showFlagMenu && (
                 <div
                   ref={flagMenuRef}
-                  className="absolute bottom-full mb-2 left-0 right-0 z-50 rounded-xl bg-(--color-surface-3) border border-(--color-card-border) shadow-(--shadow-popover) p-3 space-y-2"
+                  className="absolute bottom-full mb-2 left-0 right-0 z-50 rounded-xl bg-(--color-surface-3) border border-(--color-border)  p-3 space-y-2"
                 >
                   <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-2">Flag reason</p>
                   {["Dead website", "Dead email", "Wrong contact", "Not suitable for campaign", "Duplicate"].map((r) => (
@@ -723,14 +723,14 @@ export function EnrichmentQueue({
                       {r}
                     </button>
                   ))}
-                  <div className="pt-1 border-t border-(--color-card-border) flex gap-2">
+                  <div className="pt-1 border-t border-(--color-border) flex gap-2">
                     <input
                       type="text"
                       placeholder="Custom reason…"
                       value={customFlagReason}
                       onChange={(e) => setCustomFlagReason(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter" && customFlagReason.trim()) handleFlag(customFlagReason.trim()); }}
-                      className="flex-1 bg-(--color-surface-4) rounded-lg px-3 py-1.5 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) border-none focus:ring-1 focus:ring-(--color-accent) outline-none"
+                      className="flex-1 bg-(--color-surface-4) rounded-lg px-3 py-1.5 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) border-none focus:ring-1 focus:ring-(--color-blue) outline-none"
                     />
                     <button
                       type="button"
@@ -761,7 +761,7 @@ export function EnrichmentQueue({
                 "flex-1 py-2.5 rounded-full font-medium text-sm transition-colors flex items-center justify-center gap-1.5",
                 current.is_disqualified
                   ? "bg-(--color-danger)/15 text-(--color-danger) opacity-60 cursor-not-allowed"
-                  : "text-(--color-fg-muted) hover:text-(--color-danger) hover:bg-(--color-danger)/10"
+                  : "text-white/62 hover:text-(--color-danger) hover:bg-(--color-danger)/10"
               )}
             >
               <BanIcon className="h-3.5 w-3.5" />
@@ -776,7 +776,7 @@ export function EnrichmentQueue({
       {pipWindow && createPortal(
         <div className="flex flex-col h-screen bg-(--color-bg) animate-pip-enter" style={{ overflow: "hidden" }}>
           {/* PiP header with snap-back */}
-          <header className="px-6 pt-5 pb-3 shrink-0 flex items-center gap-3 border-b border-(--color-card-border)">
+          <header className="px-6 pt-5 pb-3 shrink-0 flex items-center gap-3 border-b border-(--color-border)">
             <div className="flex-1 min-w-0">
               <h2 className="text-base font-semibold text-(--color-fg) tracking-tight">
                 {lead.name || lead.company || "Enrichment"}
@@ -818,7 +818,7 @@ export function EnrichmentQueue({
                         <select
                           value={String(val)}
                           onChange={(e) => updateField(field.key, e.target.value)}
-                          className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm"
+                          className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) transition-all text-sm"
                         >
                           <option value="">Select…</option>
                           {(field.options ?? []).map((opt) => (
@@ -852,7 +852,7 @@ export function EnrichmentQueue({
                             value={String(val)}
                             onChange={(e) => updateField(field.key, e.target.value)}
                             placeholder={field.description || field.label}
-                            className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm"
+                            className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 pl-10 pr-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) transition-all text-sm"
                           />
                         </div>
                       )}
@@ -861,20 +861,20 @@ export function EnrichmentQueue({
                 })}
 
                 {/* Notes */}
-                <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+                <div className="space-y-1.5 pt-2 border-t border-(--color-border)">
                   <label className="block text-sm font-medium text-(--color-fg)">Notes / Comments</label>
                   <textarea
                     value={(formData["__notes"] as string) ?? ""}
                     onChange={(e) => updateField("__notes", e.target.value)}
                     placeholder="Add any notes…"
                     rows={3}
-                    className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) transition-all text-sm leading-relaxed"
+                    className="w-full bg-(--color-surface-3) border-none rounded-lg py-2.5 px-4 text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) transition-all text-sm leading-relaxed"
                     style={{ resize: "vertical", minHeight: 72 }}
                   />
                 </div>
 
                 {/* Quality rating */}
-                <div className="space-y-1.5 pt-2 border-t border-(--color-card-border)">
+                <div className="space-y-1.5 pt-2 border-t border-(--color-border)">
                   <label className="block text-sm font-medium text-(--color-fg)">Lead Quality</label>
                   <div className="flex items-center gap-3">
                     <input
@@ -891,7 +891,7 @@ export function EnrichmentQueue({
                         });
                       }}
                       placeholder="—"
-                      className="h-9 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-base font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                      className="h-9 w-20 rounded-lg border-0 bg-(--color-surface-3) px-3 text-center text-base font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                     />
                     <span className="text-sm font-medium text-(--color-fg-muted)">/ 10</span>
                   </div>
@@ -910,12 +910,12 @@ export function EnrichmentQueue({
           </div>
 
           {/* Footer */}
-          <footer className="px-6 py-5 border-t border-(--color-card-border) shrink-0 space-y-2">
+          <footer className="px-6 py-5 border-t border-(--color-border) shrink-0 space-y-2">
             <button
               type="button"
               onClick={handleComplete}
               disabled={isPending || current.is_completed || current.is_disqualified}
-              className="w-full bg-(--color-accent) text-(--color-accent-fg) py-3.5 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors shadow-[0_4px_16px_rgba(0,194,204,0.3)] disabled:opacity-50"
+              className="w-full bg-(--color-accent) text-(--color-accent-fg) py-3.5 rounded-full font-semibold text-sm hover:bg-(--color-accent-hover) transition-colors disabled:opacity-50"
             >
               {isPending ? "Saving…" : "Mark as Enriched"}
             </button>

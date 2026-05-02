@@ -66,8 +66,8 @@ export function ProfileView({
         {/* Sub-sections nav */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-4 mb-8">
           {/* Profile (active) */}
-          <div className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border-2 border-(--color-accent)/50 bg-(--color-accent)/8 overflow-hidden transition-all hover:-translate-y-0.5">
-            <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+          <div className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border-2 border-(--color-blue)/50 bg-(--color-blue)/8 overflow-hidden transition-all">
+            <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <User className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div>
@@ -78,9 +78,9 @@ export function ProfileView({
           </div>
           <Link
             href="/settings/email"
-            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) hover:border-(--color-accent) transition-all hover:-translate-y-0.5"
+            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border border-(--color-border) bg-(--color-surface-1) hover:border-(--color-blue) transition-all"
           >
-            <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <Mail className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div>
@@ -90,9 +90,9 @@ export function ProfileView({
           </Link>
           <Link
             href="/settings/templates"
-            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) hover:border-(--color-accent) transition-all hover:-translate-y-0.5"
+            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border border-(--color-border) bg-(--color-surface-1) hover:border-(--color-blue) transition-all"
           >
-            <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <FileText className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div>
@@ -102,9 +102,9 @@ export function ProfileView({
           </Link>
           <Link
             href="/settings/pipelines"
-            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) hover:border-(--color-accent) transition-all hover:-translate-y-0.5"
+            className="relative flex flex-col gap-3 p-5 min-h-[112px] rounded-2xl border border-(--color-border) bg-(--color-surface-1) hover:border-(--color-blue) transition-all"
           >
-            <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <GitBranch className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div>
@@ -115,7 +115,7 @@ export function ProfileView({
         </div>
 
         {/* Profile Card */}
-        <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-8">
+        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-8">
           <div className="flex items-center gap-5 mb-8">
             <div className="h-16 w-16 rounded-full bg-(--color-accent) flex items-center justify-center text-2xl font-bold text-(--color-accent-fg)">
               {initials}
@@ -142,7 +142,7 @@ export function ProfileView({
                   setSaved(false);
                   setError(null);
                 }}
-                className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-accent) focus:outline-none transition-all"
+                className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-blue) focus:outline-none transition-all"
                 placeholder="Your full name"
               />
             </div>
@@ -169,7 +169,7 @@ export function ProfileView({
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-(--color-card-border)">
+            <div className="flex items-center justify-between pt-4 border-t border-(--color-border)">
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -182,7 +182,7 @@ export function ProfileView({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending || fullName === initialName}
-                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-(--color-accent-fg) bg-(--color-accent) hover:bg-(--color-accent-hover) transition-all shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 cursor-pointer"
+                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-(--color-accent-fg) bg-(--color-accent) hover:bg-(--color-accent-hover) transition-all active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 cursor-pointer"
               >
                 <Save className="h-4 w-4" />
                 {isPending ? "Saving…" : "Save Changes"}

@@ -265,7 +265,7 @@ function FolderMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border border-(--color-border-strong) bg-(--color-surface-1) p-1 shadow-(--shadow-popover)">
+          <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-1">
             <button
               type="button"
               onClick={() => {
@@ -375,15 +375,12 @@ export function FolderList({
           return (
             <div
               key={folder.id}
-              className="bg-(--color-surface-1) rounded-[2rem] p-8 flex flex-col gap-6 group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover)"
+              className="bg-(--color-surface-1) rounded-2xl p-8 flex flex-col gap-6 group transition-colors duration-200 relative overflow-hidden border border-(--color-border) hover:bg-white"
             >
-              {/* Hover gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-(--color-accent)/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
               {/* Top row: icon + menu */}
               <div className="flex justify-between items-start relative z-30">
-                <div className="w-12 h-12 rounded-full bg-(--color-surface-4) flex items-center justify-center">
-                  <FolderOpen className="h-5 w-5 text-(--color-accent)" />
+                <div className="w-12 h-12 rounded-full bg-(--color-blue)/12 flex items-center justify-center">
+                  <FolderOpen className="h-5 w-5 text-(--color-blue)" />
                 </div>
                 <div className="relative z-40" onClick={(e) => e.stopPropagation()}>
                   <FolderMenu
@@ -433,8 +430,8 @@ export function FolderList({
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
                         isComplete
-                          ? "bg-(--color-success)"
-                          : "bg-(--color-accent)"
+                          ? "bg-(--color-teal)"
+                          : "bg-(--color-blue)"
                       )}
                       style={{ width: `${pct}%` }}
                     />
@@ -443,7 +440,7 @@ export function FolderList({
                 <div className="flex items-center gap-3">
                   <Link
                     href={`/folders/${folder.id}`}
-                    className="text-(--color-accent-text) font-semibold hover:text-(--color-fg) transition-colors text-sm uppercase tracking-wide"
+                    className="text-(--color-blue) font-semibold hover:text-(--color-fg) transition-colors text-sm uppercase tracking-wide"
                   >
                     Open List
                   </Link>
@@ -464,7 +461,7 @@ export function FolderList({
             {archived.map((folder) => (
               <div
                 key={folder.id}
-                className="bg-(--color-surface-1) rounded-[2rem] p-6 flex items-center justify-between shadow-(--shadow-card-3d) border-2 border-(--color-card-border)"
+                className="bg-(--color-surface-1) rounded-2xl p-6 flex items-center justify-between border border-(--color-border)"
               >
                 <div className="flex items-center gap-3">
                   <Archive className="h-5 w-5 text-(--color-fg-subtle)" />

@@ -48,7 +48,7 @@ export function EmailAnalyticsView({
       </div>
 
       {/* Daily chart */}
-      <section className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-6 mb-8">
+      <section className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-6 mb-8">
         <h2 className="text-sm font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4 flex items-center gap-2">
           <BarChart3 className="h-4 w-4" /> Sends per day
         </h2>
@@ -56,7 +56,7 @@ export function EmailAnalyticsView({
           {daily.map((d) => (
             <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group">
               <div
-                className="w-full rounded-t bg-(--color-accent)/60 group-hover:bg-(--color-accent) transition-colors"
+                className="w-full rounded-t bg-(--color-blue)/60 group-hover:bg-(--color-accent) transition-colors"
                 style={{ height: `${(d.count / maxDaily) * 100}%` }}
                 title={`${d.date}: ${d.count}`}
               />
@@ -96,7 +96,7 @@ export function EmailAnalyticsView({
 
 function Kpi({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number | string; sub?: string }) {
   return (
-    <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-4">
+    <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-4">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle) mb-2">
         {icon}
         {label}
@@ -117,7 +117,7 @@ function Leaderboard({
   rateLabel: string;
 }) {
   return (
-    <section className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-6">
+    <section className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-6">
       <h2 className="text-sm font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">{title}</h2>
       {rows.length === 0 ? (
         <p className="text-sm text-(--color-fg-muted) py-6 text-center">No data in the last 30 days</p>

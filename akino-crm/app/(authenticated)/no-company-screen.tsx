@@ -3,15 +3,14 @@
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Clock, LogOut } from "lucide-react";
+import { getSupabasePublicConfig } from "@/lib/supabase/env";
 
 export function NoCompanyScreen({ email }: { email: string }) {
   const router = useRouter();
 
   async function handleSignOut() {
-    const sb = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const { url, key } = getSupabasePublicConfig();
+    const sb = createBrowserClient(url, key);
     await sb.auth.signOut();
     router.push("/login");
   }
@@ -46,7 +45,7 @@ export function NoCompanyScreen({ email }: { email: string }) {
           </button>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 rounded-full border border-(--color-card-border) px-6 py-2.5 text-sm font-medium text-(--color-fg-muted) transition-colors hover:bg-(--color-surface-1)"
+            className="flex items-center gap-2 rounded-full border border-(--color-border) px-6 py-2.5 text-sm font-medium text-(--color-fg-muted) transition-colors hover:bg-(--color-surface-1)"
           >
             <LogOut className="h-4 w-4" />
             Sign out

@@ -2,18 +2,17 @@
 
 @theme inline {
   /* Typography */
-  --font-sans: "Inter", var(--font-geist-sans), system-ui, -apple-system,
-    "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
-    monospace;
+  --font-sans: "Inter", var(--font-sans-src), system-ui, sans-serif;
+  --font-display: "Inter Tight", var(--font-display-src), "Inter", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Radii */
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
+  --radius-xl: 18px;
+  --radius-2xl: 20px;
   --radius-pill: 9999px;
 
   /* ---- All color/shadow tokens set per-mode below ---- */
@@ -53,8 +52,13 @@
 
   --color-danger: initial;
   --color-warn: initial;
+  --color-warning: initial;
   --color-success: initial;
   --color-info: initial;
+  --color-blue: initial;
+  --color-teal: initial;
+  --color-pink: initial;
+  --color-yellow: initial;
 
   --color-grid-line: initial;
   --color-grid-line-strong: initial;
@@ -86,170 +90,170 @@
   --shadow-card-3d-hover: initial;
 }
 
-/* ═══════════════════════════════════════
-   DARK  MODE  (default)
-   ═══════════════════════════════════════ */
-.dark {
-  color-scheme: dark;
-
-  /* Surfaces */
-  --color-bg: #0b0f14;
-  --color-surface-1: #111827;
-  --color-surface-2: #161d2b;
-  --color-surface-3: #1f2937;
-  --color-surface-4: #374151;
-
-  /* Text */
-  --color-fg: #f1f3f5;
-  --color-fg-muted: #b0b8c4;
-  --color-fg-subtle: #8b95a5;
-  --color-fg-disabled: #374151;
-
-  /* Borders — thick black */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
-
-  /* Primary — Teal */
-  --color-accent: #00c2cc;
-  --color-accent-hover: #00aab3;
-  --color-accent-pressed: #008c93;
-  --color-accent-muted: rgba(0, 194, 204, 0.12);
-  --color-accent-text: #00c2cc;
-
-  /* Secondary — Coral-red */
-  --color-secondary: #ff6b75;
-  --color-secondary-hover: #e65a64;
-  --color-secondary-active: #cc4e57;
-
-  /* Tertiary — Subtle teal surface */
-  --color-tertiary: #1f3a3d;
-  --color-tertiary-hover: #2a4d51;
-  --color-tertiary-fg: #00c2cc;
-
-  /* Highlight */
-  --color-highlight: #22c55e;
-  --color-highlight-hover: #16a34a;
-
-  /* Semantic states */
-  --color-danger: #f87171;
-  --color-warn: #fbbf24;
-  --color-success: #22c55e;
-  --color-info: #38bdf8;
-
-  /* Chart palette */
-  --color-chart-1: #00c2cc;
-  --color-chart-2: #ff6b75;
-  --color-chart-3: #fbbf24;
-  --color-chart-4: #22c55e;
-  --color-chart-5: #38bdf8;
-
-  /* Grid / Data tables */
-  --color-grid-line: rgba(255, 255, 255, 0.06);
-  --color-grid-line-strong: rgba(255, 255, 255, 0.12);
-  --color-grid-header: #111827;
-  --color-grid-row-hover: rgba(0, 194, 204, 0.05);
-  --color-grid-row-selected: rgba(0, 194, 204, 0.12);
-  --color-grid-cell-focus: #00c2cc;
-
-  /* Shadows — 3D uplift feel */
-  --shadow-card: 0 2px 4px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.35);
-  --shadow-card-hover: 0 4px 8px rgba(0,0,0,0.25), 0 16px 40px rgba(0,0,0,0.45);
-  --shadow-popover: 0 8px 40px rgba(0, 0, 0, 0.5);
-  --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 16px rgba(0, 194, 204, 0.25);
-  --color-card-border: rgba(255, 255, 255, 0.10);
-  --shadow-sidebar: 4px 0 24px rgba(0, 0, 0, 0.4);
-
-  --shadow-btn: 0 2px 4px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.2);
-  --shadow-btn-hover: 0 4px 8px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.3);
-  --shadow-btn-active: inset 0 2px 4px rgba(0,0,0,0.4);
-  --shadow-card-3d: 0 2px 4px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.35);
-  --shadow-card-3d-hover: 0 4px 8px rgba(0,0,0,0.25), 0 16px 40px rgba(0,0,0,0.45);
-}
-
-/* ═══════════════════════════════════════
-   LIGHT  MODE
-   ═══════════════════════════════════════ */
+/* Light mode (default) */
 .light {
   color-scheme: light;
 
   /* Surfaces */
-  --color-bg: #f8fafc;
+  --color-bg: #f4f4f4;
   --color-surface-1: #ffffff;
-  --color-surface-2: #f1f5f9;
-  --color-surface-3: #e2e8f0;
-  --color-surface-4: #cbd5e1;
+  --color-surface-2: #f4f4f4;
+  --color-surface-3: #eef1f4;
+  --color-surface-4: #d9dde2;
 
   /* Text */
-  --color-fg: #0f172a;
-  --color-fg-muted: #3e4a5c;
-  --color-fg-subtle: #475569;
-  --color-fg-disabled: #94a3b8;
+  --color-fg: #191c1f;
+  --color-fg-muted: #505a63;
+  --color-fg-subtle: #8d969e;
+  --color-fg-disabled: #c9c9cd;
 
-  /* Borders — thick black */
-  --color-border: rgba(0, 0, 0, 0.12);
-  --color-border-strong: rgba(0, 0, 0, 0.22);
+  /* Borders */
+  --color-border: #e3e6ea;
+  --color-border-strong: #c9c9cd;
 
-  /* Primary — Red */
-  --color-accent: #ef525d;
-  --color-accent-hover: #d64550;
-  --color-accent-pressed: #b83a43;
-  --color-accent-muted: rgba(239, 82, 93, 0.08);
-  --color-accent-text: #d64550;
+  /* Primary */
+  --color-accent: #191c1f;
+  --color-accent-hover: #22262a;
+  --color-accent-pressed: #000000;
+  --color-accent-fg: #ffffff;
+  --color-accent-muted: rgba(25, 28, 31, 0.06);
+  --color-accent-text: #191c1f;
 
-  /* Secondary — Teal */
-  --color-secondary: #00969e;
-  --color-secondary-hover: #007e85;
-  --color-secondary-active: #00666b;
+  /* Secondary */
+  --color-secondary: #f4f4f4;
+  --color-secondary-hover: #eaeaea;
+  --color-secondary-active: #dcdcdc;
+  --color-secondary-fg: #191c1f;
 
-  /* Tertiary — Subtle red surface */
-  --color-tertiary: #fef2f2;
-  --color-tertiary-hover: #fecaca;
-  --color-tertiary-fg: #ef525d;
+  /* Tertiary */
+  --color-tertiary: #ffffff;
+  --color-tertiary-hover: #f4f4f4;
+  --color-tertiary-fg: #191c1f;
 
   /* Highlight */
-  --color-highlight: #16a34a;
-  --color-highlight-hover: #15803d;
+  --color-highlight: #494fdf;
+  --color-highlight-hover: #3b41c4;
+  --color-highlight-fg: #ffffff;
 
   /* Semantic states */
-  --color-danger: #dc2626;
-  --color-warn: #f59e0b;
-  --color-success: #16a34a;
-  --color-info: #0284c7;
+  --color-blue: #494fdf;
+  --color-teal: #00a87e;
+  --color-pink: #e61e49;
+  --color-yellow: #b09000;
+  --color-warning: #ec7e00;
+  --color-danger: #e23b4a;
+  --color-warn: #ec7e00;
+  --color-success: #00a87e;
+  --color-info: #007bc2;
 
   /* Chart palette */
-  --color-chart-1: #ef525d;
-  --color-chart-2: #00969e;
-  --color-chart-3: #f59e0b;
-  --color-chart-4: #16a34a;
-  --color-chart-5: #0284c7;
+  --color-chart-1: #494fdf;
+  --color-chart-2: #e61e49;
+  --color-chart-3: #ec7e00;
+  --color-chart-4: #00a87e;
+  --color-chart-5: #007bc2;
 
   /* Grid / Data tables */
-  --color-grid-line: rgba(0, 0, 0, 0.06);
-  --color-grid-line-strong: rgba(0, 0, 0, 0.12);
-  --color-grid-header: #f1f5f9;
-  --color-grid-row-hover: rgba(239, 82, 93, 0.04);
-  --color-grid-row-selected: rgba(239, 82, 93, 0.08);
-  --color-grid-cell-focus: #ef525d;
+  --color-grid-line: #edf0f2;
+  --color-grid-line-strong: #d9dde2;
+  --color-grid-header: #f4f4f4;
+  --color-grid-row-hover: rgba(25, 28, 31, 0.04);
+  --color-grid-row-selected: rgba(73, 79, 223, 0.08);
+  --color-grid-cell-focus: #494fdf;
 
-  /* Shadows — 3D uplift feel */
-  --shadow-card: 0 2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
-  --shadow-card-hover: 0 4px 8px rgba(0,0,0,0.08), 0 16px 40px rgba(0,0,0,0.14);
-  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.14);
-  --shadow-focus: 0 0 0 2px var(--color-accent);
-  --shadow-glow: 0 0 16px rgba(239, 82, 93, 0.2);
-  --color-card-border: rgba(0, 0, 0, 0.12);
-  --shadow-sidebar: 4px 0 16px rgba(0, 0, 0, 0.06);
+  /* Shadows */
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-popover: 0 0 0 1px rgba(25, 28, 31, 0.08);
+  --shadow-focus: 0 0 0 2px #494fdf;
+  --shadow-glow: none;
+  --color-card-border: #e3e6ea;
+  --shadow-sidebar: none;
 
-  --shadow-btn: 0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-btn-hover: 0 4px 8px rgba(0,0,0,0.08), 0 8px 20px rgba(0,0,0,0.1);
-  --shadow-btn-active: inset 0 2px 4px rgba(0,0,0,0.12);
-  --shadow-card-3d: 0 2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
-  --shadow-card-3d-hover: 0 4px 8px rgba(0,0,0,0.08), 0 16px 40px rgba(0,0,0,0.14);
+  --shadow-btn: none;
+  --shadow-btn-hover: none;
+  --shadow-btn-active: none;
+  --shadow-card-3d: none;
+  --shadow-card-3d-hover: none;
+}
+
+/* Dark mode */
+.dark {
+  color-scheme: dark;
+
+  --color-bg: #0f1114;
+  --color-surface-1: #191c1f;
+  --color-surface-2: #22262a;
+  --color-surface-3: #2a2f33;
+  --color-surface-4: #3a3f44;
+
+  --color-fg: #ffffff;
+  --color-fg-muted: rgba(255, 255, 255, 0.7);
+  --color-fg-subtle: rgba(255, 255, 255, 0.5);
+  --color-fg-disabled: rgba(255, 255, 255, 0.3);
+
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.24);
+
+  --color-accent: #ffffff;
+  --color-accent-hover: rgba(255, 255, 255, 0.9);
+  --color-accent-pressed: rgba(255, 255, 255, 0.8);
+  --color-accent-fg: #191c1f;
+  --color-accent-muted: rgba(255, 255, 255, 0.08);
+  --color-accent-text: #ffffff;
+
+  --color-secondary: rgba(244, 244, 244, 0.1);
+  --color-secondary-hover: rgba(244, 244, 244, 0.16);
+  --color-secondary-active: rgba(244, 244, 244, 0.22);
+  --color-secondary-fg: #ffffff;
+
+  --color-tertiary: #22262a;
+  --color-tertiary-hover: #2a2f33;
+  --color-tertiary-fg: #ffffff;
+
+  --color-highlight: #6c72ff;
+  --color-highlight-hover: #555bf0;
+  --color-highlight-fg: #ffffff;
+
+  --color-blue: #6c72ff;
+  --color-teal: #1ec99c;
+  --color-pink: #ff3a66;
+  --color-yellow: #e0c84a;
+  --color-warning: #ff9933;
+  --color-danger: #ff5b6a;
+  --color-warn: #ff9933;
+  --color-success: #1ec99c;
+  --color-info: #38bdf8;
+
+  --color-chart-1: #6c72ff;
+  --color-chart-2: #ff3a66;
+  --color-chart-3: #ff9933;
+  --color-chart-4: #1ec99c;
+  --color-chart-5: #38bdf8;
+
+  --color-grid-line: rgba(255, 255, 255, 0.06);
+  --color-grid-line-strong: rgba(255, 255, 255, 0.12);
+  --color-grid-header: #191c1f;
+  --color-grid-row-hover: rgba(255, 255, 255, 0.05);
+  --color-grid-row-selected: rgba(108, 114, 255, 0.12);
+  --color-grid-cell-focus: #6c72ff;
+
+  --color-card-border: rgba(255, 255, 255, 0.08);
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-popover: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-focus: 0 0 0 2px #6c72ff;
+  --shadow-glow: none;
+  --shadow-sidebar: none;
+  --shadow-btn: none;
+  --shadow-btn-hover: none;
+  --shadow-btn-active: none;
+  --shadow-card-3d: none;
+  --shadow-card-3d-hover: none;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -257,11 +261,11 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-size: 103%;
+  font-size: 16px;
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  letter-spacing: -0.011em;
+  letter-spacing: 0.18px;
 }
 
 ::selection {
@@ -294,8 +298,8 @@ body {
 
 /* Pulse glow for pop-out button */
 @keyframes pipGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,194,204,0); }
-  50%       { box-shadow: 0 0 0 6px rgba(0,194,204,0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(73, 79, 223, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(73, 79, 223, 0.18); }
 }
 
 .animate-snap-back {
@@ -353,10 +357,16 @@ body {
 @utility card {
   background: var(--color-surface-1);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-card);
-  border: 2px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
 }
 
 @utility pill {
   border-radius: var(--radius-pill);
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
 }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useTransition, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -146,7 +146,7 @@ function EnrichmentFieldsModal({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-10 w-full max-w-160 bg-(--color-surface-1) rounded-xl shadow-(--shadow-popover) flex flex-col border border-(--color-card-border)/10">
+      <div className="relative z-10 w-full max-w-160 bg-(--color-surface-1) rounded-2xl flex flex-col border border-(--color-border)">
         {/* Header */}
         <div className="px-8 pt-8 pb-4 flex justify-between items-start">
           <div>
@@ -203,7 +203,7 @@ function EnrichmentFieldsModal({
                   {customFields.map((field, idx) => (
                     <div key={field.id ?? `new-${idx}`} className="flex items-center gap-4 group">
                       <GripVertical className="h-5 w-5 text-(--color-fg-subtle) cursor-grab opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />
-                      <div className="flex-1 bg-(--color-surface-3) rounded px-3 py-2 border-b border-transparent focus-within:border-(--color-accent) transition-colors">
+                      <div className="flex-1 bg-(--color-surface-3) rounded px-3 py-2 border-b border-transparent focus-within:border-(--color-blue) transition-colors">
                         <input
                           type="text"
                           value={field.label}
@@ -233,7 +233,7 @@ function EnrichmentFieldsModal({
                               className="fixed inset-0 z-40"
                               onClick={() => setTypeDropdown(null)}
                             />
-                            <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) py-1">
+                            <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-2xl border border-(--color-border) bg-(--color-surface-1) py-1">
                               {FIELD_TYPE_OPTIONS.map((t) => (
                                 <button
                                   key={t.value}
@@ -245,7 +245,7 @@ function EnrichmentFieldsModal({
                                   className={cn(
                                     "w-full text-left px-3 py-1.5 text-sm hover:bg-(--color-surface-3) transition-colors",
                                     field.type === t.value
-                                      ? "text-(--color-accent) font-medium"
+                                      ? "text-(--color-blue) font-medium"
                                       : "text-(--color-fg)"
                                   )}
                                 >
@@ -269,7 +269,7 @@ function EnrichmentFieldsModal({
                 <button
                   type="button"
                   onClick={addRow}
-                  className="mt-4 flex items-center gap-2 text-(--color-accent) text-[15px] font-medium hover:text-(--color-accent-hover) transition-colors py-2 px-3 rounded-full hover:bg-(--color-accent)/10"
+                  className="mt-4 flex items-center gap-2 text-(--color-blue) text-[15px] font-medium hover:opacity-80 transition-colors py-2 px-3 rounded-full hover:bg-(--color-blue)/10"
                 >
                   <Plus className="h-5 w-5" />
                   Add Custom Field
@@ -284,7 +284,7 @@ function EnrichmentFieldsModal({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-(--color-fg-muted) border border-(--color-card-border)/20 hover:bg-(--color-surface-3) transition-colors"
+            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-(--color-fg-muted) border border-(--color-border) hover:bg-(--color-surface-3) transition-colors"
           >
             Cancel
           </button>
@@ -292,7 +292,7 @@ function EnrichmentFieldsModal({
             type="button"
             onClick={handleApply}
             disabled={isPending}
-            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-(--color-accent-fg) bg-(--color-accent) hover:bg-(--color-accent-hover) transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 rounded-full text-[15px] font-medium text-white bg-(--color-fg) hover:opacity-85 transition-colors disabled:opacity-50"
           >
             {isPending ? "Applying…" : "Apply Configuration"}
           </button>
@@ -389,10 +389,10 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                 type="button"
                 onClick={() => setViewMode("grid")}
                 className={cn(
-                  "rounded-lg p-2 transition-all duration-200 cursor-pointer",
+                  "rounded-full p-2 transition-colors duration-200 cursor-pointer",
                   viewMode === "grid"
-                    ? "bg-(--color-surface-3) text-(--color-fg) shadow-(--shadow-btn)"
-                    : "text-(--color-fg-subtle) hover:text-(--color-fg) hover:-translate-y-0.5"
+                    ? "bg-white text-(--color-fg)"
+                    : "text-(--color-fg-subtle) hover:text-(--color-fg)"
                 )}
                 title="Grid view"
               >
@@ -402,10 +402,10 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                 type="button"
                 onClick={() => setViewMode("list")}
                 className={cn(
-                  "rounded-lg p-2 transition-all duration-200 cursor-pointer",
+                  "rounded-full p-2 transition-colors duration-200 cursor-pointer",
                   viewMode === "list"
-                    ? "bg-(--color-surface-3) text-(--color-fg) shadow-(--shadow-btn)"
-                    : "text-(--color-fg-subtle) hover:text-(--color-fg) hover:-translate-y-0.5"
+                    ? "bg-white text-(--color-fg)"
+                    : "text-(--color-fg-subtle) hover:text-(--color-fg)"
                 )}
                 title="List view"
               >
@@ -426,8 +426,8 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                 className={cn(
                   "rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 cursor-pointer",
                   filter === f
-                    ? "bg-(--color-accent) text-(--color-accent-fg) shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)"
-                    : "bg-(--color-surface-2) text-(--color-fg-muted) border border-(--color-border) shadow-(--shadow-btn) hover:bg-(--color-surface-3) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)"
+                    ? "bg-(--color-fg) text-white"
+                    : "bg-(--color-surface-2) text-(--color-fg-muted) border border-(--color-border) hover:bg-(--color-surface-3)"
                 )}
               >
                 {f === "all" ? "All" : STATUS_META[f].label}
@@ -478,7 +478,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                       <ChevronDown className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
                     )}
                     <div className="h-8 w-8 rounded-lg bg-(--color-surface-4) flex items-center justify-center shrink-0">
-                      <FolderOpen className="h-4 w-4 text-(--color-accent)" />
+                      <FolderOpen className="h-4 w-4 text-(--color-blue)" />
                     </div>
                     <div className="flex-1 text-left">
                       <h3 className="text-base font-bold text-(--color-fg)">
@@ -495,7 +495,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                         e.stopPropagation();
                         setEnrichTarget({ folderId: group.folder_id });
                       }}
-                      className="flex items-center gap-1.5 text-(--color-accent) text-sm font-medium hover:text-(--color-accent-hover) transition-colors px-3 py-1.5 rounded-full hover:bg-(--color-accent)/10"
+                      className="flex items-center gap-1.5 text-(--color-blue) text-sm font-medium hover:opacity-80 transition-colors px-3 py-1.5 rounded-full hover:bg-(--color-blue)/10"
                     >
                       <Settings2 className="h-4 w-4" />
                       Enrichment Fields
@@ -507,7 +507,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                             "h-full rounded-full transition-all",
                             folderPct === 100
                               ? "bg-(--color-success)"
-                              : "bg-(--color-accent)"
+                              : "bg-(--color-blue)"
                           )}
                           style={{ width: `${folderPct}%` }}
                         />
@@ -532,11 +532,11 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                           <div key={batch.id} className="relative group/card-wrap">
                             <Link
                               href={`/enrichment/${batch.id}`}
-                              className="bg-(--color-surface-1) border-2 border-(--color-card-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-all duration-200 shadow-(--shadow-card-3d) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-1 active:translate-y-0 active:shadow-(--shadow-btn-active)"
+                              className="bg-(--color-surface-1) border border-(--color-border) rounded-2xl p-6 flex flex-col gap-4 group/card transition-colors duration-200 hover:bg-white"
                             >
                               <div className="flex items-start justify-between">
                                 <div className="w-9 h-9 rounded-full bg-(--color-surface-4) flex items-center justify-center">
-                                  <Sparkles className="h-4 w-4 text-(--color-accent)" />
+                                  <Sparkles className="h-4 w-4 text-(--color-blue)" />
                                 </div>
                                 <Badge tone={meta.tone}>
                                   <Icon className="h-3 w-3" /> {meta.label}
@@ -578,7 +578,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                                       "h-full rounded-full transition-all duration-500",
                                       pct === 100
                                         ? "bg-(--color-success)"
-                                        : "bg-(--color-accent)"
+                                        : "bg-(--color-blue)"
                                     )}
                                     style={{ width: `${pct}%` }}
                                   />
@@ -600,7 +600,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                               }}
                               title="Delete batch"
                               aria-label={`Delete batch ${batch.name}`}
-                              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-(--color-surface-2) border border-(--color-card-border) opacity-0 group-hover/card-wrap:opacity-100 hover:bg-(--color-danger)/10 hover:border-(--color-danger)/40 hover:text-(--color-danger) text-(--color-fg-subtle) flex items-center justify-center transition-all shadow-(--shadow-btn)"
+                              className="absolute top-3 right-3 h-8 w-8 rounded-full bg-(--color-surface-2) border border-(--color-border) opacity-0 group-hover/card-wrap:opacity-100 hover:bg-(--color-danger)/10 hover:border-(--color-danger)/40 hover:text-(--color-danger) text-(--color-fg-subtle) flex items-center justify-center transition-all"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -609,7 +609,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                       })}
                     </div>
                   ) : (
-                    <div className="rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d)">
+                    <div className="rounded-2xl border border-(--color-border) overflow-hidden">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-(--color-surface-2) text-left text-xs uppercase tracking-wider text-(--color-fg-subtle)">
@@ -643,7 +643,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                             return (
                               <tr
                                 key={batch.id}
-                                className="border-t border-(--color-card-border) hover:bg-(--color-surface-2)/50 transition-colors"
+                                className="border-t border-(--color-border) hover:bg-(--color-surface-2)/50 transition-colors"
                               >
                                 <td className="px-4 py-3 text-(--color-fg-subtle)">
                                   {idx + 1}
@@ -651,7 +651,7 @@ export function EnrichmentView({ groups }: { groups: FolderBatchGroup[] }) {
                                 <td className="px-4 py-3">
                                   <Link
                                     href={`/enrichment/${batch.id}`}
-                                    className="font-medium text-(--color-fg) hover:text-(--color-accent) transition-colors"
+                                    className="font-medium text-(--color-fg) hover:text-(--color-blue) transition-colors"
                                   >
                                     {batch.name}
                                   </Link>

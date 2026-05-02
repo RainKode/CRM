@@ -110,7 +110,7 @@ function AddFieldDialog({
             <select
               value={type}
               onChange={(e) => setType(e.target.value as FieldType)}
-              className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none transition-all"
+              className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none transition-all"
             >
               {FIELD_TYPES.map((ft) => (
                 <option key={ft.value} value={ft.value}>
@@ -302,7 +302,7 @@ function BulkAddDialog({
                 <select
                   value={defaultType}
                   onChange={(e) => setDefaultType(e.target.value as FieldType)}
-                  className="h-9 flex-1 rounded-xl border-0 bg-(--color-surface-2) px-3 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                  className="h-9 flex-1 rounded-xl border-0 bg-(--color-surface-2) px-3 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                 >
                   {FIELD_TYPES.map((ft) => (
                     <option key={ft.value} value={ft.value}>
@@ -317,7 +317,7 @@ function BulkAddDialog({
                 onPaste={handlePaste}
                 placeholder={"Paste here — e.g.:\nCompany Name\nEmail\nPhone Number\nIndustry\nRevenue"}
                 rows={6}
-                className="w-full rounded-xl border-0 bg-(--color-surface-2) px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-none"
+                className="w-full rounded-xl border-0 bg-(--color-surface-2) px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) focus:outline-none resize-none"
                 autoFocus
               />
               <Button
@@ -341,7 +341,7 @@ function BulkAddDialog({
                   <select
                     value={defaultType}
                     onChange={(e) => setAllTypes(e.target.value as FieldType)}
-                    className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                   >
                     {FIELD_TYPES.map((ft) => (
                       <option key={ft.value} value={ft.value}>
@@ -356,7 +356,7 @@ function BulkAddDialog({
                 {entries.map((entry, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 rounded-xl bg-(--color-surface-1) px-4 py-2.5 border-2 border-(--color-card-border)"
+                    className="flex items-center gap-2 rounded-xl bg-(--color-surface-1) px-4 py-2.5 border border-(--color-border)"
                   >
                     <span className="flex-1 text-sm font-medium truncate">
                       {entry.label}
@@ -366,7 +366,7 @@ function BulkAddDialog({
                       onChange={(e) =>
                         updateEntryType(i, e.target.value as FieldType)
                       }
-                      className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                      className="h-8 rounded-lg border-0 bg-(--color-surface-2) px-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                     >
                       {FIELD_TYPES.map((ft) => (
                         <option key={ft.value} value={ft.value}>
@@ -493,7 +493,7 @@ export function FieldSchemaBuilder({
       </div>
 
       {fields.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-(--color-surface-1) py-20 text-center shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-(--color-surface-1) py-20 text-center  border border-(--color-border)">
           <p className="text-sm text-(--color-fg-subtle)">
             No columns defined yet. Add columns to define your lead data
             structure.
@@ -554,7 +554,7 @@ export function FieldSchemaBuilder({
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
                     field.is_enrichment
-                      ? "bg-(--color-accent)/10 text-(--color-accent) hover:bg-(--color-accent)/20"
+                      ? "bg-(--color-blue)/12 text-(--color-blue) hover:bg-(--color-blue)/12"
                       : "text-(--color-fg-disabled) hover:bg-(--color-surface-3) hover:text-(--color-fg-subtle)"
                   )}
                   title={field.is_enrichment ? "Remove from enrichment" : "Mark as enrichment field"}

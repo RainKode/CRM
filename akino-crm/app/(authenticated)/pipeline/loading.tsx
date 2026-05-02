@@ -12,7 +12,7 @@ export default function PipelineLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="w-[320px] shrink-0 rounded-2xl p-4 border-2 border-(--color-card-border) bg-(--color-surface-2)/30"
+            className="w-[320px] shrink-0 rounded-2xl p-4 border border-(--color-border) bg-(--color-surface-2)/30"
           >
             <div className="h-5 w-24 rounded-lg bg-(--color-surface-3) animate-pulse mb-6" />
             {Array.from({ length: 3 }).map((_, j) => (

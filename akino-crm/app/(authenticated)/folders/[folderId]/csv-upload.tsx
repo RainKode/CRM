@@ -238,7 +238,7 @@ export function CsvUpload({
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)"
+          className="flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl bg-(--color-surface-1) px-8 py-20 text-center transition-all hover:bg-(--color-surface-2)  border border-(--color-border)"
           onClick={() => {
             const input = document.createElement("input");
             input.type = "file";
@@ -307,7 +307,7 @@ export function CsvUpload({
               onChange={(e) =>
                 setDupMode(e.target.value as "skip" | "overwrite")
               }
-              className="h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+              className="h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
             >
               <option value="skip">Skip duplicates</option>
               <option value="overwrite">Overwrite duplicates</option>
@@ -322,7 +322,7 @@ export function CsvUpload({
           {csvHeaders.map((header) => (
             <div
               key={header}
-              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3 shadow-sm border-2 border-(--color-card-border)"
+              className="flex items-center gap-3 rounded-xl bg-(--color-surface-1) px-5 py-3  border border-(--color-border)"
             >
               <div className="flex w-48 items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-(--color-fg-subtle)" />
@@ -335,7 +335,7 @@ export function CsvUpload({
                   setMapping((m) => ({ ...m, [header]: e.target.value }))
                 }
                 className={cn(
-                  "h-10 flex-1 rounded-xl border-0 px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none",
+                  "h-10 flex-1 rounded-xl border-0 px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none",
                   mapping[header] &&
                     Object.entries(mapping).some(
                       ([k, v]) => k !== header && v === mapping[header]
@@ -401,7 +401,7 @@ export function CsvUpload({
         </div>
 
         {/* Dry-run summary */}
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) px-5 py-4 shadow-sm">
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-(--color-surface-1) border border-(--color-border) px-5 py-4 ">
           {isPreviewing || !previewCounts ? (
             <span className="flex items-center gap-2 text-sm text-(--color-fg-muted)">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Calculating preview…
@@ -412,7 +412,7 @@ export function CsvUpload({
                 {previewCounts.new} new
               </span>
               <span className="text-(--color-fg-subtle)">·</span>
-              <span className="text-sm font-semibold text-(--color-accent)">
+              <span className="text-sm font-semibold text-(--color-blue)">
                 {previewCounts.updated}{" "}
                 {dupMode === "overwrite" ? "will be updated" : "matched (will be skipped)"}
               </span>
@@ -424,7 +424,7 @@ export function CsvUpload({
           )}
         </div>
 
-        <div className="overflow-auto rounded-2xl bg-(--color-surface-1) shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+        <div className="overflow-auto rounded-2xl bg-(--color-surface-1)  border border-(--color-border)">
           <table className="w-full text-sm">
             <thead className="bg-(--color-surface-2)">
               <tr>
@@ -472,7 +472,7 @@ export function CsvUpload({
         <span className="text-(--color-success) font-medium">
           {result?.newRows ?? 0} new
         </span>
-        <span className="text-(--color-accent) font-medium">
+        <span className="text-(--color-blue) font-medium">
           {result?.updatedRows ?? 0} updated
         </span>
         <span className="text-(--color-fg-muted)">

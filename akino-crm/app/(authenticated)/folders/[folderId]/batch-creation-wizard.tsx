@@ -159,7 +159,7 @@ export function BatchCreationWizard({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-(--color-surface-1) rounded-3xl w-full max-w-2xl shadow-2xl border-2 border-(--color-card-border) overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-(--color-surface-1) rounded-3xl w-full max-w-2xl  border border-(--color-border) overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-8 pb-4">
           <div>
@@ -193,7 +193,7 @@ export function BatchCreationWizard({
                   active
                     ? "bg-(--color-accent) text-(--color-accent-fg)"
                     : done
-                    ? "bg-(--color-accent)/10 text-(--color-accent)"
+                    ? "bg-(--color-blue)/12 text-(--color-blue)"
                     : "bg-(--color-surface-2) text-(--color-fg-subtle)"
                 )}
               >
@@ -212,14 +212,14 @@ export function BatchCreationWizard({
               {/* Sort */}
               <div className="space-y-3">
                 <h4 className="text-sm font-bold text-(--color-fg) flex items-center gap-2">
-                  <ArrowUpDown className="h-4 w-4 text-(--color-accent)" />
+                  <ArrowUpDown className="h-4 w-4 text-(--color-blue)" />
                   Sort Leads
                 </h4>
                 <div className="flex gap-3">
                   <select
                     value={sortField}
                     onChange={(e) => setSortField(e.target.value)}
-                    className="flex-1 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    className="flex-1 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                   >
                     <option value="">No sorting (default order)</option>
                     {sortableFields.map((f) => (
@@ -232,7 +232,7 @@ export function BatchCreationWizard({
                     value={sortDir}
                     onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
                     disabled={!sortField}
-                    className="w-36 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none disabled:opacity-40"
+                    className="w-36 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none disabled:opacity-40"
                   >
                     <option value="asc">Ascending</option>
                     <option value="desc">Descending</option>
@@ -243,7 +243,7 @@ export function BatchCreationWizard({
               {/* Filter */}
               <div className="space-y-3">
                 <h4 className="text-sm font-bold text-(--color-fg) flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-(--color-accent)" />
+                  <Filter className="h-4 w-4 text-(--color-blue)" />
                   Filter Leads (Optional)
                 </h4>
                 <div className="flex gap-3">
@@ -253,7 +253,7 @@ export function BatchCreationWizard({
                       setFilterField(e.target.value);
                       setFilteredCount(null);
                     }}
-                    className="flex-1 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    className="flex-1 h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                   >
                     <option value="">No filter (all leads)</option>
                     {sortableFields.map((f) => (
@@ -291,7 +291,7 @@ export function BatchCreationWizard({
                       Clear filter
                     </button>
                     {filteredCount !== null && (
-                      <span className="text-sm font-bold text-(--color-accent)">
+                      <span className="text-sm font-bold text-(--color-blue)">
                         {filteredCount} of {totalCount} leads match
                       </span>
                     )}
@@ -302,7 +302,7 @@ export function BatchCreationWizard({
               {/* Summary */}
               <div className="rounded-2xl bg-(--color-surface-2) p-5">
                 <p className="text-sm text-(--color-fg)">
-                  <span className="font-bold text-(--color-accent)">{effectiveCount}</span>{" "}
+                  <span className="font-bold text-(--color-blue)">{effectiveCount}</span>{" "}
                   leads will be used for batch creation
                 </p>
               </div>
@@ -314,7 +314,7 @@ export function BatchCreationWizard({
             <div className="space-y-6">
               <div className="space-y-3">
                 <h4 className="text-sm font-bold text-(--color-fg) flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-(--color-accent)" />
+                  <Layers className="h-4 w-4 text-(--color-blue)" />
                   Batch Size
                 </h4>
                 <p className="text-sm text-(--color-fg-muted)">
@@ -350,7 +350,7 @@ export function BatchCreationWizard({
                   <>
                     <p className="text-sm text-(--color-fg-muted)">
                       This will create{" "}
-                      <span className="font-bold text-(--color-accent)">
+                      <span className="font-bold text-(--color-blue)">
                         {totalBatches} batch{totalBatches > 1 ? "es" : ""}
                       </span>
                     </p>
@@ -361,7 +361,7 @@ export function BatchCreationWizard({
                         return (
                           <div
                             key={i}
-                            className="flex items-center justify-between rounded-xl bg-(--color-surface-1) px-4 py-2.5 text-sm border-2 border-(--color-card-border)"
+                            className="flex items-center justify-between rounded-xl bg-(--color-surface-1) px-4 py-2.5 text-sm border border-(--color-border)"
                           >
                             <span className="font-medium text-(--color-fg)">
                               {namePrefix || folder.name} - Batch #{i + 1}
@@ -408,7 +408,7 @@ export function BatchCreationWizard({
                   </div>
                   <div>
                     <p className="text-(--color-fg-subtle)">Batches to Create</p>
-                    <p className="font-bold text-(--color-accent)">{totalBatches}</p>
+                    <p className="font-bold text-(--color-blue)">{totalBatches}</p>
                   </div>
                   {sortField && (
                     <div>
@@ -438,8 +438,8 @@ export function BatchCreationWizard({
               )}
 
               {skippedCount > 0 && (
-                <div className="rounded-2xl bg-(--color-accent)/10 border-2 border-(--color-accent)/20 p-4">
-                  <p className="text-sm font-medium text-(--color-accent)">
+                <div className="rounded-2xl bg-(--color-blue)/10 border-2 border-(--color-blue)/20 p-4">
+                  <p className="text-sm font-medium text-(--color-blue)">
                     Batches created.{" "}
                     {skippedCount} lead{skippedCount === 1 ? " was" : "s were"} already in active batches and{" "}
                     {skippedCount === 1 ? "was" : "were"} skipped.
@@ -457,7 +457,7 @@ export function BatchCreationWizard({
                   return (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl bg-(--color-surface-2) px-4 py-2.5 text-sm border-2 border-(--color-card-border)"
+                      className="flex items-center justify-between rounded-xl bg-(--color-surface-2) px-4 py-2.5 text-sm border border-(--color-border)"
                     >
                       <span className="font-medium text-(--color-fg)">
                         {namePrefix || folder.name} - Batch #{i + 1}
@@ -479,7 +479,7 @@ export function BatchCreationWizard({
         </div>
 
         {/* Footer nav */}
-        <div className="flex items-center justify-between px-8 py-5 border-t border-(--color-card-border) bg-(--color-surface-2)/50">
+        <div className="flex items-center justify-between px-8 py-5 border-t border-(--color-border) bg-(--color-surface-2)/50">
           <div>
             {step !== "filter" && (
               <Button

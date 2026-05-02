@@ -43,18 +43,21 @@ function formatDealValue(value: number | null, currency: string): string {
 }
 
 function activityDotColor(lastActivity: string | null): string {
-  if (!lastActivity) return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+  if (!lastActivity) return "bg-(--color-danger) ";
   const diff = Date.now() - new Date(lastActivity).getTime();
   const hours = diff / (1000 * 60 * 60);
-  if (hours < 24) return "bg-(--color-success) shadow-[0_0_8px_rgba(22,163,74,0.6)]";
+  if (hours < 24) return "bg-(--color-success) ";
   if (hours < 72) return "bg-(--color-warn)";
-  return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+  return "bg-(--color-danger) ";
 }
 
 // ─── Sortable Deal Card ────────────────────────────────────────────
 function DealCard({ deal, batchName, onClick }: { deal: Deal; batchName?: string; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deal.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const isPriority = Boolean(
+    deal.follow_up_at && new Date(deal.follow_up_at).getTime() <= Date.now()
+  );
 
   return (
     <div
@@ -63,33 +66,36 @@ function DealCard({ deal, batchName, onClick }: { deal: Deal; batchName?: string
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 border-(--color-card-border)"
+      className={cn(
+        "rounded-2xl p-4 cursor-grab transition-colors border border-transparent",
+        isPriority ? "bg-(--color-fg) text-white" : "bg-(--color-surface-2) text-(--color-fg) hover:bg-(--color-surface-3)"
+      )}
     >
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
+          <h4 className={cn("font-display text-xl font-semibold leading-tight mb-1", isPriority ? "text-white" : "text-(--color-fg)")}>
             {deal.company || deal.contact_name}
           </h4>
-          <p className="text-xs text-(--color-fg-muted)">{deal.contact_name}</p>
+          <p className={cn("text-sm", isPriority ? "text-white/60" : "text-(--color-fg-muted)")}>{deal.contact_name}</p>
         </div>
       </div>
       {batchName && (
-        <span className="inline-block text-[10px] font-medium bg-(--color-accent)/15 text-(--color-accent) rounded-full px-2 py-0.5 mb-3">
+        <span className={cn("inline-block text-[10px] font-medium rounded-full px-2 py-0.5 mb-3", isPriority ? "bg-white/10 text-white/70" : "bg-(--color-blue)/12 text-(--color-blue)")}>
           {batchName}
         </span>
       )}
       {deal.deal_value != null && (
-        <div className="text-lg font-semibold text-(--color-fg) mb-4">
+        <div className={cn("text-lg font-semibold mb-4", isPriority ? "text-white" : "text-(--color-fg)")}>
           {formatDealValue(deal.deal_value, deal.currency)}
         </div>
       )}
-      <div className="flex items-center justify-between pt-3 border-t border-(--color-surface-4)">
-        <div className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+      <div className={cn("flex items-center justify-between pt-3 border-t", isPriority ? "border-white/14" : "border-(--color-border)")}>
+        <div className={cn("flex items-center gap-1.5 text-xs", isPriority ? "text-white/58" : "text-(--color-fg-muted)")}>
           <div className={cn("w-1.5 h-1.5 rounded-full", activityDotColor(deal.last_activity_at))} />
           <span>{deal.last_activity_at ? relativeTime(deal.last_activity_at) : "No activity"}</span>
         </div>
         {deal.follow_up_at && (
-          <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
+          <div className={cn("flex items-center gap-1 text-xs font-medium", isPriority ? "text-white" : "text-(--color-blue)")}>
             <Calendar className="h-3.5 w-3.5" />
             {new Date(deal.follow_up_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
           </div>
@@ -145,7 +151,7 @@ function KanbanColumn({
         )}
       </div>
       <SortableContext items={deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 space-y-3 min-h-25 rounded-xl p-2">
+        <div className="flex-1 space-y-3 min-h-25 rounded-2xl bg-white border border-(--color-border) p-3">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -372,7 +378,7 @@ export function FolderPipelineView({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                     {overflowOpen && (
-                      <div className="absolute right-0 top-9 z-50 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1">
+                      <div className="absolute right-0 top-9 z-50 w-48 rounded-2xl bg-(--color-surface-1) border border-(--color-border) py-1">
                         {overflowChips.map((p, i) => (
                           <button
                             key={p.id}
@@ -384,7 +390,7 @@ export function FolderPipelineView({
                             }}
                             className={cn(
                               "w-full text-left text-sm px-3 py-2 hover:bg-(--color-surface-2) transition-colors",
-                              filterBatchId === p.batch_id ? "text-(--color-accent)" : "text-(--color-fg)"
+                              filterBatchId === p.batch_id ? "text-(--color-blue)" : "text-(--color-fg)"
                             )}
                           >
                             {p.name}
@@ -398,7 +404,7 @@ export function FolderPipelineView({
             )}
 
             {/* View toggle */}
-            <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
+            <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border border-(--color-border)">
               <button
                 type="button"
                 title="Compact summary"
@@ -441,8 +447,8 @@ export function FolderPipelineView({
               className={cn(
                 "text-xs px-4 py-2 rounded-full font-medium border transition-colors",
                 showClosed
-                  ? "border-(--color-accent) text-(--color-accent) bg-(--color-accent)/10"
-                  : "border-(--color-card-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
+                  ? "border-(--color-blue) text-(--color-blue) bg-(--color-blue)/12"
+                  : "border-(--color-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
               )}
             >
               {showClosed ? "Hide Closed" : "Show Closed"}
@@ -455,8 +461,8 @@ export function FolderPipelineView({
               className={cn(
                 "text-xs px-4 py-2 rounded-full font-medium border transition-colors",
                 hideEmpty
-                  ? "border-(--color-accent) text-(--color-accent) bg-(--color-accent)/10"
-                  : "border-(--color-card-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
+                  ? "border-(--color-blue) text-(--color-blue) bg-(--color-blue)/12"
+                  : "border-(--color-border) text-(--color-fg-muted) hover:bg-(--color-surface-2)"
               )}
             >
               {hideEmpty ? "Show Empty" : "Hide Empty"}
@@ -546,7 +552,7 @@ export function FolderPipelineView({
           </div>
           <DragOverlay>
             {draggedDeal && (
-              <div className="bg-(--color-surface-1) rounded-xl p-5 shadow-2xl border-2 border-(--color-accent) w-80 opacity-90">
+              <div className="bg-(--color-surface-1) rounded-xl p-5  border-2 border-(--color-blue) w-80 opacity-90">
                 <h4 className="font-semibold text-(--color-fg) text-[15px]">
                   {draggedDeal.company || draggedDeal.contact_name}
                 </h4>
@@ -559,7 +565,7 @@ export function FolderPipelineView({
       {/* List view */}
       {stages.length > 0 && view === "list" && (
         <div className="flex-1 overflow-y-auto px-8 md:px-12 pb-8">
-          <div className="bg-(--color-surface-1) rounded-2xl border-2 border-(--color-card-border) overflow-hidden">
+          <div className="bg-(--color-surface-1) rounded-2xl border border-(--color-border) overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-(--color-border)">
@@ -604,7 +610,7 @@ export function FolderPipelineView({
                         {formatDealValue(deal.deal_value, deal.currency)}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-[10px] font-medium bg-(--color-accent)/15 text-(--color-accent) rounded-full px-2 py-0.5">
+                        <span className="text-[10px] font-medium bg-(--color-blue)/12 text-(--color-blue) rounded-full px-2 py-0.5">
                           {pipelines.find((p) => p.batch_id)?.name ?? "—"}
                         </span>
                       </td>
@@ -698,7 +704,7 @@ function CompactView({
                       type="button"
                       title={p.name}
                       onClick={() => onExpandBatch(expandedBatch === p.id ? null : p.id)}
-                      className="flex items-center gap-1.5 text-left hover:text-(--color-accent) transition-colors"
+                      className="flex items-center gap-1.5 text-left hover:text-(--color-blue) transition-colors"
                     >
                       <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expandedBatch === p.id && "rotate-90")} />
                       {batchLabel}
@@ -709,7 +715,7 @@ function CompactView({
                     return (
                       <td key={s.id} className="py-3 px-2 text-center">
                         {count > 0 ? (
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-(--color-accent)/10 text-(--color-accent) text-xs font-semibold">
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-(--color-blue)/12 text-(--color-blue) text-xs font-semibold">
                             {count}
                           </span>
                         ) : (

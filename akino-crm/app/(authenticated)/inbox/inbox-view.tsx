@@ -210,11 +210,11 @@ export function InboxView({
   return (
     <div className="flex-1 flex overflow-hidden bg-(--color-bg)">
       {/* ─── Left nav rail ──────────────────────────────────────── */}
-      <aside className="w-60 shrink-0 border-r border-(--color-card-border) bg-(--color-surface-1) flex flex-col">
+      <aside className="w-60 shrink-0 border-r border-(--color-border) bg-(--color-surface-1) flex flex-col">
         <div className="px-4 pt-5 pb-3">
           <button
             onClick={() => setComposeOpen(true)}
-            className="w-full flex items-center justify-center gap-2 bg-(--color-accent) text-(--color-accent-fg) font-semibold text-sm px-4 py-2.5 rounded-2xl shadow-(--shadow-btn) hover:opacity-90"
+            className="w-full flex items-center justify-center gap-2 bg-(--color-accent) text-(--color-accent-fg) font-semibold text-sm px-4 py-2.5 rounded-2xl  hover:opacity-90"
           >
             <PencilLine className="h-4 w-4" />
             Compose
@@ -235,7 +235,7 @@ export function InboxView({
                 className={cn(
                   "w-full flex items-center gap-3 pl-4 pr-3 py-1.5 rounded-r-full text-sm transition-colors",
                   active
-                    ? "bg-(--color-accent)/15 text-(--color-fg) font-semibold"
+                    ? "bg-(--color-blue)/12 text-(--color-fg) font-semibold"
                     : "text-(--color-fg-muted) hover:bg-(--color-surface-2)",
                 )}
               >
@@ -249,7 +249,7 @@ export function InboxView({
           })}
         </nav>
         {primaryAccount && (
-          <div className="px-4 py-3 border-t border-(--color-card-border) text-[11px] text-(--color-fg-subtle) truncate">
+          <div className="px-4 py-3 border-t border-(--color-border) text-[11px] text-(--color-fg-subtle) truncate">
             {primaryAccount.email_address}
           </div>
         )}
@@ -258,7 +258,7 @@ export function InboxView({
       {/* ─── Main pane ──────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top toolbar */}
-        <div className="shrink-0 h-14 border-b border-(--color-card-border) bg-(--color-surface-1) flex items-center gap-2 px-4">
+        <div className="shrink-0 h-14 border-b border-(--color-border) bg-(--color-surface-1) flex items-center gap-2 px-4">
           {detail ? (
             <>
               <button
@@ -388,7 +388,7 @@ export function InboxView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search mail"
-              className="w-full h-9 pl-9 pr-3 rounded-full bg-(--color-surface-2) text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) outline-none focus:ring-2 focus:ring-(--color-accent)/40"
+              className="w-full h-9 pl-9 pr-3 rounded-full bg-(--color-surface-2) text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) outline-none focus:ring-2 focus:ring-(--color-blue)/40"
             />
           </div>
         </div>
@@ -480,10 +480,10 @@ function GmailRow({
       className={cn(
         "group flex items-center gap-3 pl-4 pr-4 py-2 cursor-pointer transition-colors border-l-2",
         checked
-          ? "bg-(--color-accent)/10 border-(--color-accent)"
+          ? "bg-(--color-blue)/10 border-(--color-blue)"
           : unread
-            ? "bg-(--color-surface-1) border-transparent hover:shadow-sm hover:z-10"
-            : "bg-(--color-bg) border-transparent hover:shadow-sm hover:z-10",
+            ? "bg-(--color-surface-1) border-transparent hover:z-10"
+            : "bg-(--color-bg) border-transparent hover:z-10",
       )}
       onClick={onOpen}
     >
@@ -525,7 +525,7 @@ function GmailRow({
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {thread.deal_id && thread.deal_name && (
-          <span className="shrink-0 text-[10px] font-semibold text-(--color-accent) bg-(--color-accent)/10 px-1.5 py-0.5 rounded">
+          <span className="shrink-0 text-[10px] font-semibold text-(--color-blue) bg-(--color-blue)/12 px-1.5 py-0.5 rounded">
             {thread.deal_name}
           </span>
         )}
@@ -582,7 +582,7 @@ function ThreadDetailView({
   const [showReply, setShowReply] = useState(false);
   return (
     <div className="max-w-4xl mx-auto px-8 py-8">
-      <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-(--color-card-border)">
+      <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-(--color-border)">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl font-bold text-(--color-fg) mb-1">
             {detail.subject ?? "(no subject)"}
@@ -595,7 +595,7 @@ function ThreadDetailView({
           {!showReply && (
             <button
               onClick={() => setShowReply(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent-fg) bg-(--color-accent) hover:opacity-90 px-3 py-1.5 rounded-full shadow-(--shadow-btn)"
+              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent-fg) bg-(--color-accent) hover:opacity-90 px-3 py-1.5 rounded-full "
             >
               <Reply className="h-3 w-3" />
               Reply
@@ -604,7 +604,7 @@ function ThreadDetailView({
           {detail.deal_id && (
             <Link
               href={`/pipeline?deal=${detail.deal_id}`}
-              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-accent) hover:underline"
+              className="flex items-center gap-1.5 text-xs font-semibold text-(--color-blue) hover:underline"
             >
               View deal
               <ChevronRight className="h-3 w-3" />
@@ -644,8 +644,8 @@ function MessageCard({ message }: { message: import("./actions").ThreadMessage }
       className={cn(
         "rounded-2xl border p-5",
         isOutbound
-          ? "border-(--color-accent)/30 bg-(--color-accent)/5"
-          : "border-(--color-card-border) bg-(--color-surface-1)",
+          ? "border-(--color-blue)/30 bg-(--color-blue)/8"
+          : "border-(--color-border) bg-(--color-surface-1)",
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -730,7 +730,7 @@ function EmptyState({ tab }: { tab: InboxFilter }) {
   const m = messages[tab];
   return (
     <div className="px-6 py-16 text-center">
-      <div className="h-12 w-12 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center mx-auto mb-4">
+      <div className="h-12 w-12 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center mx-auto mb-4">
         <Mail className="h-6 w-6" />
       </div>
       <p className="text-sm font-semibold text-(--color-fg) mb-1">{m.title}</p>
@@ -738,7 +738,7 @@ function EmptyState({ tab }: { tab: InboxFilter }) {
       {tab === "primary" && (
         <Link
           href="/settings/email"
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-(--color-accent) hover:underline"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-(--color-blue) hover:underline"
         >
           Connect a mailbox
           <ChevronRight className="h-3 w-3" />

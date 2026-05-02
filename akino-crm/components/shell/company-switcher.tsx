@@ -102,17 +102,16 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-          "hover:bg-(--color-surface-2) active:bg-(--color-surface-3)",
-          collapsed && "justify-center px-0"
+          "w-full grid grid-cols-[40px_minmax(0,1fr)_18px] items-center gap-3 rounded-2xl border border-white/12 bg-white/8 p-2.5 text-left transition-colors hover:bg-white/12",
+          collapsed && "flex justify-center px-0"
         )}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--color-accent)/15 text-(--color-accent) font-bold text-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#191c1f] font-bold text-sm">
           {active.logo_url ? (
             <img
               src={active.logo_url}
               alt=""
-              className="h-9 w-9 rounded-lg object-cover"
+              className="h-10 w-10 rounded-xl object-cover"
             />
           ) : (
             initials(active.name)
@@ -121,16 +120,16 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
         {!collapsed && (
           <>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-(--color-fg) truncate">
+              <p className="text-sm font-semibold text-white truncate">
                 {active.name}
               </p>
-              <p className="text-[11px] text-(--color-fg-subtle)">
+              <p className="text-[11px] text-white/45">
                 {companies.length} workspace{companies.length !== 1 ? "s" : ""}
               </p>
             </div>
             <ChevronDown
               className={cn(
-                "h-4 w-4 shrink-0 text-(--color-fg-muted) transition-transform",
+                "h-4 w-4 shrink-0 text-white/55 transition-transform",
                 open && "rotate-180"
               )}
             />
@@ -141,7 +140,7 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
       {open && (
         <div
           className={cn(
-            "absolute z-50 mt-1 rounded-xl border border-(--color-border) bg-(--color-bg) shadow-lg",
+            "absolute z-50 mt-2 rounded-2xl border border-(--color-border) bg-(--color-surface-1)",
             "py-1 min-w-55",
             collapsed ? "left-full top-0 ml-2" : "left-0 right-0"
           )}
@@ -157,12 +156,12 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
                 c.id === active.id && "bg-(--color-surface-2)"
               )}
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-(--color-accent)/10 text-(--color-accent) text-xs font-bold">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-(--color-blue)/12 text-(--color-blue) text-xs font-bold">
                 {initials(c.name)}
               </div>
               <span className="flex-1 text-left truncate">{c.name}</span>
               {c.id === active.id && (
-                <Check className="h-4 w-4 text-(--color-accent) shrink-0" />
+                <Check className="h-4 w-4 text-(--color-blue) shrink-0" />
               )}
             </button>
           ))}

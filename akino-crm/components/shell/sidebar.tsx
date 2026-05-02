@@ -276,18 +276,18 @@ function EnrichmentFieldsDialog({
                           <span className="font-medium text-(--color-fg)">{f.label}</span>
                           <span className="text-xs text-(--color-fg-subtle) bg-(--color-surface-3) px-2 py-0.5 rounded-full">{f.type}</span>
                         </div>
-                        {f.is_required && <span className="text-[10px] font-bold text-(--color-accent) uppercase">Required</span>}
+                        {f.is_required && <span className="text-[10px] font-bold text-(--color-blue) uppercase">Required</span>}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="border-t border-(--color-card-border) pt-4">
+              <div className="border-t border-(--color-border) pt-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-3">Add Enrichment Field</h4>
                 <div className="space-y-3">
                   <div className="flex gap-3">
                     <Input placeholder="Field label (e.g., CEO Email)" value={label} onChange={(e) => { setLabel(e.target.value); setError(null); }} className="flex-1" />
-                    <select value={type} onChange={(e) => setType(e.target.value as FieldType)} className="h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none">
+                    <select value={type} onChange={(e) => setType(e.target.value as FieldType)} className="h-10 rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none">
                       {FIELD_TYPES.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}
                     </select>
                   </div>
@@ -331,7 +331,7 @@ function NavLink({
     return (
       <span
         className={cn(
-          "flex items-center rounded-full text-[15px] text-(--color-fg-subtle) opacity-40 cursor-not-allowed",
+          "flex items-center rounded-full text-[15px] text-white/35 cursor-not-allowed",
           collapsed ? "justify-center p-3" : "gap-4 px-4 py-3"
         )}
         title={collapsed ? item.label : undefined}
@@ -351,15 +351,15 @@ function NavLink({
       href={item.href}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "flex items-center rounded-full text-[15px] transition-all",
-        collapsed ? "justify-center p-3" : "gap-4 px-4 py-3",
+        "flex min-h-[46px] items-center rounded-full text-[15px] font-semibold transition-colors",
+        collapsed ? "justify-center px-3" : "gap-3.5 px-4",
         active
-          ? "bg-(--color-accent) text-(--color-accent-fg) font-bold shadow-(--shadow-btn)"
-          : "text-(--color-fg-subtle) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
+          ? "bg-white text-[#191c1f]"
+          : "text-white/60 hover:bg-white/10 hover:text-white"
       )}
     >
       <Icon
-        className={cn("h-5 w-5 shrink-0", active && "text-(--color-accent-fg)")}
+        className="h-5 w-5 shrink-0"
         strokeWidth={active ? 2.25 : 1.75}
       />
       {!collapsed && <span>{item.label}</span>}
@@ -439,19 +439,18 @@ export function Sidebar({
       />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col bg-(--color-bg) py-10 rounded-r-2xl",
+          "fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col overflow-y-auto bg-(--color-fg) text-white dark:bg-(--color-surface-1) border-r border-black/100 py-8",
           "transition-transform duration-300 md:transition-all",
           "md:static md:translate-x-0 md:flex",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "w-20 px-3" : "w-80 px-6"
+          collapsed ? "w-20 px-3" : "w-[320px] px-6"
         )}
-        style={{ boxShadow: "var(--shadow-sidebar)" }}
       >
         {/* Mobile close button */}
         <button
           type="button"
           onClick={() => onMobileOpenChange?.(false)}
-          className="md:hidden absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors"
+          className="md:hidden absolute top-4 right-4 h-9 w-9 flex items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white transition-colors"
           aria-label="Close navigation menu"
         >
           <X className="h-5 w-5" />
@@ -459,19 +458,19 @@ export function Sidebar({
         {/* Brand */}
         <div
           className={cn(
-            "mb-10 flex items-center",
+            "mb-8 flex items-center",
             collapsed ? "justify-center" : "px-4 gap-4"
           )}
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--color-accent) text-(--color-accent-fg) font-bold text-lg shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#191c1f] font-bold text-lg">
             R
           </div>
           {!collapsed && (
             <div>
-              <h1 className="text-lg font-bold text-(--color-fg) tracking-tight">
+              <h1 className="text-lg font-bold text-white tracking-tight">
                 Rainhub
               </h1>
-              <p className="text-xs text-(--color-fg-subtle) font-medium tracking-wide">
+              <p className="text-xs text-white/50 font-medium tracking-wide">
                 CRM
               </p>
             </div>
@@ -496,7 +495,7 @@ export function Sidebar({
                 isOnEnrichment &&
                 !collapsed &&
                 enrichmentGroups.length > 0 && (
-                  <div className="ml-5 pl-4 border-l border-(--color-border) mt-1 mb-2 space-y-1">
+                  <div className="ml-5 pl-4 border-l border-white/12 mt-1 mb-2 space-y-1">
                     {enrichmentGroups.map((group) => {
                       const isOpen = enrichmentOpen.has(group.folder_id);
                       const folderTotal = group.batches.reduce((s, b) => s + b.total, 0);
@@ -509,25 +508,25 @@ export function Sidebar({
                           <button
                             type="button"
                             onClick={() => toggleEnrichmentFolder(group.folder_id)}
-                            className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-[13px] text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors"
+                            className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-[13px] text-white/60 hover:bg-white/10 hover:text-white transition-colors"
                           >
                             {isOpen ? (
                               <ChevronDown className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             ) : (
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             )}
-                            <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-(--color-accent)" />
+                            <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-white/70" />
                             <span className="flex-1 text-left leading-snug wrap-break-word">
                               {group.folder_name}
                             </span>
-                            <span className="text-[10px] text-(--color-fg-subtle) shrink-0 mt-0.5">
+                            <span className="text-[10px] text-white/40 shrink-0 mt-0.5">
                               {folderPct}%
                             </span>
                           </button>
 
                           {/* Expanded batches */}
                           {isOpen && (
-                            <div className="ml-4 pl-3 border-l border-(--color-border) space-y-0.5 mt-0.5 mb-1">
+                            <div className="ml-4 pl-3 border-l border-white/12 space-y-0.5 mt-0.5 mb-1">
                               {group.batches.map((batch) => {
                                 const Icon = STATUS_ICON[batch.status];
                                 return (
@@ -537,15 +536,15 @@ export function Sidebar({
                                     className={cn(
                                       "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors",
                                       pathname === `/enrichment/${batch.id}`
-                                        ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
-                                        : "text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
+                                        ? "bg-white/10 text-white font-semibold"
+                                        : "text-white/58 hover:bg-white/10 hover:text-white"
                                     )}
                                   >
                                     <Icon className="h-3 w-3 shrink-0 mt-0.5" />
                                     <span className="flex-1 leading-snug wrap-break-word">
                                       {batch.name}
                                     </span>
-                                    <span className="text-[10px] text-(--color-fg-subtle) shrink-0">
+                                    <span className="text-[10px] text-white/40 shrink-0">
                                       {batch.completed}/{batch.total}
                                     </span>
                                   </Link>
@@ -560,7 +559,7 @@ export function Sidebar({
                                     folderName: group.folder_name,
                                   })
                                 }
-                                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-(--color-accent) hover:bg-(--color-accent)/10 transition-colors w-full"
+                                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-white hover:bg-white/10 transition-colors w-full"
                               >
                                 <Settings2 className="h-3 w-3 shrink-0" />
                                 <span>Enrichment Fields</span>
@@ -578,7 +577,7 @@ export function Sidebar({
                 isOnPipeline &&
                 !collapsed &&
                 pipelineGroups.length > 0 && (
-                  <div className="ml-5 pl-4 border-l border-(--color-border) mt-1 mb-2 space-y-1">
+                  <div className="ml-5 pl-4 border-l border-white/12 mt-1 mb-2 space-y-1">
                     {pipelineGroups.map((group) => {
                       const isOpen = pipelineOpen.has(group.folder_id);
                       const totalDeals = group.pipelines.reduce((s, p) => s + p.deal_count, 0);
@@ -589,33 +588,33 @@ export function Sidebar({
                           <button
                             type="button"
                             onClick={() => togglePipelineFolder(group.folder_id)}
-                            className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-[13px] text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors"
+                            className="w-full flex items-start gap-2 rounded-lg px-2 py-2 text-[13px] text-white/60 hover:bg-white/10 hover:text-white transition-colors"
                           >
                             {isOpen ? (
                               <ChevronDown className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             ) : (
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             )}
-                            <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-(--color-accent)" />
+                            <FolderOpen className="h-3.5 w-3.5 shrink-0 mt-0.5 text-white/70" />
                             <span className="flex-1 text-left leading-snug wrap-break-word">
                               {group.folder_name}
                             </span>
-                            <span className="text-[10px] text-(--color-fg-subtle) shrink-0 mt-0.5">
+                            <span className="text-[10px] text-white/40 shrink-0 mt-0.5">
                               {totalDeals}
                             </span>
                           </button>
 
                           {/* Expanded batch pipelines + master view */}
                           {isOpen && (
-                            <div className="ml-4 pl-3 border-l border-(--color-border) space-y-0.5 mt-0.5 mb-1">
+                            <div className="ml-4 pl-3 border-l border-white/12 space-y-0.5 mt-0.5 mb-1">
                               {/* Master folder view link */}
                               <Link
                                 href={`/pipeline/folder/${group.folder_id}`}
                                 className={cn(
                                   "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors font-medium",
                                   pathname === `/pipeline/folder/${group.folder_id}`
-                                    ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
-                                    : "text-(--color-accent) hover:bg-(--color-accent)/10"
+                                    ? "bg-white/10 text-white font-semibold"
+                                    : "text-white hover:bg-white/10"
                                 )}
                               >
                                 <Workflow className="h-3 w-3 shrink-0 mt-0.5" />
@@ -631,15 +630,15 @@ export function Sidebar({
                                     "flex items-start gap-2 rounded-lg px-2 py-1.5 text-[12px] transition-colors",
                                     pathname === "/pipeline" &&
                                       sidebarSearchParams.get("pid") === pipeline.id
-                                      ? "bg-(--color-accent)/10 text-(--color-accent) font-semibold"
-                                      : "text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg)"
+                                        ? "bg-white/10 text-white font-semibold"
+                                        : "text-white/58 hover:bg-white/10 hover:text-white"
                                   )}
                                 >
                                   <Circle className="h-3 w-3 shrink-0 mt-0.5" />
                                   <span className="flex-1 leading-snug wrap-break-word">
                                     {pipeline.name}
                                   </span>
-                                  <span className="text-[10px] text-(--color-fg-subtle) shrink-0">
+                                  <span className="text-[10px] text-white/40 shrink-0">
                                     {pipeline.deal_count}
                                   </span>
                                 </Link>
@@ -656,11 +655,12 @@ export function Sidebar({
         </nav>
 
         {/* Collapse toggle */}
-        <button
+        <Button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
+          variant="ghostDark"
           className={cn(
-            "mb-4 flex items-center justify-center rounded-full py-3 text-sm font-medium text-(--color-fg-muted) hover:bg-(--color-surface-2) hover:text-(--color-fg) transition-colors",
+            "mb-4",
             collapsed ? "px-3" : "gap-2 px-4"
           )}
         >
@@ -672,21 +672,22 @@ export function Sidebar({
               <span>Collapse</span>
             </>
           )}
-        </button>
+        </Button>
 
         {/* Create Lead / Customer CTA */}
-        <button
+        <Button
           type="button"
           onClick={() => setCreateOpen(true)}
           title={collapsed ? "Create Lead / Customer" : undefined}
+          variant="tertiary"
           className={cn(
-            "flex items-center justify-center rounded-full bg-(--color-accent) text-(--color-accent-fg) font-semibold transition-all duration-200 shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active) cursor-pointer",
-            collapsed ? "p-3" : "gap-2 py-4 px-6"
+            "bg-white text-[#191c1f] hover:opacity-85",
+            collapsed ? "px-3" : "gap-2 px-6"
           )}
         >
           <Plus className="h-5 w-5" />
           {!collapsed && "Create"}
-        </button>
+        </Button>
       </aside>
 
       {/* Create Panel (slide-in from right) */}

@@ -191,7 +191,7 @@ export function TrashView({
             className={cn(
               "pb-3 text-sm font-medium capitalize border-b-2 transition-colors flex items-center gap-2",
               tab === t
-                ? "text-(--color-fg) border-(--color-accent)"
+                ? "text-(--color-fg) border-(--color-blue)"
                 : "text-(--color-fg-muted) border-transparent hover:text-(--color-fg)"
             )}
           >
@@ -395,7 +395,7 @@ export function TrashView({
       {/* Empty-trash confirmation */}
       {confirmEmpty && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-96 rounded-2xl bg-(--color-surface-1) border border-(--color-border)/30 p-6 shadow-(--shadow-popover)">
+          <div className="w-96 rounded-2xl bg-(--color-surface-1) border border-(--color-border)/30 p-6 ">
             <h3 className="text-lg font-semibold text-(--color-fg) mb-2">
               Empty recycle bin?
             </h3>

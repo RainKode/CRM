@@ -12,13 +12,13 @@ const KIND_CONFIG: Record<
   ActivityKind,
   { label: string; icon: React.ElementType; accent: string }
 > = {
-  call: { label: "Call", icon: Phone, accent: "text-(--color-accent)" },
-  email: { label: "Email", icon: Mail, accent: "text-(--color-accent)" },
-  note: { label: "Note", icon: StickyNote, accent: "text-(--color-accent)" },
+  call: { label: "Call", icon: Phone, accent: "text-(--color-blue)" },
+  email: { label: "Email", icon: Mail, accent: "text-(--color-blue)" },
+  note: { label: "Note", icon: StickyNote, accent: "text-(--color-blue)" },
   meeting: {
     label: "Meeting",
     icon: CalendarClock,
-    accent: "text-(--color-accent)",
+    accent: "text-(--color-blue)",
   },
 };
 
@@ -100,7 +100,7 @@ export function QuickLogPopover({
     <div
       ref={ref}
       className={cn(
-        "fixed z-100 rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) p-3",
+        "fixed z-100 rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-3",
         kind === "email" ? "w-96" : "w-80",
       )}
       style={{ left, top }}
@@ -135,7 +135,7 @@ export function QuickLogPopover({
               className={cn(
                 "flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-medium transition-colors border",
                 active
-                  ? "bg-(--color-accent)/10 border-(--color-accent)/40 text-(--color-accent)"
+                  ? "bg-(--color-blue)/10 border-(--color-blue)/40 text-(--color-blue)"
                   : "bg-(--color-surface-2) border-transparent text-(--color-fg-muted) hover:bg-(--color-surface-3)"
               )}
             >
@@ -167,7 +167,7 @@ export function QuickLogPopover({
             value={emailSubject}
             onChange={(e) => setEmailSubject(e.target.value)}
             placeholder="Email subject"
-            className="w-full mb-2 rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+            className="w-full mb-2 rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
           />
           {templateId && (
             <p className="mb-2 text-[10px] text-(--color-fg-subtle)">
@@ -184,7 +184,7 @@ export function QuickLogPopover({
         placeholder={`Quick ${KIND_CONFIG[kind].label.toLowerCase()} summary…`}
         rows={kind === "email" ? 6 : 2}
         autoFocus
-        className="w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-y"
+        className="w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none resize-y"
       />
 
       {/* Schedule toggle */}
@@ -202,7 +202,7 @@ export function QuickLogPopover({
           type="datetime-local"
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
-          className="mt-2 w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+          className="mt-2 w-full rounded-xl border-0 bg-(--color-surface-2) px-3 py-2 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
         />
       )}
 

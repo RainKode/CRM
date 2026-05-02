@@ -137,8 +137,8 @@ export function EmailSettingsView({
         </p>
 
         {banner && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-(--color-accent)/30 bg-(--color-accent)/10 p-4 text-sm text-(--color-fg)">
-            <Loader2 className="h-4 w-4 animate-spin text-(--color-accent) shrink-0 mt-0.5" />
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-(--color-blue)/30 bg-(--color-blue)/10 p-4 text-sm text-(--color-fg)">
+            <Loader2 className="h-4 w-4 animate-spin text-(--color-blue) shrink-0 mt-0.5" />
             <div>{banner}</div>
           </div>
         )}
@@ -156,7 +156,7 @@ export function EmailSettingsView({
         )}
 
         {/* Connected accounts */}
-        <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-6 mb-6">
+        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-6 mb-6">
           <h3 className="text-sm font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
             Connected
           </h3>
@@ -171,7 +171,7 @@ export function EmailSettingsView({
                   key={a.id}
                   className="flex items-center gap-4 rounded-xl bg-(--color-surface-2) px-4 py-3"
                 >
-                  <div className="h-10 w-10 rounded-full bg-(--color-accent)/15 text-(--color-accent) flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
                     <Mail className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -225,7 +225,7 @@ export function EmailSettingsView({
         </div>
 
         {/* Connect new */}
-        <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-6">
+        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-6">
           <h3 className="text-sm font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-1">
             Connect a mailbox
           </h3>
@@ -240,12 +240,12 @@ export function EmailSettingsView({
                 type="button"
                 onClick={() => handleConnect(p.id)}
                 disabled={connecting}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl border border-(--color-card-border) bg-(--color-surface-2) px-4 py-6 text-sm font-semibold text-(--color-fg) hover:border-(--color-accent) hover:bg-(--color-accent)/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center justify-center gap-2 rounded-xl border border-(--color-border) bg-(--color-surface-2) px-4 py-6 text-sm font-semibold text-(--color-fg) hover:border-(--color-blue) hover:bg-(--color-blue)/8 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {connecting ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Plug className="h-5 w-5 text-(--color-accent)" />
+                  <Plug className="h-5 w-5 text-(--color-blue)" />
                 )}
                 {p.label}
               </button>
@@ -253,7 +253,7 @@ export function EmailSettingsView({
           </div>
 
           {/* Manual: paste Unipile account ID */}
-          <div className="mt-6 pt-6 border-t border-(--color-card-border)">
+          <div className="mt-6 pt-6 border-t border-(--color-border)">
             <div className="flex items-center gap-2 mb-1">
               <KeyRound className="h-4 w-4 text-(--color-fg-subtle)" />
               <h4 className="text-sm font-semibold text-(--color-fg)">

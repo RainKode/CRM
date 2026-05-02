@@ -54,7 +54,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-(--color-surface-1) shadow-(--shadow-popover)",
+        "rounded-2xl border-2 border-(--color-fg)/10 bg-(--color-surface-1)",
         className
       )}
     >

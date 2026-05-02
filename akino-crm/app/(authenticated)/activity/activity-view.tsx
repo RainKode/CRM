@@ -54,11 +54,11 @@ export function ActivityItemRow({ a }: { a: ActivityLogEntry }) {
     <div className="flex items-start gap-4 py-4 border-b border-(--color-border)/10 last:border-0">
       <div
         className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
-          isWon ? "bg-(--color-accent)/20" : "bg-(--color-surface-3)"
+          isWon ? "bg-(--color-blue)/12" : "bg-(--color-surface-3)"
         }`}
       >
         {isWon ? (
-          <CheckCircle className="h-[18px] w-[18px] text-(--color-accent)" />
+          <CheckCircle className="h-[18px] w-[18px] text-(--color-blue)" />
         ) : (
           <Icon className="h-[18px] w-[18px] text-(--color-fg-muted)" />
         )}
@@ -72,7 +72,7 @@ export function ActivityItemRow({ a }: { a: ActivityLogEntry }) {
             className={cn(
               "inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide",
               a.category === "pipeline"
-                ? "bg-(--color-accent)/10 text-(--color-accent)"
+                ? "bg-(--color-blue)/12 text-(--color-blue)"
                 : a.category === "enrichment"
                 ? "bg-purple-500/10 text-purple-400"
                 : "bg-emerald-500/10 text-emerald-400"
@@ -121,8 +121,8 @@ export function ActivityView({
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center gap-4 px-8 md:px-12 h-24 shrink-0">
-        <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 flex items-center justify-center">
-          <Activity className="h-5 w-5 text-(--color-accent)" />
+        <div className="h-10 w-10 rounded-xl bg-(--color-blue)/10 flex items-center justify-center">
+          <Activity className="h-5 w-5 text-(--color-blue)" />
         </div>
         <div>
           <h1 className="font-semibold text-3xl tracking-tight text-(--color-fg)">
@@ -175,7 +175,7 @@ export function ActivityView({
                 <button
                   type="button"
                   onClick={loadMore}
-                  className="text-sm text-(--color-fg-muted) hover:text-(--color-fg) transition-colors px-4 py-2 rounded-full border border-(--color-card-border) hover:bg-(--color-surface-2)"
+                  className="text-sm text-(--color-fg-muted) hover:text-(--color-fg) transition-colors px-4 py-2 rounded-full border border-(--color-border) hover:bg-(--color-surface-2)"
                 >
                   Load more
                 </button>

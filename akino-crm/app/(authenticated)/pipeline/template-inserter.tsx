@@ -75,7 +75,7 @@ export function TemplateInserter({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent-hover)"
+        className="flex items-center gap-1.5 text-xs font-medium text-(--color-blue) hover:text-(--color-accent-hover)"
       >
         <FileText className="h-3.5 w-3.5" />
         Insert template
@@ -83,7 +83,7 @@ export function TemplateInserter({
 
       {open && (
         <div
-          className="absolute z-110 right-0 mt-1 w-72 rounded-xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-popover) p-2"
+          className="absolute z-110 right-0 mt-1 w-72 rounded-xl border border-(--color-border) bg-(--color-surface-1)  p-2"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -95,7 +95,7 @@ export function TemplateInserter({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search templates…"
-              className="h-8 w-full rounded-lg border-0 bg-(--color-surface-2) pl-7 pr-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+              className="h-8 w-full rounded-lg border-0 bg-(--color-surface-2) pl-7 pr-2 text-xs text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
             />
           </div>
 

@@ -73,7 +73,7 @@ export function TemplatesView({
           </Button>
         </div>
 
-        <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) shadow-(--shadow-card-3d) p-6">
+        <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1)  p-6">
           {templates.length === 0 ? (
             <div className="py-16 text-center">
               <FileText className="h-10 w-10 text-(--color-fg-subtle) mx-auto mb-3" />
@@ -92,7 +92,7 @@ export function TemplatesView({
                   key={t.id}
                   className="flex items-start gap-4 rounded-xl bg-(--color-surface-2) px-4 py-3 hover:bg-(--color-surface-3) transition-colors"
                 >
-                  <div className="h-10 w-10 rounded-full bg-(--color-accent)/15 text-(--color-accent) flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center shrink-0">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -103,7 +103,7 @@ export function TemplatesView({
                         {t.variables.map((v) => (
                           <span
                             key={v}
-                            className="text-[10px] uppercase tracking-wider font-semibold text-(--color-accent) bg-(--color-accent)/10 px-1.5 py-0.5 rounded"
+                            className="text-[10px] uppercase tracking-wider font-semibold text-(--color-blue) bg-(--color-blue)/12 px-1.5 py-0.5 rounded"
                           >
                             {v}
                           </span>
@@ -242,7 +242,7 @@ function TemplateEditor({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Intro follow-up, pricing recap, …"
-                className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
               />
             </div>
 
@@ -255,7 +255,7 @@ function TemplateEditor({
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Hey {{first_name}} — following up"
-                className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
               />
             </div>
 
@@ -268,7 +268,7 @@ function TemplateEditor({
                 onChange={(e) => setBody(e.target.value)}
                 rows={10}
                 placeholder={"Hi {{first_name}},\n\nThanks for your time yesterday…"}
-                className="w-full rounded-xl border-0 bg-(--color-surface-2) px-4 py-3 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none resize-y"
+                className="w-full rounded-xl border-0 bg-(--color-surface-2) px-4 py-3 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none resize-y"
               />
             </div>
 
@@ -282,7 +282,7 @@ function TemplateEditor({
                     key={v.key}
                     type="button"
                     onClick={() => insertVariable(v.key)}
-                    className="text-xs font-medium text-(--color-accent) bg-(--color-accent)/10 hover:bg-(--color-accent)/20 px-2 py-1 rounded-lg transition-colors"
+                    className="text-xs font-medium text-(--color-blue) bg-(--color-blue)/12 hover:bg-(--color-blue)/12 px-2 py-1 rounded-lg transition-colors"
                     title={v.help}
                   >
                     {"{{"}{v.key}{"}}"}

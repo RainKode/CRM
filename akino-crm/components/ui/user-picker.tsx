@@ -94,14 +94,14 @@ export function UserPicker({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-64 rounded-md border border-(--color-border) bg-(--color-surface-1) shadow-lg">
+        <div className="absolute z-50 mt-1 w-64 rounded-md border border-(--color-border) bg-(--color-surface-1) ">
           <div className="p-2 border-b border-(--color-border)">
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search members…"
-              className="w-full bg-(--color-surface-2) rounded px-2 py-1 text-sm outline-none border border-(--color-border) focus:border-(--color-accent)"
+              className="w-full bg-(--color-surface-2) rounded px-2 py-1 text-sm outline-none border border-(--color-border) focus:border-(--color-blue)"
             />
           </div>
           <ul className="max-h-64 overflow-auto py-1">

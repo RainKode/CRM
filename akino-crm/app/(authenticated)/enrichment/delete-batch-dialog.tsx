@@ -80,9 +80,9 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <div className="rounded-2xl bg-(--color-surface-1) border-2 border-(--color-danger)/30 shadow-(--shadow-card-3d) overflow-hidden">
+      <div className="rounded-2xl bg-(--color-surface-1) border-2 border-(--color-danger)/30  overflow-hidden">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-(--color-card-border)/40 bg-(--color-danger)/5">
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-(--color-border)/40 bg-(--color-danger)/5">
           <div className="flex gap-3">
             <div className="h-10 w-10 rounded-full bg-(--color-danger)/10 flex items-center justify-center shrink-0">
               <AlertTriangle className="h-5 w-5 text-(--color-danger)" />
@@ -109,7 +109,7 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
         {/* Body */}
         <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
           {/* Batch summary */}
-          <div className="rounded-xl bg-(--color-surface-2) border border-(--color-card-border) p-4">
+          <div className="rounded-xl bg-(--color-surface-2) border border-(--color-border) p-4">
             <div className="text-[11px] uppercase tracking-wider text-(--color-fg-subtle) mb-1">
               Batch to delete
             </div>
@@ -171,7 +171,7 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
                   ? "border-(--color-success) focus:ring-(--color-success)/30"
                   : typedName.length > 0
                   ? "border-(--color-danger) focus:ring-(--color-danger)/30"
-                  : "border-(--color-card-border) focus:ring-(--color-accent)/30"
+                  : "border-(--color-border) focus:ring-(--color-blue)/30"
               )}
             />
           </div>
@@ -199,7 +199,7 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
                   ? "border-(--color-success) focus:ring-(--color-success)/30"
                   : typedPhrase.length > 0
                   ? "border-(--color-danger) focus:ring-(--color-danger)/30"
-                  : "border-(--color-card-border) focus:ring-(--color-accent)/30"
+                  : "border-(--color-border) focus:ring-(--color-blue)/30"
               )}
             />
           </div>
@@ -212,12 +212,12 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 bg-(--color-surface-2) border-t border-(--color-card-border)/40">
+        <div className="flex justify-end gap-3 px-6 py-4 bg-(--color-surface-2) border-t border-(--color-border)/40">
           <button
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="px-5 py-2 rounded-full text-sm font-medium text-(--color-fg-muted) border border-(--color-card-border)/40 hover:bg-(--color-surface-3) transition-colors disabled:opacity-50"
+            className="px-5 py-2 rounded-full text-sm font-medium text-(--color-fg-muted) border border-(--color-border)/40 hover:bg-(--color-surface-3) transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -228,7 +228,7 @@ export function DeleteBatchDialog({ open, onOpenChange, batch }: Props) {
             className={cn(
               "px-5 py-2 rounded-full text-sm font-semibold text-white transition-all inline-flex items-center gap-2",
               allGatesPassed && !isPending
-                ? "bg-(--color-danger) hover:brightness-110 shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0"
+                ? "bg-(--color-danger) hover:brightness-110 active:translate-y-0"
                 : "bg-(--color-danger)/40 cursor-not-allowed"
             )}
           >

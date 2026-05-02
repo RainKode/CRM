@@ -7,10 +7,10 @@ import {
   CheckSquare,
   Inbox,
 } from "lucide-react";
-import { relativeTime } from "@/lib/utils";
 import type { Deal, PipelineStage, Activity, Notification, Task, FolderSummary, ActivityLogEntry } from "@/lib/types";
 import { FolderSummaryCard } from "@/components/dashboard/folder-summary-card";
 import { RecentActivityCard } from "@/components/dashboard/recent-activity-card";
+import { Badge } from "@/components/ui/badge";
 
 type DashboardData = {
   stages: PipelineStage[];
@@ -61,7 +61,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
       <div className="mx-auto w-full max-w-4xl px-4 md:px-8 py-6 space-y-6">
         {/* Greeting */}
         <div className="px-0 py-2">
-          <h2 className="text-[32px] sm:text-[40px] font-bold tracking-tight text-(--color-fg) leading-tight pb-1">
+          <h2 className="font-display text-[32px] sm:text-[40px] font-semibold tracking-normal text-(--color-fg) leading-tight pb-1">
             {getGreeting()}, RainKode
           </h2>
           <p className="text-base font-medium uppercase tracking-[0.02em] text-(--color-fg-muted)">
@@ -72,41 +72,55 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {/* Follow-up Queue CTA — single entry point to everything due today */}
         <Link
           href="/queue"
-          className="group flex items-center justify-between gap-4 rounded-2xl bg-(--color-surface-1) p-5 sm:p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5"
+          className="card group grid grid-cols-1 gap-7 rounded-2xl bg-(--color-fg) p-7 text-white transition-opacity hover:opacity-95 sm:grid-cols-[minmax(0,1fr)_160px] sm:items-end"
         >
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-start gap-5 min-w-0">
             <div
-              className={`h-12 w-12 flex-none rounded-xl flex items-center justify-center ${
+              className={`h-12 w-12 flex-none rounded-full flex items-center justify-center ${
                 data.queueCount > 0
-                  ? "bg-(--color-accent)/10 text-(--color-accent)"
-                  : "bg-(--color-success)/10 text-(--color-success)"
+                  ? "bg-white/10 text-white"
+                  : "bg-(--color-teal)/15 text-(--color-teal)"
               }`}
             >
               <Inbox className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-bold text-(--color-fg) tracking-tight">
+              <Badge tone={data.queueCount > 0 ? "warn" : "success"}>
+                {data.queueCount > 0 ? "Due today" : "Clear"}
+              </Badge>
+              <div className="font-display mt-4 text-[clamp(76px,9vw,132px)] font-semibold leading-[0.92] tracking-normal">
+                {data.queueCount}
+              </div>
+              <h3 className="font-display mt-3 text-[clamp(30px,4.5vw,52px)] font-semibold leading-none tracking-normal text-white">
                 {data.queueCount > 0
                   ? `${data.queueCount} item${data.queueCount === 1 ? "" : "s"} need you today`
-                  : "Inbox zero — nothing due today"}
+                  : "Nothing due today"}
               </h3>
-              <p className="text-sm text-(--color-fg-muted) truncate">
+              <p className="mt-3 max-w-xl text-sm text-white/70 sm:text-base">
                 Tasks, scheduled calls, and deal follow-ups in one queue.
               </p>
             </div>
           </div>
-          <ArrowRight className="h-5 w-5 flex-none text-(--color-fg-muted) group-hover:text-(--color-fg) group-hover:translate-x-1 transition-all" />
+          <div className="hidden h-full rounded-2xl bg-white/8 p-4 sm:block">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.16px] text-white/45">
+              Next action
+            </p>
+            <p className="mt-3 text-sm font-semibold leading-snug text-white">
+              {topFollowUp ? topFollowUp.contact_name : "Review the queue"}
+            </p>
+            <ArrowRight className="mt-5 h-5 w-5 text-white/60 transition-transform group-hover:translate-x-1" />
+          </div>
         </Link>
 
         {/* Featured Follow-up Card */}
         {topFollowUp && (
-          <div className="rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
+          <div className="rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 border border-(--color-border) transition-colors duration-200 hover:bg-white">
             <div className="flex items-stretch justify-between gap-6">
               <div className="flex flex-col gap-6 justify-between flex-2">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="h-2 w-2 rounded-full bg-(--color-accent) animate-pulse" />
-                    <p className="text-(--color-accent) text-xs font-bold uppercase tracking-wider">
+                    <div className="h-2 w-2 rounded-full bg-(--color-warning) animate-pulse" />
+                    <p className="text-(--color-warning) text-xs font-bold uppercase tracking-wider">
                       {new Date(topFollowUp.follow_up_at!) < new Date()
                         ? `${dueCount} Overdue`
                         : `${dueCount} Due Today`}
@@ -128,7 +142,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
                 </div>
                 <Link
                   href={`/pipeline?deal=${topFollowUp.id}`}
-                  className="flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-(--color-accent) text-(--color-accent-fg) text-sm font-bold w-fit hover:opacity-90 transition-opacity"
+                  className="flex items-center justify-center gap-2 rounded-full h-11 px-6 bg-(--color-fg) text-white text-sm font-bold w-fit hover:opacity-85 transition-opacity"
                 >
                   View Deal
                   <ArrowRight className="h-4 w-4" />
@@ -171,10 +185,10 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
         {/* Zero-state card when no follow-ups at all */}
         {!topFollowUp && upcomingCount === 0 && (
-          <div className="rounded-2xl bg-(--color-surface-1) p-6 border-2 border-(--color-card-border) shadow-(--shadow-card-3d)">
+          <div className="rounded-2xl bg-(--color-surface-1) p-6 border border-(--color-border)">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-(--color-accent)/15 flex items-center justify-center">
-                <CalendarClock className="h-5 w-5 text-(--color-accent)" />
+              <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 flex items-center justify-center">
+                <CalendarClock className="h-5 w-5 text-(--color-blue)" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-(--color-fg)">
@@ -191,39 +205,38 @@ export function DashboardView({ data }: { data: DashboardData }) {
         {/* Pipeline Summary Stats */}
         <div className="flex flex-wrap gap-4">
           {/* New */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-1) hover:bg-white transition-colors duration-200 border border-(--color-border)">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               New
             </p>
-            <p className="text-(--color-fg) text-3xl font-bold tracking-tight leading-none">
+            <p className="font-display text-(--color-fg) text-3xl font-semibold tracking-normal leading-none">
               {data.stageCounts[data.stages.find((s) => !s.is_won && !s.is_lost)?.id ?? ""] ?? 0}
             </p>
           </div>
           {/* In Progress */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-1) hover:bg-white transition-colors duration-200 border border-(--color-border)">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               In Progress
             </p>
-            <p className="text-(--color-fg) text-3xl font-bold tracking-tight leading-none">
+            <p className="font-display text-(--color-fg) text-3xl font-semibold tracking-normal leading-none">
               {totalActive}
             </p>
           </div>
           {/* Won */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 relative overflow-hidden shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
-            <div className="absolute inset-0 bg-(--color-accent)/5 pointer-events-none" />
-            <p className="text-(--color-accent) text-xs font-bold uppercase tracking-wider relative z-10">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-blue) transition-colors duration-200 relative overflow-hidden border border-(--color-blue)">
+            <p className="text-white/72 text-xs font-bold uppercase tracking-wider relative z-10">
               Won
             </p>
-            <p className="text-(--color-accent) text-3xl font-bold tracking-tight leading-none relative z-10">
+            <p className="font-display text-white text-3xl font-semibold tracking-normal leading-none relative z-10">
               {wonCount}
             </p>
           </div>
           {/* Lost */}
-          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-all duration-200 opacity-70 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5">
+          <div className="flex min-w-[140px] flex-1 flex-col justify-between gap-4 rounded-2xl p-6 bg-(--color-surface-1) hover:bg-white transition-colors duration-200 opacity-70 border border-(--color-border)">
             <p className="text-(--color-fg-muted) text-xs font-bold uppercase tracking-wider">
               Lost
             </p>
-            <p className="text-(--color-fg-muted) text-3xl font-bold tracking-tight leading-none">
+            <p className="font-display text-(--color-fg-muted) text-3xl font-semibold tracking-normal leading-none">
               {lostCount}
             </p>
           </div>
@@ -235,10 +248,10 @@ export function DashboardView({ data }: { data: DashboardData }) {
           <FolderSummaryCard summaries={data.folderSummaries} />
 
           {/* Tasks */}
-          <div className="flex flex-col gap-4 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
+          <div className="flex flex-col gap-4 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 border border-(--color-border) transition-colors duration-200 hover:bg-white">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <CheckSquare className="h-5 w-5 text-(--color-accent)" />
+                <CheckSquare className="h-5 w-5 text-(--color-blue)" />
                 <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
                   Tasks
                 </h3>
@@ -258,7 +271,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
             {data.openTasks.length === 0 ? (
               <p className="text-sm text-(--color-fg-subtle)">
                 No open tasks.{" "}
-                <Link href="/tasks" className="text-(--color-accent) hover:underline">
+                <Link href="/tasks" className="text-(--color-blue) hover:underline">
                   Create one →
                 </Link>
               </p>

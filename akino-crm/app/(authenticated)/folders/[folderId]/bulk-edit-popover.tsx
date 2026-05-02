@@ -68,10 +68,10 @@ export function BulkEditPopover({
   if (!open) return null;
 
   return (
-    <div className="absolute bottom-16 left-6 z-40 w-80 rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+    <div className="absolute bottom-16 left-6 z-40 w-80 rounded-2xl bg-(--color-surface-1) border border-(--color-border)  overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-border)">
         <div className="flex items-center gap-2">
-          <Pencil className="h-4 w-4 text-(--color-accent)" />
+          <Pencil className="h-4 w-4 text-(--color-blue)" />
           <span className="text-sm font-bold text-(--color-fg)">
             Edit {selectedCount} {selectedCount === 1 ? "lead" : "leads"}
           </span>
@@ -93,7 +93,7 @@ export function BulkEditPopover({
           <select
             value={fieldKey}
             onChange={(e) => setFieldKey(e.target.value)}
-            className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-card-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-accent)"
+            className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-blue)"
           >
             {editableFields.map((f) => (
               <option key={f.key} value={f.key}>
@@ -113,7 +113,7 @@ export function BulkEditPopover({
             <select
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-card-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-accent)"
+              className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-blue)"
             >
               <option value="">— (clear)</option>
               <option value="new">New</option>
@@ -127,7 +127,7 @@ export function BulkEditPopover({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="New value"
-              className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-card-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-accent) placeholder:text-(--color-fg-subtle)"
+              className="w-full rounded-lg bg-(--color-surface-2) border border-(--color-border) px-3 py-2 text-sm text-(--color-fg) outline-none focus:border-(--color-blue) placeholder:text-(--color-fg-subtle)"
             />
           )}
         </div>

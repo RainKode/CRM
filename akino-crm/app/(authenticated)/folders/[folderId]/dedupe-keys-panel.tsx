@@ -72,11 +72,11 @@ export function DedupeKeysPanel({
   }
 
   return (
-    <div className="mb-6 rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-card-3d) p-5">
+    <div className="mb-6 rounded-2xl bg-(--color-surface-1) border border-(--color-border)  p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-(--color-surface-3)">
-            <ShieldCheck className="h-4 w-4 text-(--color-accent)" />
+            <ShieldCheck className="h-4 w-4 text-(--color-blue)" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-(--color-fg)">
@@ -118,8 +118,8 @@ export function DedupeKeysPanel({
               className={cn(
                 "rounded-xl border-2 px-4 py-3 text-left transition-colors",
                 active
-                  ? "border-(--color-accent) bg-(--color-accent)/10"
-                  : "border-(--color-card-border) bg-(--color-surface-2) hover:bg-(--color-surface-3)"
+                  ? "border-(--color-blue) bg-(--color-blue)/10"
+                  : "border-(--color-border) bg-(--color-surface-2) hover:bg-(--color-surface-3)"
               )}
             >
               <div className="flex items-center justify-between">
@@ -130,8 +130,8 @@ export function DedupeKeysPanel({
                   className={cn(
                     "h-4 w-4 rounded-full border-2",
                     active
-                      ? "border-(--color-accent) bg-(--color-accent)"
-                      : "border-(--color-card-border)"
+                      ? "border-(--color-blue) bg-(--color-accent)"
+                      : "border-(--color-border)"
                   )}
                 />
               </div>

@@ -145,9 +145,9 @@ export function PipelineTemplatesView({
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-8">
           <Link
             href="/settings"
-            className="flex items-center gap-3 rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) p-4 hover:border-(--color-accent) transition-colors"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-4 hover:border-(--color-blue) transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <User className="h-5 w-5" />
             </div>
             <div className="flex-1">
@@ -158,9 +158,9 @@ export function PipelineTemplatesView({
           </Link>
           <Link
             href="/settings/email"
-            className="flex items-center gap-3 rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) p-4 hover:border-(--color-accent) transition-colors"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-4 hover:border-(--color-blue) transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <Mail className="h-5 w-5" />
             </div>
             <div className="flex-1">
@@ -171,9 +171,9 @@ export function PipelineTemplatesView({
           </Link>
           <Link
             href="/settings/templates"
-            className="flex items-center gap-3 rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) p-4 hover:border-(--color-accent) transition-colors"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-4 hover:border-(--color-blue) transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <FileText className="h-5 w-5" />
             </div>
             <div className="flex-1">
@@ -182,7 +182,7 @@ export function PipelineTemplatesView({
             </div>
             <ChevronRight className="h-4 w-4 text-(--color-fg-subtle)" />
           </Link>
-          <div className="flex items-center gap-3 rounded-2xl border-2 border-(--color-accent)/50 bg-(--color-accent)/5 p-4">
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-(--color-blue)/50 bg-(--color-blue)/8 p-4">
             <div className="h-10 w-10 rounded-full bg-(--color-accent) text-(--color-accent-fg) flex items-center justify-center">
               <GitBranch className="h-5 w-5" />
             </div>
@@ -202,14 +202,14 @@ export function PipelineTemplatesView({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* ── Template list ──────────────────────────────────────── */}
           <div className="md:col-span-1">
-            <div className="rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+            <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1) overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-border)">
                 <span className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle)">
                   Templates
                 </span>
                 <button
                   onClick={() => setShowNewTemplate(true)}
-                  className="h-7 w-7 rounded-lg bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-colors"
+                  className="h-7 w-7 rounded-lg bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-colors"
                   title="New template"
                 >
                   <Plus className="h-4 w-4" />
@@ -217,7 +217,7 @@ export function PipelineTemplatesView({
               </div>
 
               {showNewTemplate && (
-                <div className="px-3 py-2 border-b border-(--color-card-border) bg-(--color-surface-2)">
+                <div className="px-3 py-2 border-b border-(--color-border) bg-(--color-surface-2)">
                   <input
                     autoFocus
                     value={newTemplateName}
@@ -230,7 +230,7 @@ export function PipelineTemplatesView({
                       }
                     }}
                     placeholder="Template name…"
-                    className="w-full h-8 rounded-lg bg-(--color-surface-1) px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                    className="w-full h-8 rounded-lg bg-(--color-surface-1) px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                   />
                   <div className="flex gap-2 mt-2">
                     <button
@@ -266,7 +266,7 @@ export function PipelineTemplatesView({
                             if (e.key === "Enter") handleRenameTemplate(t.id);
                             if (e.key === "Escape") setEditingTemplateId(null);
                           }}
-                          className="flex-1 h-7 rounded-lg bg-(--color-surface-2) px-2 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                          className="flex-1 h-7 rounded-lg bg-(--color-surface-2) px-2 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                         />
                         <button
                           onClick={() => handleRenameTemplate(t.id)}
@@ -286,7 +286,7 @@ export function PipelineTemplatesView({
                         onClick={() => setSelectedId(t.id)}
                         className={`w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-(--color-surface-2) transition-colors ${
                           selectedId === t.id
-                            ? "bg-(--color-accent)/8 border-l-2 border-(--color-accent)"
+                            ? "bg-(--color-blue)/8 border-l-2 border-(--color-blue)"
                             : ""
                         }`}
                       >
@@ -341,8 +341,8 @@ export function PipelineTemplatesView({
           {/* ── Stage editor ───────────────────────────────────────── */}
           <div className="md:col-span-2">
             {selected ? (
-              <div className="rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1) overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-border)">
                   <div>
                     <span className="text-sm font-bold text-(--color-fg)">{selected.name}</span>
                     {selected.is_default && (
@@ -353,7 +353,7 @@ export function PipelineTemplatesView({
                   </div>
                   <button
                     onClick={() => setShowNewStage(true)}
-                    className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-(--color-accent)/10 text-(--color-accent) text-xs font-semibold hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-colors"
+                    className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-(--color-blue)/12 text-(--color-blue) text-xs font-semibold hover:bg-(--color-accent) hover:text-(--color-accent-fg) transition-colors"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add stage
@@ -381,7 +381,7 @@ export function PipelineTemplatesView({
                             if (e.key === "Enter") handleRenameStage(stage.id);
                             if (e.key === "Escape") setEditingStageId(null);
                           }}
-                          className="flex-1 h-8 rounded-lg bg-(--color-surface-2) px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                          className="flex-1 h-8 rounded-lg bg-(--color-surface-2) px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                         />
                       ) : (
                         <span className="flex-1 text-sm text-(--color-fg)">{stage.name}</span>
@@ -437,7 +437,7 @@ export function PipelineTemplatesView({
                 </ul>
 
                 {showNewStage && (
-                  <div className="px-4 py-3 border-t border-(--color-card-border) bg-(--color-surface-2)">
+                  <div className="px-4 py-3 border-t border-(--color-border) bg-(--color-surface-2)">
                     <input
                       autoFocus
                       value={newStageName}
@@ -450,7 +450,7 @@ export function PipelineTemplatesView({
                         }
                       }}
                       placeholder="Stage name…"
-                      className="w-full h-9 rounded-xl bg-(--color-surface-1) px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                      className="w-full h-9 rounded-xl bg-(--color-surface-1) px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                     />
                     <div className="flex gap-2 mt-2">
                       <button
@@ -474,7 +474,7 @@ export function PipelineTemplatesView({
                 )}
               </div>
             ) : (
-              <div className="rounded-2xl border border-(--color-card-border) bg-(--color-surface-1) flex items-center justify-center h-40 text-sm text-(--color-fg-muted)">
+              <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1) flex items-center justify-center h-40 text-sm text-(--color-fg-muted)">
                 Select a template to edit its stages
               </div>
             )}

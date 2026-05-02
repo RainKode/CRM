@@ -78,11 +78,11 @@ export function LossReasonDialog({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-md rounded-2xl bg-(--color-surface-1) border-2 border-(--color-danger)/30 shadow-(--shadow-popover) overflow-hidden"
+        className="relative z-10 w-full max-w-md rounded-2xl bg-(--color-surface-1) border-2 border-(--color-danger)/30  overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start gap-3 px-5 py-4 border-b border-(--color-card-border)">
+        <div className="flex items-start gap-3 px-5 py-4 border-b border-(--color-border)">
           <div className="h-10 w-10 rounded-full bg-(--color-danger)/15 flex items-center justify-center shrink-0">
             <XCircle className="h-5 w-5 text-(--color-danger)" />
           </div>
@@ -115,7 +115,7 @@ export function LossReasonDialog({
                     "w-full text-left rounded-lg px-3 py-2 text-sm border-2 transition-colors",
                     selectedId === r.id
                       ? "border-(--color-danger) bg-(--color-danger)/10 text-(--color-fg) font-medium"
-                      : "border-(--color-card-border) bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
+                      : "border-(--color-border) bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
                   )}
                 >
                   {r.label}
@@ -132,7 +132,7 @@ export function LossReasonDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-(--color-card-border) bg-(--color-surface-2)">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-(--color-border) bg-(--color-surface-2)">
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={isPending}>
             Cancel
           </Button>

@@ -77,7 +77,7 @@ export function LeadDetail({
           {/* Top info cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Contact card */}
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
                 Contact
               </h3>
@@ -102,7 +102,7 @@ export function LeadDetail({
             </div>
 
             {/* Quality Rating card */}
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
                 Lead Quality
               </h3>
@@ -123,7 +123,7 @@ export function LeadDetail({
                     });
                   }}
                   placeholder="—"
-                  className="h-12 w-24 rounded-xl border-0 bg-(--color-surface-2) px-3 text-center text-2xl font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                  className="h-12 w-24 rounded-xl border-0 bg-(--color-surface-2) px-3 text-center text-2xl font-bold text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                 />
                 <span className="text-lg font-medium text-(--color-fg-muted)">/ 10</span>
               </div>
@@ -135,7 +135,7 @@ export function LeadDetail({
             </div>
 
             {/* Tags card */}
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4 flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5" />
                 Tags
@@ -145,7 +145,7 @@ export function LeadDetail({
                   {lead.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-(--color-accent)/10 px-3 py-1 text-xs font-medium text-(--color-accent)"
+                      className="rounded-full bg-(--color-blue)/10 px-3 py-1 text-xs font-medium text-(--color-blue)"
                     >
                       {tag}
                     </span>
@@ -158,7 +158,7 @@ export function LeadDetail({
           </div>
 
           {/* Lead Data — all fields */}
-          <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+          <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
             <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4 flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5" />
               Lead Data
@@ -190,9 +190,9 @@ export function LeadDetail({
 
           {/* Enrichment Data */}
           {enrichmentFields.length > 0 && (
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-(--color-accent)" />
+                <Sparkles className="h-3.5 w-3.5 text-(--color-blue)" />
                 Enrichment Data
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
@@ -219,7 +219,7 @@ export function LeadDetail({
 
           {/* Notes */}
           {lead.notes && (
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
                 Notes
               </h3>
@@ -229,7 +229,7 @@ export function LeadDetail({
 
           {/* Batch History */}
           {batchHistory.length > 0 && (
-            <div className="rounded-2xl bg-(--color-surface-1) p-6 shadow-(--shadow-card-3d) border-2 border-(--color-card-border)">
+            <div className="rounded-2xl bg-(--color-surface-1) p-6  border border-(--color-border)">
               <h3 className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-4">
                 Enrichment Batch History
               </h3>
@@ -246,7 +246,7 @@ export function LeadDetail({
                       ) : bh.is_skipped ? (
                         <Circle className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
                       ) : (
-                        <Clock className="h-4 w-4 text-(--color-accent) shrink-0" />
+                        <Clock className="h-4 w-4 text-(--color-blue) shrink-0" />
                       )}
                       <span className="font-medium text-(--color-fg)">
                         {bh.batch?.name ?? "Unknown Batch"}

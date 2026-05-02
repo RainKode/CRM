@@ -9,7 +9,7 @@ export const Input = React.forwardRef<
     ref={ref}
     type={type}
     className={cn(
-      "h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) transition-all focus:ring-1 focus:ring-(--color-accent) focus:outline-none disabled:opacity-50",
+      "h-11 w-full rounded-full border border-(--color-border) bg-white px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:border-(--color-fg) focus:outline-none disabled:opacity-50",
       className
     )}
     {...props}
@@ -24,7 +24,7 @@ export const Label = React.forwardRef<
   <label
     ref={ref}
     className={cn(
-      "text-xs font-medium uppercase tracking-wider text-(--color-fg-subtle)",
+      "text-[11px] font-extrabold uppercase tracking-[0.22px] text-(--color-fg-subtle)",
       className
     )}
     {...props}
@@ -39,7 +39,7 @@ export const Select = React.forwardRef<
   <select
     ref={ref}
     className={cn(
-      "h-9 rounded-md border border-(--color-border) bg-(--color-surface-1) px-3 text-sm text-(--color-fg) focus:border-(--color-accent) focus:outline-none disabled:opacity-50",
+      "h-10 rounded-full border border-(--color-border) bg-white px-4 pr-9 text-sm text-(--color-fg) focus:border-(--color-fg) focus:outline-none disabled:opacity-50",
       className
     )}
     {...props}
@@ -56,7 +56,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      "min-h-20 w-full rounded-md border border-(--color-border) bg-(--color-surface-1) px-3 py-2 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:border-(--color-accent) focus:outline-none disabled:opacity-50",
+      "min-h-24 w-full rounded-2xl border border-(--color-border) bg-white px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:border-(--color-fg) focus:outline-none disabled:opacity-50",
       className
     )}
     {...props}

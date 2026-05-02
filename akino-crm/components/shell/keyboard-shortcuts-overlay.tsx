@@ -131,13 +131,13 @@ export function KeyboardShortcutsOverlay() {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-lg rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) overflow-hidden"
+        className="relative z-10 w-full max-w-lg rounded-2xl bg-(--color-surface-1) border border-(--color-border) overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-(--color-card-border)">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-(--color-border)">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-(--color-accent)/15 flex items-center justify-center">
-              <Keyboard className="h-5 w-5 text-(--color-accent)" />
+            <div className="h-9 w-9 rounded-lg bg-(--color-blue)/12 flex items-center justify-center">
+              <Keyboard className="h-5 w-5 text-(--color-blue)" />
             </div>
             <div>
               <div className="text-sm font-bold text-(--color-fg)">
@@ -181,7 +181,7 @@ export function KeyboardShortcutsOverlay() {
                       {s.keys.map((k, i) => (
                         <kbd
                           key={i}
-                          className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-(--color-surface-3) border border-(--color-card-border) text-(--color-fg)"
+                          className="font-mono text-[11px] px-1.5 py-0.5 rounded-full bg-(--color-surface-2) border border-(--color-border) text-(--color-fg)"
                         >
                           {k}
                         </kbd>

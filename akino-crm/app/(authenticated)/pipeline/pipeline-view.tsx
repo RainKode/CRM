@@ -97,12 +97,12 @@ function formatDealValue(value: number | null, currency: string): string {
 }
 
 function activityDotColor(lastActivity: string | null): string {
-  if (!lastActivity) return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+  if (!lastActivity) return "bg-(--color-danger) ";
   const diff = Date.now() - new Date(lastActivity).getTime();
   const hours = diff / (1000 * 60 * 60);
-  if (hours < 24) return "bg-(--color-success) shadow-[0_0_8px_rgba(22,163,74,0.6)]";
+  if (hours < 24) return "bg-(--color-success) ";
   if (hours < 72) return "bg-(--color-warn)";
-  return "bg-(--color-danger) shadow-[0_0_8px_rgba(220,38,38,0.6)]";
+  return "bg-(--color-danger) ";
 }
 
 // ─────────────────────────────────────────────
@@ -137,6 +137,9 @@ function DealCard({
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+  const isPriority = Boolean(
+    deal.follow_up_at && new Date(deal.follow_up_at).getTime() <= Date.now()
+  );
 
   return (
     <div
@@ -146,10 +149,11 @@ function DealCard({
       {...listeners}
       onClick={bulkMode ? onToggleSelect : onClick}
       className={cn(
-        "bg-(--color-surface-1) rounded-xl p-5 cursor-grab hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all border-2 group/card",
+        "rounded-2xl p-4 cursor-grab transition-colors border group/card",
+        isPriority ? "bg-(--color-fg) text-white" : "bg-(--color-surface-2) text-(--color-fg) hover:bg-(--color-surface-3)",
         isSelected
-          ? "border-(--color-accent) ring-1 ring-(--color-accent)/30"
-          : "border-(--color-card-border)"
+          ? "border-(--color-blue) ring-1 ring-(--color-blue)/30"
+          : "border-transparent"
       )}
     >
       <div className="flex justify-between items-start mb-3">
@@ -161,34 +165,34 @@ function DealCard({
               className="shrink-0 mt-0.5"
             >
               {isSelected ? (
-                <CheckSquare className="h-4 w-4 text-(--color-accent)" />
+                <CheckSquare className="h-4 w-4 text-(--color-blue)" />
               ) : (
                 <Square className="h-4 w-4 text-(--color-fg-muted)" />
               )}
             </button>
           )}
           <div className="min-w-0">
-            <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1 truncate">
+            <h4 className={cn("font-display text-xl font-semibold leading-tight mb-1 truncate", isPriority ? "text-white" : "text-(--color-fg)")}>
               {deal.company || deal.contact_name}
             </h4>
-            <p className="text-xs text-(--color-fg-muted) truncate">{deal.contact_name}</p>
+            <p className={cn("text-sm mt-1 truncate", isPriority ? "text-white/60" : "text-(--color-fg-muted)")}>{deal.contact_name}</p>
           </div>
         </div>
       </div>
       {deal.deal_value != null && (
-        <div className="text-lg font-semibold text-(--color-fg) mb-4">
+        <div className={cn("text-lg font-semibold mb-4", isPriority ? "text-white" : "text-(--color-fg)")}>
           {formatDealValue(deal.deal_value, deal.currency)}
         </div>
       )}
-      <div className="flex items-center justify-between pt-3 border-t border-(--color-surface-4)">
-        <div className="flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+      <div className={cn("flex items-center justify-between pt-3 border-t", isPriority ? "border-white/14" : "border-(--color-border)")}>
+        <div className={cn("flex items-center gap-1.5 text-xs", isPriority ? "text-white/58" : "text-(--color-fg-muted)")}>
           <div className={cn("w-1.5 h-1.5 rounded-full", activityDotColor(deal.last_activity_at))} />
           <span>{deal.last_activity_at ? relativeTime(deal.last_activity_at) : "No activity"}</span>
         </div>
         <div className="flex items-center gap-2">
           <EmailStatusBadge deal={deal} />
           {deal.follow_up_at && (
-            <div className="flex items-center gap-1 text-xs text-(--color-accent) font-medium">
+            <div className={cn("flex items-center gap-1 text-xs font-medium", isPriority ? "text-white" : "text-(--color-blue)")}>
               <Calendar className="h-3.5 w-3.5" />
               {new Date(deal.follow_up_at).toLocaleDateString("en-GB", {
                 day: "numeric",
@@ -210,7 +214,7 @@ function DealCard({
               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
               onQuickLog(deal.id, rect);
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-(--color-surface-2) hover:bg-(--color-surface-3) py-1.5 text-[11px] font-medium text-(--color-fg-muted) hover:text-(--color-fg) transition-colors"
+              className={cn("flex-1 flex items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-medium transition-colors", isPriority ? "bg-white/10 text-white/62 hover:bg-white/16 hover:text-white" : "bg-white hover:bg-(--color-surface-3) text-(--color-fg-muted) hover:text-(--color-fg)")}
             title="Log or schedule an activity"
           >
             <Phone className="h-3 w-3" />
@@ -324,12 +328,12 @@ function KanbanColumn({
     <div
       ref={setDroppableRef}
       className={cn(
-        "w-[320px] flex flex-col h-full rounded-2xl p-4 border-2 transition-colors",
+        "w-[320px] flex flex-col h-full rounded-2xl p-4 border transition-colors",
         isOver
-          ? "border-(--color-accent) bg-(--color-accent)/5"
+          ? "border-(--color-blue) bg-(--color-blue)/5"
           : isWon
-            ? "bg-(--color-success)/10 border-(--color-success)/40"
-            : "bg-(--color-surface-2)/30 border-(--color-card-border)"
+            ? "bg-(--color-teal)/10 border-(--color-teal)/30"
+            : "bg-white border-(--color-border)"
       )}
     >
       <div className="flex justify-between items-center mb-6 px-2">
@@ -342,7 +346,7 @@ function KanbanColumn({
               title={allSelected ? "Deselect all" : "Select all"}
             >
               {allSelected ? (
-                <CheckSquare className="h-4 w-4 text-(--color-accent)" />
+                <CheckSquare className="h-4 w-4 text-(--color-blue)" />
               ) : (
                 <Square className="h-4 w-4 text-(--color-fg-muted)" />
               )}
@@ -351,7 +355,7 @@ function KanbanColumn({
           <h3
             className={cn(
               "font-semibold tracking-wide",
-              isWon ? "text-(--color-success)" : "text-(--color-fg)"
+              isWon ? "text-(--color-teal)" : "text-(--color-fg)"
             )}
           >
             {stage.name}
@@ -360,7 +364,7 @@ function KanbanColumn({
             className={cn(
               "px-2 py-0.5 rounded-full text-xs font-bold",
               isWon
-                ? "bg-(--color-success)/20 text-(--color-success) border border-(--color-success)/30"
+                ? "bg-(--color-teal)/12 text-(--color-teal) border border-(--color-teal)/30"
                 : "bg-(--color-surface-3) text-(--color-fg-muted)"
             )}
           >
@@ -373,13 +377,13 @@ function KanbanColumn({
             onClick={() => menu.setOpen(!menu.open)}
             className={cn(
               "cursor-pointer hover:text-(--color-fg) p-1 rounded-md hover:bg-(--color-surface-3) transition-colors",
-              isWon ? "text-(--color-success)/50 hover:text-(--color-success)" : "text-(--color-fg-muted)"
+              isWon ? "text-(--color-teal)/60 hover:text-(--color-teal)" : "text-(--color-fg-muted)"
             )}
           >
             <MoreHorizontal className="h-5 w-5" />
           </button>
           {menu.open && (
-            <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1 z-50">
+            <div className="absolute right-0 top-full mt-1 w-44 rounded-2xl bg-(--color-surface-1) border border-(--color-border) py-1 z-50">
               <button
                 type="button"
                 onClick={() => { onCreateInStage(stage.id); menu.setOpen(false); }}
@@ -565,7 +569,7 @@ function CreateDealDialog({
                     value={leadQuery}
                     onChange={(e) => handleSearch(e.target.value)}
                     autoFocus
-                    className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                    className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                   />
                 </div>
 
@@ -582,7 +586,7 @@ function CreateDealDialog({
 
                 {/* Search results */}
                 {leadQuery.trim().length >= 2 && (
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-(--color-card-border) bg-(--color-surface-1)">
+                  <div className="max-h-48 overflow-y-auto rounded-xl border border-(--color-border) bg-(--color-surface-1)">
                     {isSearching ? (
                       <p className="text-sm text-(--color-fg-muted) text-center py-4">Searching…</p>
                     ) : leadResults.length === 0 ? (
@@ -594,9 +598,9 @@ function CreateDealDialog({
                           type="button"
                           onClick={() => selectLead(lead)}
                           className={cn(
-                            "w-full text-left px-4 py-3 border-b border-(--color-card-border) last:border-b-0 transition-colors flex items-center justify-between gap-3",
+                            "w-full text-left px-4 py-3 border-b border-(--color-border) last:border-b-0 transition-colors flex items-center justify-between gap-3",
                             selectedLead?.id === lead.id
-                              ? "bg-(--color-accent)/10"
+                              ? "bg-(--color-blue)/10"
                               : "hover:bg-(--color-surface-2)"
                           )}
                         >
@@ -615,7 +619,7 @@ function CreateDealDialog({
                               </span>
                             )}
                             {lead.quality_rating != null && (
-                              <span className="flex items-center gap-0.5 text-xs text-(--color-accent)">
+                              <span className="flex items-center gap-0.5 text-xs text-(--color-blue)">
                                 <Star className="h-3 w-3" /> {lead.quality_rating}
                               </span>
                             )}
@@ -724,13 +728,13 @@ function getTimelineTitle(type: TimelineEventType): string {
 
 function getTimelineColor(type: TimelineEventType): string {
   switch (type) {
-    case "created": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "created": return "bg-(--color-blue)/12 text-(--color-blue)";
     case "won": return "bg-(--color-success)/15 text-(--color-success)";
     case "lost": return "bg-(--color-danger)/15 text-(--color-danger)";
     case "email": return "bg-(--color-info)/15 text-(--color-info)";
-    case "call": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "call": return "bg-(--color-blue)/12 text-(--color-blue)";
     case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
-    case "follow_up_set": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "follow_up_set": return "bg-(--color-blue)/12 text-(--color-blue)";
     case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
     default: return "bg-(--color-surface-3) text-(--color-fg-muted)";
   }
@@ -738,11 +742,11 @@ function getTimelineColor(type: TimelineEventType): string {
 
 function getTimelineBadgeColor(type: TimelineEventType): string {
   switch (type) {
-    case "created": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "created": return "bg-(--color-blue)/12 text-(--color-blue)";
     case "won": return "bg-(--color-success)/15 text-(--color-success)";
     case "lost": return "bg-(--color-danger)/15 text-(--color-danger)";
     case "email": return "bg-(--color-info)/15 text-(--color-info)";
-    case "call": return "bg-(--color-accent)/15 text-(--color-accent)";
+    case "call": return "bg-(--color-blue)/12 text-(--color-blue)";
     case "stage_change": return "bg-(--color-warn)/15 text-(--color-warn)";
     case "follow_up_set": return "bg-(--color-highlight)/15 text-(--color-highlight)";
     case "note": return "bg-(--color-surface-3) text-(--color-fg-muted)";
@@ -789,7 +793,7 @@ function TimelineCard({
   return (
     <div
       className={cn(
-        "bg-(--color-surface-2)/50 border rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all",
+        "bg-(--color-surface-2)/50 border rounded-xl p-3.5 transition-colors",
         isScheduled
           ? "border-(--color-info)/40 hover:border-(--color-info)/60"
           : "border-(--color-border)/15 hover:border-(--color-border)/30"
@@ -1059,7 +1063,7 @@ function DealDetail({
           <div ref={timelineRef} className="flex-1 overflow-y-auto py-8 px-5" style={{ scrollbarWidth: "thin" }}>
             {loadingActivities ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-6 h-6 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-(--color-blue)/30 border-t-(--color-accent) rounded-full animate-spin" />
               </div>
             ) : timelineEvents.length === 0 ? (
               <p className="text-sm text-(--color-fg-subtle) text-center py-12">No activity yet</p>
@@ -1157,7 +1161,7 @@ function DealDetail({
                         className={cn(
                           "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                           stage.id === deal.stage_id
-                            ? "bg-(--color-accent) text-(--color-accent-fg) shadow-sm"
+                            ? "bg-(--color-accent) text-(--color-accent-fg) "
                             : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3) hover:text-(--color-fg)"
                         )}
                       >
@@ -1187,7 +1191,7 @@ function DealDetail({
                       Mark as Lost
                     </button>
                     {lossMenu.open && (
-                      <div className="absolute left-0 right-0 top-full mt-2 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                      <div className="absolute left-0 right-0 top-full mt-2 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30  py-2 z-50">
                         <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">
                           Select Reason
                         </p>
@@ -1249,7 +1253,7 @@ function DealDetail({
                 className={cn(
                   "pb-3 text-sm font-medium capitalize border-b-2 transition-colors",
                   activeTab === t
-                    ? "text-(--color-fg) border-(--color-accent)"
+                    ? "text-(--color-fg) border-(--color-blue)"
                     : "text-(--color-fg-muted) border-transparent hover:text-(--color-fg)"
                 )}
               >
@@ -1268,7 +1272,7 @@ function DealDetail({
                     className="group cursor-pointer"
                     onClick={() => !editingField && startEditing("deal_value", deal.deal_value?.toString() || "")}
                   >
-                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-blue) transition-colors">
                       Deal Value
                     </p>
                     {editingField === "deal_value" ? (
@@ -1282,10 +1286,10 @@ function DealDetail({
                             if (e.key === "Escape") cancelEdit();
                           }}
                           autoFocus
-                          className="w-full h-9 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                          className="w-full h-9 rounded-lg bg-(--color-surface-2) border border-(--color-blue)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                           placeholder="e.g. 125000"
                         />
-                        <button type="button" onClick={() => saveEdit("deal_value")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                        <button type="button" onClick={() => saveEdit("deal_value")} className="text-(--color-blue) text-xs font-medium hover:underline shrink-0">
                           Save
                         </button>
                       </div>
@@ -1327,7 +1331,7 @@ function DealDetail({
                         <Mail className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-blue) transition-colors">
                           Email Address
                         </p>
                         {editingField === "email" ? (
@@ -1341,9 +1345,9 @@ function DealDetail({
                                 if (e.key === "Escape") cancelEdit();
                               }}
                               autoFocus
-                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-blue)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                             />
-                            <button type="button" onClick={() => saveEdit("email")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                            <button type="button" onClick={() => saveEdit("email")} className="text-(--color-blue) text-xs font-medium hover:underline shrink-0">
                               Save
                             </button>
                           </div>
@@ -1362,7 +1366,7 @@ function DealDetail({
                         <Phone className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-accent) transition-colors">
+                        <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-1 group-hover:text-(--color-blue) transition-colors">
                           Phone Number
                         </p>
                         {editingField === "phone" ? (
@@ -1376,9 +1380,9 @@ function DealDetail({
                                 if (e.key === "Escape") cancelEdit();
                               }}
                               autoFocus
-                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                              className="w-full h-8 rounded-lg bg-(--color-surface-2) border border-(--color-blue)/50 px-3 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                             />
-                            <button type="button" onClick={() => saveEdit("phone")} className="text-(--color-accent) text-xs font-medium hover:underline shrink-0">
+                            <button type="button" onClick={() => saveEdit("phone")} className="text-(--color-blue) text-xs font-medium hover:underline shrink-0">
                               Save
                             </button>
                           </div>
@@ -1400,7 +1404,7 @@ function DealDetail({
                             href={deal.linkedin_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[15px] text-(--color-accent) hover:underline"
+                            className="text-[15px] text-(--color-blue) hover:underline"
                           >
                             View Profile
                           </a>
@@ -1420,7 +1424,7 @@ function DealDetail({
                             href={deal.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[15px] text-(--color-accent) hover:underline"
+                            className="text-[15px] text-(--color-blue) hover:underline"
                           >
                             {deal.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
                           </a>
@@ -1450,7 +1454,7 @@ function DealDetail({
                     className="group cursor-pointer"
                     onClick={() => !editingField && startEditing("notes", deal.notes || "")}
                   >
-                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-2 group-hover:text-(--color-accent) transition-colors">
+                    <p className="text-xs font-medium tracking-[0.08em] uppercase text-(--color-fg-subtle) mb-2 group-hover:text-(--color-blue) transition-colors">
                       Notes
                     </p>
                     {editingField === "notes" ? (
@@ -1463,13 +1467,13 @@ function DealDetail({
                           }}
                           autoFocus
                           rows={4}
-                          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-accent)/50 p-4 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent) resize-none"
+                          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-blue)/50 p-4 text-sm text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue) resize-none"
                         />
                         <div className="flex gap-2 justify-end">
                           <button type="button" onClick={cancelEdit} className="text-xs text-(--color-fg-muted) hover:underline">
                             Cancel
                           </button>
-                          <button type="button" onClick={() => saveEdit("notes")} className="text-(--color-accent) text-xs font-medium hover:underline">
+                          <button type="button" onClick={() => saveEdit("notes")} className="text-(--color-blue) text-xs font-medium hover:underline">
                             Save
                           </button>
                         </div>
@@ -1542,7 +1546,7 @@ function DealDetail({
                         className={cn(
                           "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
                           actType === val
-                            ? "bg-(--color-accent)/15 text-(--color-accent)"
+                            ? "bg-(--color-blue)/12 text-(--color-blue)"
                             : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
                         )}
                       >
@@ -1570,7 +1574,7 @@ function DealDetail({
                   </h4>
                   {loadingActivities ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="w-5 h-5 border-2 border-(--color-accent)/30 border-t-(--color-accent) rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-(--color-blue)/30 border-t-(--color-accent) rounded-full animate-spin" />
                     </div>
                   ) : activities.length === 0 ? (
                     <p className="text-sm text-(--color-fg-subtle) text-center py-8">No activity logged yet</p>
@@ -1658,10 +1662,10 @@ function DealDetail({
                   type="date"
                   value={followUpDate}
                   onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="h-8 rounded-lg bg-(--color-surface-2) border border-(--color-accent)/50 px-3 text-xs text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                  className="h-8 rounded-lg bg-(--color-surface-2) border border-(--color-blue)/50 px-3 text-xs text-(--color-fg) focus:outline-none focus:ring-1 focus:ring-(--color-blue)"
                   autoFocus
                 />
-                <button type="submit" disabled={!followUpDate} className="text-(--color-accent) text-xs font-medium hover:underline disabled:opacity-40">
+                <button type="submit" disabled={!followUpDate} className="text-(--color-blue) text-xs font-medium hover:underline disabled:opacity-40">
                   Set
                 </button>
                 <button type="button" onClick={() => setShowFollowUp(false)} className="text-xs text-(--color-fg-muted) hover:underline">
@@ -1672,7 +1676,7 @@ function DealDetail({
               <button
                 type="button"
                 onClick={() => setShowFollowUp(true)}
-                className="text-(--color-accent) font-medium text-sm hover:underline flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-(--color-accent)/10 transition-colors"
+                className="text-(--color-blue) font-medium text-sm hover:underline flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-(--color-blue)/10 transition-colors"
               >
                 <Calendar className="h-4 w-4" /> Set Follow-up
               </button>
@@ -1954,13 +1958,13 @@ export function PipelineView({
               <button
                 type="button"
                 onClick={() => pipelineMenu.setOpen(!pipelineMenu.open)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-(--color-border) bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)"
               >
                 {activePipeline?.name ?? "Select Pipeline"}
                 <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
               </button>
               {pipelineMenu.open && (
-                <div className="absolute left-0 top-full mt-2 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                <div className="absolute left-0 top-full mt-2 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30  py-2 z-50">
                   <div className="px-4 py-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Pipelines</span>
                   </div>
@@ -1972,7 +1976,7 @@ export function PipelineView({
                         className={cn(
                           "flex-1 text-left px-4 py-2 text-sm transition-colors flex items-center justify-between",
                           p.id === activePipelineId
-                            ? "text-(--color-accent) bg-(--color-accent-muted)"
+                            ? "text-(--color-blue) bg-(--color-accent-muted)"
                             : "text-(--color-fg) hover:bg-(--color-surface-3)"
                         )}
                       >
@@ -2013,7 +2017,7 @@ export function PipelineView({
                           if (e.key === "Escape") setShowNewPipeline(false);
                         }}
                         autoFocus
-                        className="flex-1 h-8 rounded-lg bg-(--color-surface-2) border-none px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                        className="flex-1 h-8 rounded-lg bg-(--color-surface-2) border-none px-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
                       />
                       <button
                         type="button"
@@ -2027,7 +2031,7 @@ export function PipelineView({
                             });
                           }
                         }}
-                        className="text-sm text-(--color-accent) font-medium hover:underline"
+                        className="text-sm text-(--color-blue) font-medium hover:underline"
                       >
                         Add
                       </button>
@@ -2036,7 +2040,7 @@ export function PipelineView({
                     <button
                       type="button"
                       onClick={() => setShowNewPipeline(true)}
-                      className="w-full text-left px-4 py-2 text-sm text-(--color-accent) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-(--color-blue) hover:bg-(--color-surface-3) transition-colors flex items-center gap-2"
                     >
                       <Plus className="h-3.5 w-3.5" /> New Pipeline
                     </button>
@@ -2048,14 +2052,14 @@ export function PipelineView({
         </div>
         <div className="flex items-center gap-4">
           {/* View toggle */}
-          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border-2 border-(--color-card-border)">
+          <div className="flex items-center bg-(--color-surface-1) p-1 rounded-full border border-(--color-border)">
             <button
               type="button"
               onClick={() => setView("list")}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                 view === "list"
-                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  ? "bg-(--color-surface-4) text-(--color-fg) "
                   : "text-(--color-fg-muted) hover:text-(--color-fg)"
               )}
             >
@@ -2067,7 +2071,7 @@ export function PipelineView({
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                 view === "kanban"
-                  ? "bg-(--color-surface-4) text-(--color-fg) shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                  ? "bg-(--color-surface-4) text-(--color-fg) "
                   : "text-(--color-fg-muted) hover:text-(--color-fg)"
               )}
             >
@@ -2118,8 +2122,8 @@ export function PipelineView({
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-full border bg-(--color-surface-1) hover:bg-(--color-surface-2) transition-colors text-sm font-medium text-(--color-fg)",
                 (showClosed || filterStageId)
-                  ? "border-(--color-accent)/50"
-                  : "border-(--color-card-border)"
+                  ? "border-(--color-blue)/50"
+                  : "border-(--color-border)"
               )}
             >
               <Filter className="h-4 w-4" />
@@ -2130,14 +2134,14 @@ export function PipelineView({
               <ChevronDown className="h-4 w-4 text-(--color-fg-muted)" />
             </button>
             {filterMenu.open && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30  py-2 z-50">
                 <div className="px-4 py-2 flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Filters</span>
                   {(showClosed || filterStageId) && (
                     <button
                       type="button"
                       onClick={() => { setShowClosed(false); setFilterStageId(null); }}
-                      className="text-xs text-(--color-accent) hover:underline"
+                      className="text-xs text-(--color-blue) hover:underline"
                     >
                       Clear all
                     </button>
@@ -2160,7 +2164,7 @@ export function PipelineView({
                   onClick={() => setFilterStageId(null)}
                   className={cn(
                     "w-full text-left px-4 py-1.5 text-sm transition-colors",
-                    !filterStageId ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                    !filterStageId ? "text-(--color-blue) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
                   )}
                 >
                   All stages
@@ -2172,7 +2176,7 @@ export function PipelineView({
                     onClick={() => setFilterStageId(s.id)}
                     className={cn(
                       "w-full text-left px-4 py-1.5 text-sm transition-colors",
-                      filterStageId === s.id ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                      filterStageId === s.id ? "text-(--color-blue) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
                     )}
                   >
                     {s.name}
@@ -2262,7 +2266,7 @@ export function PipelineView({
               <ArrowRight className="h-3.5 w-3.5" /> Move to stage
             </Button>
             {bulkActionsMenu.open && (
-              <div className="absolute left-0 top-full mt-1 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-1 z-50">
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30  py-1 z-50">
                 {pipelineStages.map((s) => (
                   <button
                     key={s.id}
@@ -2365,8 +2369,8 @@ export function PipelineView({
             </div>
             <DragOverlay>
               {draggedDeal && (
-                <div className="bg-(--color-surface-1) rounded-xl p-5 w-[320px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-(--color-accent)/50">
-                  <div className="absolute inset-0 rounded-xl shadow-[0_0_20px_rgba(0,113,227,0.15)] pointer-events-none" />
+                <div className="bg-(--color-surface-1) rounded-xl p-5 w-[320px]  border border-(--color-blue)/50">
+                  <div className="absolute inset-0 rounded-xl  pointer-events-none" />
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h4 className="font-semibold text-(--color-fg) text-[15px] leading-tight mb-1">
@@ -2501,7 +2505,7 @@ export function PipelineView({
       <button
         type="button"
         onClick={() => setCreateOpen(true)}
-        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-(--color-accent) rounded-full flex items-center justify-center text-white shadow-[0_8px_30px_rgba(0,113,227,0.4)] z-50"
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-(--color-accent) rounded-full flex items-center justify-center text-white  z-50"
       >
         <Plus className="h-7 w-7" />
       </button>

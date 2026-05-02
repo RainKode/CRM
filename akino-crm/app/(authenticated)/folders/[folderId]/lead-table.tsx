@@ -189,7 +189,7 @@ export function LeadTable({
                 return (
                   <Link
                     href={`/folders/${folderId}/leads/${lead.id}`}
-                    className="text-(--color-accent) hover:underline font-medium"
+                    className="text-(--color-blue) hover:underline font-medium"
                   >
                     {val != null && val !== "" ? String(val) : lead.name || "�"}
                   </Link>
@@ -277,9 +277,9 @@ export function LeadTable({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d) relative">
+    <div className="flex h-full flex-col rounded-2xl border border-(--color-border) overflow-hidden  relative">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-card-border)">
+      <div className="flex items-center justify-between px-4 py-2 bg-(--color-surface-1) border-b border-(--color-border)">
         <div className="text-xs text-(--color-fg-muted)">
           {visibleFields.length} of {fields.length} columns shown
         </div>
@@ -352,8 +352,8 @@ export function LeadTable({
             </button>
 
           {showFieldPanel && (
-            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-card-border)">
+            <div className="absolute right-0 top-full mt-2 z-30 w-64 rounded-xl bg-(--color-surface-1) border border-(--color-border)  overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-border)">
                 <span className="text-sm font-bold text-(--color-fg)">
                   Toggle Columns
                 </span>
@@ -376,7 +376,7 @@ export function LeadTable({
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-(--color-surface-2) transition-colors"
                     >
                       {isVisible ? (
-                        <Eye className="h-4 w-4 text-(--color-accent) shrink-0" />
+                        <Eye className="h-4 w-4 text-(--color-blue) shrink-0" />
                       ) : (
                         <EyeOff className="h-4 w-4 text-(--color-fg-subtle) shrink-0" />
                       )}
@@ -394,7 +394,7 @@ export function LeadTable({
                   );
                 })}
               </div>
-              <div className="flex gap-2 px-4 py-3 border-t border-(--color-card-border)">
+              <div className="flex gap-2 px-4 py-3 border-t border-(--color-border)">
                 <button
                   type="button"
                   onClick={() => setHiddenFieldIds(new Set())}
@@ -420,22 +420,22 @@ export function LeadTable({
 
       {/* Select all banner */}
       {allOnPageSelected && !selectAllMode && totalCount > leads.length && (
-        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
+        <div className="flex items-center justify-center gap-2 bg-(--color-blue)/10 px-4 py-2 text-sm">
           <span className="text-(--color-fg-muted)">
             All {leads.length} leads on this page are selected.
           </span>
           <button
             type="button"
             onClick={handleSelectAll}
-            className="font-bold text-(--color-accent) hover:underline"
+            className="font-bold text-(--color-blue) hover:underline"
           >
             Select all {totalCount} leads
           </button>
         </div>
       )}
       {selectAllMode && (
-        <div className="flex items-center justify-center gap-2 bg-(--color-accent)/10 px-4 py-2 text-sm">
-          <span className="font-bold text-(--color-accent)">
+        <div className="flex items-center justify-center gap-2 bg-(--color-blue)/10 px-4 py-2 text-sm">
+          <span className="font-bold text-(--color-blue)">
             All {totalCount} leads are selected.
           </span>
           <button
@@ -502,7 +502,7 @@ export function LeadTable({
                   className={cn(
                     "border-b border-(--color-surface-3) transition-colors",
                     row.getIsSelected()
-                      ? "bg-(--color-accent)/5"
+                      ? "bg-(--color-blue)/8"
                       : "hover:bg-(--color-surface-1)"
                   )}
                 >
@@ -526,11 +526,11 @@ export function LeadTable({
       </div>
 
       {/* Bottom bar */}
-      <div className="flex items-center justify-between bg-(--color-surface-2) px-6 py-3 border-t border-(--color-card-border)">
+      <div className="flex items-center justify-between bg-(--color-surface-2) px-6 py-3 border-t border-(--color-border)">
         <div className="flex items-center gap-3">
           {selectedCount > 0 && (
             <>
-              <span className="rounded-full bg-(--color-accent)/15 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
+              <span className="rounded-full bg-(--color-blue)/12 px-4 py-1 text-sm font-bold text-(--color-accent-text)">
                 {selectedCount} selected
               </span>
               <Button

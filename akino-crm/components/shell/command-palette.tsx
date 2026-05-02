@@ -259,11 +259,11 @@ export function CommandPalette() {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-xl rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) overflow-hidden"
+        className="relative z-10 w-full max-w-xl rounded-2xl bg-(--color-surface-1) border border-(--color-border) overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Input row */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-(--color-card-border)/40">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-(--color-border)">
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin text-(--color-fg-subtle) shrink-0" />
           ) : (
@@ -280,7 +280,7 @@ export function CommandPalette() {
             spellCheck={false}
             className="flex-1 bg-transparent outline-none text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle)"
           />
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-(--color-surface-3) text-(--color-fg-subtle) border border-(--color-card-border)">
+          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-(--color-surface-2) text-(--color-fg-subtle) border border-(--color-border)">
             ESC
           </kbd>
         </div>
@@ -305,7 +305,7 @@ export function CommandPalette() {
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
                     active
-                      ? "bg-(--color-accent)/10 text-(--color-fg)"
+                      ? "bg-(--color-blue)/10 text-(--color-fg)"
                       : "text-(--color-fg-muted) hover:bg-(--color-surface-2)"
                   )}
                 >
@@ -313,7 +313,7 @@ export function CommandPalette() {
                     className={cn(
                       "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
                       active
-                        ? "bg-(--color-accent)/20 text-(--color-accent)"
+                        ? "bg-(--color-blue)/12 text-(--color-blue)"
                         : "bg-(--color-surface-3) text-(--color-fg-subtle)"
                     )}
                   >
@@ -339,7 +339,7 @@ export function CommandPalette() {
         </div>
 
         {/* Footer hotkey legend */}
-        <div className="flex items-center justify-between gap-4 px-4 py-2 border-t border-(--color-card-border)/40 bg-(--color-surface-2) text-[11px] text-(--color-fg-subtle)">
+        <div className="flex items-center justify-between gap-4 px-4 py-2 border-t border-(--color-border) bg-(--color-surface-2) text-[11px] text-(--color-fg-subtle)">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1">
               <ArrowUp className="h-3 w-3" /><ArrowDown className="h-3 w-3" />

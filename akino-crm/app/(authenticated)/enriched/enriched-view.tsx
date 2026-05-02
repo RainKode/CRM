@@ -18,7 +18,7 @@ import { getEnrichedLeads } from "./actions";
 function ratingColor(rating: number | null): string {
   if (rating == null) return "text-(--color-fg-subtle)";
   if (rating >= 8) return "text-(--color-success)";
-  if (rating >= 5) return "text-(--color-accent)";
+  if (rating >= 5) return "text-(--color-blue)";
   if (rating >= 3) return "text-(--color-warn)";
   return "text-(--color-danger)";
 }
@@ -119,7 +119,7 @@ export function EnrichedView({
                 placeholder="Search by name, email, or company…"
                 value={search}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className="w-full h-10 rounded-xl bg-(--color-surface-2) border-none pl-10 pr-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
               />
             </div>
 
@@ -131,7 +131,7 @@ export function EnrichedView({
                 className={cn(
                   "flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-(--color-surface-2) hover:bg-(--color-surface-3) transition-colors text-sm font-medium text-(--color-fg)",
                   hasFilters
-                    ? "border-(--color-accent)/50"
+                    ? "border-(--color-blue)/50"
                     : "border-transparent"
                 )}
               >
@@ -143,14 +143,14 @@ export function EnrichedView({
               {filterOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-72 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) py-2 z-50">
+                  <div className="absolute right-0 top-full mt-2 w-72 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30  py-2 z-50">
                     <div className="px-4 py-2 flex items-center justify-between">
                       <span className="text-xs font-semibold uppercase tracking-wider text-(--color-fg-subtle)">Filters</span>
                       {hasFilters && (
                         <button
                           type="button"
                           onClick={clearFilters}
-                          className="text-xs text-(--color-accent) hover:underline"
+                          className="text-xs text-(--color-blue) hover:underline"
                         >
                           Clear all
                         </button>
@@ -182,7 +182,7 @@ export function EnrichedView({
                         className={cn(
                           "w-full text-left px-4 py-1.5 text-sm transition-colors",
                           minRating === opt.min && maxRating === opt.max
-                            ? "text-(--color-accent) bg-(--color-accent-muted)"
+                            ? "text-(--color-blue) bg-(--color-accent-muted)"
                             : "text-(--color-fg) hover:bg-(--color-surface-3)"
                         )}
                       >
@@ -198,7 +198,7 @@ export function EnrichedView({
                       onClick={() => handleFolderFilter(null)}
                       className={cn(
                         "w-full text-left px-4 py-1.5 text-sm transition-colors",
-                        !folderId ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                        !folderId ? "text-(--color-blue) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
                       )}
                     >
                       All folders
@@ -210,7 +210,7 @@ export function EnrichedView({
                         onClick={() => handleFolderFilter(f.id)}
                         className={cn(
                           "w-full text-left px-4 py-1.5 text-sm transition-colors flex items-center justify-between",
-                          folderId === f.id ? "text-(--color-accent) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
+                          folderId === f.id ? "text-(--color-blue) bg-(--color-accent-muted)" : "text-(--color-fg) hover:bg-(--color-surface-3)"
                         )}
                       >
                         <span>{f.name}</span>
@@ -238,7 +238,7 @@ export function EnrichedView({
               </p>
             </div>
           ) : (
-            <div className="max-w-6xl mx-auto w-full rounded-2xl border-2 border-(--color-card-border) overflow-hidden shadow-(--shadow-card-3d)">
+            <div className="max-w-6xl mx-auto w-full rounded-2xl border border-(--color-border) overflow-hidden ">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-(--color-surface-2) text-left text-xs uppercase tracking-wider text-(--color-fg-subtle)">
@@ -256,8 +256,8 @@ export function EnrichedView({
                       key={lead.id}
                       onClick={() => setSelectedLead(lead)}
                       className={cn(
-                        "border-t border-(--color-card-border) hover:bg-(--color-surface-2)/50 transition-colors cursor-pointer",
-                        selectedLead?.id === lead.id && "bg-(--color-accent)/5"
+                        "border-t border-(--color-border) hover:bg-(--color-surface-2)/50 transition-colors cursor-pointer",
+                        selectedLead?.id === lead.id && "bg-(--color-blue)/8"
                       )}
                     >
                       <td className="px-4 py-3 font-medium text-(--color-fg)">
@@ -295,7 +295,7 @@ export function EnrichedView({
 
       {/* Detail panel */}
       {selectedLead && (
-        <div className="w-full md:w-[420px] shrink-0 flex flex-col bg-(--color-bg) border-l border-(--color-card-border) overflow-hidden">
+        <div className="w-full md:w-[420px] shrink-0 flex flex-col bg-(--color-bg) border-l border-(--color-border) overflow-hidden">
           <div className="flex items-center justify-between px-6 py-5 shrink-0">
             <h3 className="text-xl font-bold text-(--color-fg) tracking-tight truncate">
               {selectedLead.name || selectedLead.company || "Lead Details"}
@@ -320,7 +320,7 @@ export function EnrichedView({
               </div>
             )}
 
-            <div className="rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) p-5 shadow-(--shadow-card-3d)">
+            <div className="rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-5 ">
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 {selectedLead.name && (
                   <div className="min-w-0">
@@ -337,7 +337,7 @@ export function EnrichedView({
                 {selectedLead.email && (
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">Email</p>
-                    <a href={`mailto:${selectedLead.email}`} className="text-sm text-(--color-accent) hover:underline break-all">{selectedLead.email}</a>
+                    <a href={`mailto:${selectedLead.email}`} className="text-sm text-(--color-blue) hover:underline break-all">{selectedLead.email}</a>
                   </div>
                 )}
                 <div className="min-w-0">
@@ -366,7 +366,7 @@ export function EnrichedView({
                     <div key={key} className={cn("min-w-0", isLong && "col-span-2")}>
                       <p className="text-[11px] font-semibold text-(--color-fg-subtle) uppercase tracking-widest mb-1">{displayKey}</p>
                       {isUrl ? (
-                        <a href={strVal} target="_blank" rel="noopener noreferrer" className="text-sm text-(--color-accent) hover:underline break-all flex items-center gap-1">
+                        <a href={strVal} target="_blank" rel="noopener noreferrer" className="text-sm text-(--color-blue) hover:underline break-all flex items-center gap-1">
                           {strVal} <ExternalLink className="h-3 w-3 shrink-0" />
                         </a>
                       ) : (

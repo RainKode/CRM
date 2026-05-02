@@ -88,8 +88,8 @@ export function ReplyComposer({
   }
 
   return (
-    <div className="mt-6 rounded-2xl border-2 border-(--color-accent)/30 bg-(--color-surface-1) shadow-(--shadow-card-3d) overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-card-border) bg-(--color-surface-2)">
+    <div className="mt-6 rounded-2xl border-2 border-(--color-blue)/30 bg-(--color-surface-1)  overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-border) bg-(--color-surface-2)">
         <p className="text-xs font-bold uppercase tracking-wider text-(--color-fg-subtle)">
           {fromAddress ? `Reply from ${fromAddress}` : "Reply"}
         </p>
@@ -133,7 +133,7 @@ export function ReplyComposer({
           placeholder="Write your reply…"
           disabled={sending}
           rows={8}
-          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-card-border) px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:outline-none focus:ring-2 focus:ring-(--color-accent) resize-y font-sans"
+          className="w-full rounded-xl bg-(--color-surface-2) border border-(--color-border) px-4 py-3 text-sm text-(--color-fg) placeholder:text-(--color-fg-subtle) focus:outline-none focus:ring-2 focus:ring-(--color-blue) resize-y font-sans"
         />
 
         {error && (

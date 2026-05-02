@@ -107,7 +107,7 @@ export function RecentActivityCard({
   ];
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover)">
+    <div className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 border border-(--color-border) transition-colors duration-200 hover:bg-white">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-(--color-fg) tracking-tight">
           Recent Activity
@@ -130,7 +130,7 @@ export function RecentActivityCard({
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-8 z-50 w-48 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) p-3 flex flex-col gap-1">
+              <div className="absolute right-0 top-8 z-50 w-48 rounded-2xl bg-(--color-surface-1) border border-(--color-border) p-3 flex flex-col gap-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-2 px-1">
                   Filter categories
                 </p>
@@ -165,11 +165,11 @@ export function RecentActivityCard({
               <div key={a.id} className="flex items-start gap-4">
                 <div
                   className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
-                    isWon ? "bg-(--color-accent)/20" : "bg-(--color-surface-4)"
+                    isWon ? "bg-(--color-blue)/12" : "bg-(--color-surface-3)"
                   }`}
                 >
                   {isWon ? (
-                    <CheckCircle className="h-[18px] w-[18px] text-(--color-accent)" />
+                    <CheckCircle className="h-[18px] w-[18px] text-(--color-blue)" />
                   ) : (
                     <Icon className="h-[18px] w-[18px] text-(--color-fg)" />
                   )}

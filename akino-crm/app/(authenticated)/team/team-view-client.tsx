@@ -83,7 +83,7 @@ export default function TeamViewClient({
       <header className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-(--color-accent)" />
+            <Users className="h-5 w-5 text-(--color-blue)" />
             <h1 className="text-2xl font-bold tracking-tight">Team</h1>
             {(isPending || refreshing || refreshScheduled) && (
               <span className="text-xs text-(--color-fg-muted) flex items-center gap-1">

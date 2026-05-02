@@ -87,7 +87,7 @@ export default function LoginPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-accent) focus:outline-none transition-all"
+                className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-blue) focus:outline-none transition-all"
                 placeholder="John Doe"
               />
             </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-accent) focus:outline-none transition-all"
+              className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-blue) focus:outline-none transition-all"
               placeholder="you@example.com"
             />
           </div>
@@ -115,7 +115,7 @@ export default function LoginPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-accent) focus:outline-none transition-all"
+              className="h-12 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 text-sm text-(--color-fg) placeholder:text-(--color-fg-disabled) focus:ring-1 focus:ring-(--color-blue) focus:outline-none transition-all"
               placeholder="••••••••"
             />
           </div>

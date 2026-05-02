@@ -54,7 +54,7 @@ function KpiCard({
       ? "bg-(--color-success)/10 text-(--color-success)"
       : tone === "danger"
       ? "bg-(--color-danger)/10 text-(--color-danger)"
-      : "bg-(--color-accent)/10 text-(--color-accent)";
+      : "bg-(--color-blue)/12 text-(--color-blue)";
   return (
     <div className="rounded-2xl border border-(--color-surface-4) bg-(--color-surface-1) p-5">
       <div className="flex items-center justify-between mb-3">
@@ -100,7 +100,7 @@ export function AnalyticsView({
       <div className="px-8 md:px-12 pt-8 pb-6 border-b border-(--color-surface-4)">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
               <BarChart3 className="h-5 w-5" />
             </div>
             <div>
@@ -124,7 +124,7 @@ export function AnalyticsView({
                 onChange={(e) =>
                   router.push(`/analytics?pipeline=${e.target.value}`)
                 }
-                className="rounded-lg border border-(--color-surface-4) bg-(--color-surface-1) px-3 py-2 text-sm text-(--color-fg) focus:outline-none focus:ring-2 focus:ring-(--color-accent)"
+                className="rounded-lg border border-(--color-surface-4) bg-(--color-surface-1) px-3 py-2 text-sm text-(--color-fg) focus:outline-none focus:ring-2 focus:ring-(--color-blue)"
               >
                 {pipelines.map((p) => (
                   <option key={p.id} value={p.id}>

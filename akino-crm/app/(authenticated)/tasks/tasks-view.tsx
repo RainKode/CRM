@@ -153,8 +153,8 @@ export function TasksView({ initialTasks }: { initialTasks: Task[] }) {
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors border",
                 active
-                  ? "bg-(--color-accent) text-(--color-accent-fg) border-(--color-accent)"
-                  : "bg-(--color-surface-1) text-(--color-fg-muted) border-(--color-card-border) hover:bg-(--color-surface-2)"
+                  ? "bg-(--color-accent) text-(--color-accent-fg) border-(--color-blue)"
+                  : "bg-(--color-surface-1) text-(--color-fg-muted) border-(--color-border) hover:bg-(--color-surface-2)"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -167,7 +167,7 @@ export function TasksView({ initialTasks }: { initialTasks: Task[] }) {
       {/* Composer */}
       <form
         onSubmit={handleCreate}
-        className="flex flex-col gap-2 rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) p-4 shadow-(--shadow-card-3d) md:flex-row md:items-end"
+        className="flex flex-col gap-2 rounded-2xl border border-(--color-border) bg-(--color-surface-1) p-4  md:flex-row md:items-end"
       >
         <div className="flex-1 space-y-1">
           <label className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle)">
@@ -202,7 +202,7 @@ export function TasksView({ initialTasks }: { initialTasks: Task[] }) {
 
       {/* List */}
       {tasks.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-(--color-card-border) bg-(--color-surface-1) py-16 text-center">
+        <div className="rounded-2xl border-2 border-dashed border-(--color-border) bg-(--color-surface-1) py-16 text-center">
           <Inbox className="mx-auto h-8 w-8 text-(--color-fg-subtle)" />
           <div className="mt-3 text-sm font-semibold text-(--color-fg)">
             Nothing here
@@ -222,18 +222,18 @@ export function TasksView({ initialTasks }: { initialTasks: Task[] }) {
               <li
                 key={t.id}
                 className={cn(
-                  "group flex items-start gap-3 rounded-2xl border-2 border-(--color-card-border) bg-(--color-surface-1) px-4 py-3 shadow-(--shadow-card-3d) transition-colors",
+                  "group flex items-start gap-3 rounded-2xl border border-(--color-border) bg-(--color-surface-1) px-4 py-3  transition-colors",
                   done && "opacity-60"
                 )}
               >
                 <button
                   type="button"
                   onClick={() => handleToggle(t)}
-                  className="mt-0.5 shrink-0 text-(--color-fg-subtle) hover:text-(--color-accent) transition-colors"
+                  className="mt-0.5 shrink-0 text-(--color-fg-subtle) hover:text-(--color-blue) transition-colors"
                   aria-label={done ? "Mark incomplete" : "Mark complete"}
                 >
                   {done ? (
-                    <CheckCircle2 className="h-5 w-5 text-(--color-accent)" />
+                    <CheckCircle2 className="h-5 w-5 text-(--color-blue)" />
                   ) : (
                     <Circle className="h-5 w-5" />
                   )}
@@ -256,7 +256,7 @@ export function TasksView({ initialTasks }: { initialTasks: Task[] }) {
                     className={cn(
                       "mt-1.5 text-[11px] font-medium",
                       due.tone === "danger" && "text-(--color-danger)",
-                      due.tone === "warn" && "text-(--color-accent)",
+                      due.tone === "warn" && "text-(--color-blue)",
                       due.tone === "muted" && "text-(--color-fg-subtle)"
                     )}
                   >

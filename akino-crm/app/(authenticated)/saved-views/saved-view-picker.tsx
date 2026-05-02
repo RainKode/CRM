@@ -136,7 +136,7 @@ export function SavedViewPicker({
         className={cn(
           "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border-2 transition-colors",
           activeView
-            ? "bg-(--color-accent)/10 border-(--color-accent)/40 text-(--color-accent)"
+            ? "bg-(--color-blue)/10 border-(--color-blue)/40 text-(--color-blue)"
             : "bg-(--color-surface-2) border-transparent text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-3)"
         )}
       >
@@ -148,7 +148,7 @@ export function SavedViewPicker({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-(--color-surface-1) border border-(--color-border)  z-50 overflow-hidden">
           {/* Header */}
           <div className="px-3 py-2 border-b border-(--color-surface-4) flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle)">
@@ -158,7 +158,7 @@ export function SavedViewPicker({
               <button
                 type="button"
                 onClick={() => setSaving(true)}
-                className="flex items-center gap-1 text-[11px] font-medium text-(--color-accent) hover:underline"
+                className="flex items-center gap-1 text-[11px] font-medium text-(--color-blue) hover:underline"
               >
                 <BookmarkPlus className="h-3 w-3" />
                 Save current
@@ -179,7 +179,7 @@ export function SavedViewPicker({
                   if (e.key === "Enter") handleCreate();
                   if (e.key === "Escape") setSaving(false);
                 }}
-                className="w-full rounded-lg bg-(--color-surface-2) px-3 py-1.5 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none"
+                className="w-full rounded-lg bg-(--color-surface-2) px-3 py-1.5 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none"
               />
               <label className="flex items-center gap-2 text-xs text-(--color-fg-muted) cursor-pointer">
                 <input
@@ -224,7 +224,7 @@ export function SavedViewPicker({
               )}
             >
               <span>Default (no filter)</span>
-              {!activeView && <Check className="h-3.5 w-3.5 text-(--color-accent)" />}
+              {!activeView && <Check className="h-3.5 w-3.5 text-(--color-blue)" />}
             </button>
 
             {views.length === 0 && !saving && (
@@ -241,7 +241,7 @@ export function SavedViewPicker({
                   key={v.id}
                   className={cn(
                     "group flex items-center gap-1 px-3 py-1.5 hover:bg-(--color-surface-3)",
-                    isActive && "bg-(--color-accent)/5"
+                    isActive && "bg-(--color-blue)/8"
                   )}
                 >
                   <button
@@ -261,7 +261,7 @@ export function SavedViewPicker({
                       {v.name}
                     </span>
                     {isActive && (
-                      <Check className="h-3.5 w-3.5 text-(--color-accent) flex-none ml-auto" />
+                      <Check className="h-3.5 w-3.5 text-(--color-blue) flex-none ml-auto" />
                     )}
                   </button>
 
@@ -318,7 +318,7 @@ function ViewRowMenu({
         <MoreHorizontal className="h-3 w-3" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) py-1 z-50">
+        <div className="absolute right-0 top-full mt-1 w-40 rounded-xl bg-(--color-surface-1) border border-(--color-border)  py-1 z-50">
           <button
             type="button"
             onClick={() => {

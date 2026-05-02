@@ -79,7 +79,7 @@ export function FolderSummaryCard({
   return (
     <Link
       href="/folders"
-      className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 shadow-(--shadow-card-3d) border-2 border-(--color-card-border) transition-all duration-200 hover:shadow-(--shadow-card-3d-hover) hover:-translate-y-0.5"
+      className="flex flex-col gap-6 rounded-2xl bg-(--color-surface-1) p-6 sm:p-8 border border-(--color-border) transition-colors duration-200 hover:bg-white"
     >
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -102,7 +102,7 @@ export function FolderSummaryCard({
 
           {menuOpen && (
             <div
-              className="absolute right-0 top-8 z-50 w-56 rounded-xl bg-(--color-surface-1) border border-(--color-border)/30 shadow-(--shadow-popover) p-3 flex flex-col gap-1"
+              className="absolute right-0 top-8 z-50 w-56 rounded-2xl bg-(--color-surface-1) border border-(--color-border) p-3 flex flex-col gap-1"
               onClick={(e) => e.stopPropagation()}
             >
               <p className="text-[11px] font-bold uppercase tracking-wider text-(--color-fg-subtle) mb-2 px-1">
@@ -131,7 +131,7 @@ export function FolderSummaryCard({
       <div className="flex flex-wrap gap-3 text-sm text-(--color-fg-muted)">
         {visible.has("folders_count") && (
           <span className="flex items-center gap-1.5">
-            <FolderOpen className="h-3.5 w-3.5 text-(--color-accent)" />
+            <FolderOpen className="h-3.5 w-3.5 text-(--color-blue)" />
             <span className="font-semibold text-(--color-fg)">{totalFolders}</span> folders
           </span>
         )}
@@ -167,12 +167,12 @@ export function FolderSummaryCard({
             return (
               <div key={f.folder_id} className="flex flex-col gap-2 group">
                 <div className="flex justify-between items-end">
-                  <p className="text-base font-medium text-(--color-fg) group-hover:text-(--color-accent-text) transition-colors">
+                  <p className="text-base font-medium text-(--color-fg) group-hover:text-(--color-blue) transition-colors">
                     {f.folder_name}
                   </p>
                   <div className="flex items-center gap-3 text-sm text-(--color-fg-muted)">
                     {visible.has("deal_count") && f.active_deals > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-(--color-accent)/10 text-(--color-accent)">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-(--color-blue)/12 text-(--color-blue)">
                         {f.active_deals} deal{f.active_deals !== 1 ? "s" : ""}
                       </span>
                     )}
@@ -187,7 +187,7 @@ export function FolderSummaryCard({
                 {visible.has("enrichment") && (
                   <div className="h-1.5 w-full bg-(--color-surface-4) rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-(--color-accent) rounded-full shadow-(--shadow-glow) transition-all duration-500"
+                      className="h-full bg-(--color-blue) rounded-full transition-all duration-500"
                       style={{ width: `${pct}%` }}
                     />
                   </div>

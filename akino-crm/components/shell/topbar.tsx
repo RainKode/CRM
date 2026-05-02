@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, Sun, Moon, Search } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 function getInitials(name: string | undefined | null): string {
@@ -37,48 +38,53 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between bg-(--color-bg)/80 backdrop-blur-[20px] px-6 md:px-8 py-4 border-b-2 border-(--color-card-border)">
+    <header className="sticky top-0 z-50 flex min-h-[74px] items-center justify-between gap-5 bg-(--color-surface-2)/82 px-6 py-4 backdrop-blur-[18px] border-b border-(--color-border) md:px-8">
       {/* Mobile menu button */}
-      <button
+      <Button
         type="button"
         onClick={onMenuClick}
-        className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-(--color-fg-muted) hover:bg-(--color-surface-3) transition-colors"
+        variant="secondary"
+        size="icon"
+        className="md:hidden"
         aria-label="Open navigation menu"
       >
         <Menu className="h-5 w-5" />
-      </button>
+      </Button>
 
       {/* Command palette trigger — takes the centre/left space */}
       <div className="flex-1 flex items-center pl-2 md:pl-0">
         <button
           type="button"
           onClick={openCommandPalette}
-          className="hidden md:inline-flex items-center gap-3 h-9 w-full max-w-md rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) px-4 text-sm text-(--color-fg-subtle) hover:text-(--color-fg) transition-colors"
+          className="hidden h-11 w-[min(520px,100%)] items-center gap-3 rounded-full border border-(--color-border) bg-white px-4 text-sm text-(--color-fg-muted) transition-colors hover:text-(--color-fg) md:inline-flex"
           aria-label="Search (⌘K)"
         >
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">Search folders, deals, batches…</span>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-(--color-bg) text-(--color-fg-subtle) border border-(--color-card-border)">
-            ⌘K
+          <Search className="size-5" />
+          <span className="flex-1 truncate text-left">Search folders, deals, batches...</span>
+          <kbd className="min-w-[46px] rounded-full bg-(--color-surface-2) px-2 py-0.5 text-center text-[11px] font-bold text-(--color-fg-muted)">
+            Ctrl K
           </kbd>
         </button>
       </div>
 
       <div className="flex items-center gap-3">
         {/* Mobile search icon */}
-        <button
+        <Button
           type="button"
           onClick={openCommandPalette}
-          className="md:hidden flex h-10 w-10 items-center justify-center rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) transition-colors text-(--color-fg-muted) hover:text-(--color-fg)"
+          variant="secondary"
+          size="icon"
+          className="md:hidden"
           aria-label="Search"
         >
           <Search className="h-5 w-5" strokeWidth={1.75} />
-        </button>
+        </Button>
         {/* Theme toggle */}
-        <button
+        <Button
           type="button"
           onClick={toggle}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-(--color-surface-3) hover:bg-(--color-surface-4) transition-colors text-(--color-fg-muted) hover:text-(--color-fg)"
+          variant="secondary"
+          size="icon"
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
           {theme === "dark" ? (
@@ -86,12 +92,12 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
           ) : (
             <Moon className="h-5 w-5" strokeWidth={1.75} />
           )}
-        </button>
+        </Button>
         {/* Notifications bell hidden until a real notifications panel is built.
             Previously rendered as a dead button with no handler. */}
         <Link
           href="/settings"
-          className="h-10 w-10 rounded-full bg-(--color-surface-3) ring-2 ring-(--color-bg) ring-offset-2 ring-offset-(--color-surface-3) flex items-center justify-center text-sm font-medium text-(--color-fg) hover:ring-(--color-accent) transition-all"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white border border-(--color-border) text-sm font-bold text-(--color-fg) transition-colors hover:bg-(--color-surface-2)"
           title="Profile & Settings"
         >
           {initials}

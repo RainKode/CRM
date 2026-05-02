@@ -239,7 +239,7 @@ export function QueueView({ initialItems }: { initialItems: QueueItem[] }) {
       {/* Header */}
       <div className="px-8 md:px-12 pt-8 pb-6 border-b border-(--color-surface-4)">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-10 w-10 rounded-xl bg-(--color-accent)/10 text-(--color-accent) flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-(--color-blue)/12 text-(--color-blue) flex items-center justify-center">
             <Inbox className="h-5 w-5" />
           </div>
           <div>
@@ -267,7 +267,7 @@ export function QueueView({ initialItems }: { initialItems: QueueItem[] }) {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors",
                   active
-                    ? "bg-(--color-accent)/10 text-(--color-accent)"
+                    ? "bg-(--color-blue)/12 text-(--color-blue)"
                     : "text-(--color-fg-muted) hover:text-(--color-fg) hover:bg-(--color-surface-2)"
                 )}
               >
@@ -353,7 +353,7 @@ function QueueRow({
         focused && "ring-2 ring-(--color-accent) ring-offset-2 ring-offset-(--color-bg)",
         item.overdue
           ? "border-(--color-danger)/30 bg-(--color-danger)/5"
-          : "border-(--color-card-border) bg-(--color-surface-1) hover:bg-(--color-surface-2)"
+          : "border-(--color-border) bg-(--color-surface-1) hover:bg-(--color-surface-2)"
       )}
     >
       {/* Complete checkbox */}
@@ -365,7 +365,7 @@ function QueueRow({
           "flex-none h-6 w-6 rounded-md border-2 flex items-center justify-center transition-colors",
           item.overdue
             ? "border-(--color-danger)/50 hover:bg-(--color-danger)/10 hover:border-(--color-danger)"
-            : "border-(--color-surface-4) hover:bg-(--color-accent)/10 hover:border-(--color-accent)"
+            : "border-(--color-surface-4) hover:bg-(--color-blue)/10 hover:border-(--color-blue)"
         )}
         title="Mark done"
       >
@@ -393,7 +393,7 @@ function QueueRow({
           {item.deal_id && item.deal_name && (
             <Link
               href="/pipeline"
-              className="flex items-center gap-1 text-[11px] font-medium text-(--color-accent) hover:underline"
+              className="flex items-center gap-1 text-[11px] font-medium text-(--color-blue) hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               <Workflow className="h-3 w-3" />
@@ -439,7 +439,7 @@ function QueueRow({
           <ChevronDown className="h-3 w-3" />
         </button>
         {snooze.open && (
-          <div className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-(--color-surface-1) border-2 border-(--color-card-border) shadow-(--shadow-popover) py-1 z-50">
+          <div className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-(--color-surface-1) border border-(--color-border)  py-1 z-50">
             {SNOOZE_OPTIONS.map((opt) => (
               <button
                 key={opt.days}

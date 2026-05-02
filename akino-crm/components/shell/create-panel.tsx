@@ -131,7 +131,7 @@ function StageManager({
                     setEditingId(s.id);
                     setEditName(s.name);
                   }}
-                  className="text-[11px] text-(--color-fg-muted) hover:text-(--color-accent) transition-colors"
+                  className="text-[11px] text-(--color-fg-muted) hover:text-(--color-blue) transition-colors"
                 >
                   Edit
                 </button>
@@ -320,7 +320,7 @@ function CreateLeadForm({ onSuccess }: { onSuccess: () => void }) {
           <select
             value={selectedFolderId}
             onChange={(e) => setSelectedFolderId(e.target.value)}
-            className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none appearance-none cursor-pointer"
+            className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none appearance-none cursor-pointer"
           >
             <option value="">Choose a folder…</option>
             {folders.map((f) => (
@@ -382,7 +382,7 @@ function CreateLeadForm({ onSuccess }: { onSuccess: () => void }) {
                   <Label>
                     {field.label}
                     {field.is_required && (
-                      <span className="text-(--color-accent) ml-1">*</span>
+                      <span className="text-(--color-blue) ml-1">*</span>
                     )}
                   </Label>
                   {field.type === "dropdown" && field.options ? (
@@ -395,7 +395,7 @@ function CreateLeadForm({ onSuccess }: { onSuccess: () => void }) {
                             [field.key]: e.target.value,
                           }))
                         }
-                        className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none appearance-none cursor-pointer"
+                        className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none appearance-none cursor-pointer"
                       >
                         <option value="">Select…</option>
                         {field.options.map((opt) => (
@@ -567,7 +567,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label>
-            Contact Name <span className="text-(--color-accent)">*</span>
+            Contact Name <span className="text-(--color-blue)">*</span>
           </Label>
           <Input
             placeholder="Full name"
@@ -578,7 +578,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
         <div className="space-y-2">
           <Label>
-            Email <span className="text-(--color-accent)">*</span>
+            Email <span className="text-(--color-blue)">*</span>
           </Label>
           <Input
             type="email"
@@ -589,7 +589,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
         <div className="space-y-2">
           <Label>
-            Phone <span className="text-(--color-accent)">*</span>
+            Phone <span className="text-(--color-blue)">*</span>
           </Label>
           <Input
             type="tel"
@@ -614,7 +614,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
             <button
               type="button"
               onClick={() => setShowStageManager(!showStageManager)}
-              className="text-[11px] text-(--color-accent) hover:underline"
+              className="text-[11px] text-(--color-blue) hover:underline"
             >
               {showStageManager ? "Hide" : "Manage Stages"}
             </button>
@@ -623,7 +623,7 @@ function CreateCustomerForm({ onSuccess }: { onSuccess: () => void }) {
             <select
               value={stageId}
               onChange={(e) => setStageId(e.target.value)}
-              className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-accent) focus:outline-none appearance-none cursor-pointer"
+              className="h-10 w-full rounded-xl border-0 bg-(--color-surface-2) px-4 pr-10 text-sm text-(--color-fg) focus:ring-1 focus:ring-(--color-blue) focus:outline-none appearance-none cursor-pointer"
             >
               {stages
                 .filter((s) => !s.is_won && !s.is_lost)
@@ -699,12 +699,12 @@ export function CreatePanel({
       {/* Panel */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-(--color-bg) shadow-(--shadow-popover) transition-transform duration-300 ease-out",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-(--color-border) bg-(--color-bg) transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-(--color-card-border)">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-(--color-border)">
           <h2 className="text-xl font-bold text-(--color-fg) tracking-tight">
             Create New
           </h2>
@@ -730,10 +730,9 @@ export function CreatePanel({
               type="button"
               onClick={() => setTab(key)}
               className={cn(
-                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-200",
-                "shadow-(--shadow-btn) hover:shadow-(--shadow-btn-hover) hover:-translate-y-0.5 active:translate-y-0 active:shadow-(--shadow-btn-active)",
+                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-colors duration-200",
                 tab === key
-                  ? "bg-(--color-accent) text-(--color-accent-fg)"
+                  ? "bg-(--color-fg) text-white"
                   : "bg-(--color-surface-2) text-(--color-fg-muted) hover:bg-(--color-surface-3)"
               )}
             >
